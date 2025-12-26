@@ -1,0 +1,139 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 医院
+model Clinic {
+  id            String   @id @default(uuid())
+  slug          String   @unique
+  name          String
+  email         String   @unique
+  passwordHash  String   @map("password_hash")
+  phone         String?
+  logoUrl       String?  @map("logo_url")
+  mainColor     String   @default("#2563eb") @map("main_color")
+  ctaConfig     Json     @default("{}") @map("cta_config")
+  clinicPage    Json     @default("{}") @map("clinic_page")
+  status        String   @default("trial")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  subscription     Subscription?
+  clinicDiagnoses  ClinicDiagnosis[]
+  sessions         DiagnosisSession[]
+  accessLogs       AccessLog[]
+  ctaClicks        CTAClick[]
+
+  @@map("clinics")
+}
+
+// サブスクリプション
+model Subscription {
+  id                   String    @id @default(uuid())
+  clinicId             String    @unique @map("clinic_id")
+  payjpCustomerId      String?   @map("payjp_customer_id")
+  payjpSubscriptionId  String?   @map("payjp_subscription_id")
+  status               String    @default("trial")
+  trialEnd             DateTime? @map("trial_end")
+  currentPeriodStart   DateTime? @map("current_period_start")
+  currentPeriodEnd     DateTime? @map("current_period_end")
+  canceledAt           DateTime? @map("canceled_at")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  clinic Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+// 診断タイプ
+model DiagnosisType {
+  id              String   @id @default(uuid())
+  slug            String   @unique
+  name            String
+  description     String?
+  questions       Json
+  resultPatterns  Json     @map("result_patterns")
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  clinicDiagnoses ClinicDiagnosis[]
+  sessions        DiagnosisSession[]
+
+  @@map("diagnosis_types")
+}
+
+// 医院別診断設定
+model ClinicDiagnosis {
+  id              String   @id @default(uuid())
+  clinicId        String   @map("clinic_id")
+  diagnosisTypeId String   @map("diagnosis_type_id")
+  isEnabled       Boolean  @default(true) @map("is_enabled")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  clinic        Clinic        @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  diagnosisType DiagnosisType @relation(fields: [diagnosisTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([clinicId, diagnosisTypeId])
+  @@map("clinic_diagnoses")
+}
+
+// 診断セッション
+model DiagnosisSession {
+  id              String    @id @default(uuid())
+  clinicId        String?   @map("clinic_id")
+  diagnosisTypeId String    @map("diagnosis_type_id")
+  isDemo          Boolean   @default(false) @map("is_demo")
+  userAge         Int?      @map("user_age")
+  userGender      String?   @map("user_gender")
+  answers         Json?
+  totalScore      Int?      @map("total_score")
+  resultCategory  String?   @map("result_category")
+  completedAt     DateTime? @map("completed_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  clinic        Clinic?       @relation(fields: [clinicId], references: [id], onDelete: SetNull)
+  diagnosisType DiagnosisType @relation(fields: [diagnosisTypeId], references: [id])
+  ctaClicks     CTAClick[]
+
+  @@map("diagnosis_sessions")
+}
+
+// アクセスログ
+model AccessLog {
+  id                String   @id @default(uuid())
+  clinicId          String?  @map("clinic_id")
+  diagnosisTypeSlug String?  @map("diagnosis_type_slug")
+  eventType         String   @map("event_type")
+  userAgent         String?  @map("user_agent")
+  referer           String?
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  clinic Clinic? @relation(fields: [clinicId], references: [id], onDelete: SetNull)
+
+  @@index([clinicId, createdAt])
+  @@map("access_logs")
+}
+
+// CTAクリック
+model CTAClick {
+  id        String   @id @default(uuid())
+  sessionId String?  @map("session_id")
+  clinicId  String?  @map("clinic_id")
+  ctaType   String   @map("cta_type")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  session DiagnosisSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  clinic  Clinic?           @relation(fields: [clinicId], references: [id], onDelete: SetNull)
+
+  @@index([clinicId, createdAt])
+  @@map("cta_clicks")
+}
