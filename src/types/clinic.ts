@@ -1,3 +1,11 @@
+export interface CTAConfig {
+  bookingUrl?: string;
+  lineUrl?: string;
+  instagramUrl?: string;
+  phone?: string;
+  directorMessage?: string;
+}
+
 export interface Clinic {
   id: string;
   slug: string;
@@ -7,7 +15,7 @@ export interface Clinic {
   phone: string | null;
   logoUrl: string | null;
   mainColor: string;
-  ctaConfig: Record<string, unknown>;
+  ctaConfig: CTAConfig;
   clinicPage: Record<string, unknown>;
   status: string;
   createdAt: Date;

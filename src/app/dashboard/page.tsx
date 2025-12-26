@@ -22,15 +22,27 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // TODO: 実際のAPIから統計データを取得
-    // 現在はダミーデータを表示
-    setStats({
-      totalAccess: 0,
-      totalDiagnosis: 0,
-      totalCtaClick: 0,
-      channels: [],
-    });
-    setIsLoading(false);
+    const fetchStats = async () => {
+      try {
+        const response = await fetch("/api/stats");
+        if (response.ok) {
+          const data = await response.json();
+          setStats(data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch stats:", error);
+        setStats({
+          totalAccess: 0,
+          totalDiagnosis: 0,
+          totalCtaClick: 0,
+          channels: [],
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchStats();
   }, []);
 
   if (isLoading) {
