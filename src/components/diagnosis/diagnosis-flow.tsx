@@ -18,7 +18,7 @@ interface Props {
   channelId?: string;
 }
 
-export function DiagnosisFlow({ diagnosis, isDemo, ctaConfig, clinicName, mainColor, channelId }: Props) {
+export function DiagnosisFlow({ diagnosis, isDemo, clinicSlug, ctaConfig, clinicName, mainColor, channelId }: Props) {
   const { userAge, currentStep, resultPattern, reset } =
     useDiagnosisStore();
 
@@ -43,6 +43,7 @@ export function DiagnosisFlow({ diagnosis, isDemo, ctaConfig, clinicName, mainCo
         <ResultCard
           diagnosis={diagnosis}
           isDemo={isDemo}
+          clinicSlug={clinicSlug}
           ctaConfig={ctaConfig}
           clinicName={clinicName}
           mainColor={mainColor}

@@ -6,20 +6,21 @@ import { DiagnosisType } from "@/data/diagnosis-types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DemoCTA } from "./demo-cta";
-import { Share2, Calendar, Phone, MessageCircle } from "lucide-react";
+import { Share2, Calendar, Phone, MessageCircle, Building2 } from "lucide-react";
 import Link from "next/link";
 import type { CTAConfig } from "@/types/clinic";
 
 interface Props {
   diagnosis: DiagnosisType;
   isDemo: boolean;
+  clinicSlug?: string;
   ctaConfig?: CTAConfig;
   clinicName?: string;
   mainColor?: string;
   channelId?: string;
 }
 
-export function ResultCard({ diagnosis, isDemo, ctaConfig, clinicName, mainColor, channelId }: Props) {
+export function ResultCard({ diagnosis, isDemo, clinicSlug, ctaConfig, clinicName, mainColor, channelId }: Props) {
   const { userAge, resultPattern, oralAge, reset } =
     useDiagnosisStore();
 
@@ -136,6 +137,7 @@ export function ResultCard({ diagnosis, isDemo, ctaConfig, clinicName, mainColor
             <ClinicCTA
               ctaConfig={ctaConfig}
               clinicName={clinicName}
+              clinicSlug={clinicSlug}
               mainColor={mainColor}
               channelId={channelId}
               diagnosisType={diagnosis.slug}
@@ -177,12 +179,14 @@ export function ResultCard({ diagnosis, isDemo, ctaConfig, clinicName, mainColor
 function ClinicCTA({
   ctaConfig,
   clinicName,
+  clinicSlug,
   mainColor,
   channelId,
   diagnosisType,
 }: {
   ctaConfig?: CTAConfig;
   clinicName?: string;
+  clinicSlug?: string;
   mainColor?: string;
   channelId?: string;
   diagnosisType?: string;
@@ -314,6 +318,23 @@ function ClinicCTA({
             </a>
           )}
         </div>
+
+        {/* 医院紹介ページへのリンク */}
+        {clinicSlug && (
+          <Link
+            href={`/clinic/${clinicSlug}`}
+            className="block"
+            onClick={() => trackClick("clinic_page")}
+          >
+            <Button
+              variant="ghost"
+              className="w-full gap-2 text-gray-600"
+            >
+              <Building2 className="w-4 h-4" />
+              医院について詳しく見る
+            </Button>
+          </Link>
+        )}
       </div>
     </div>
   );
