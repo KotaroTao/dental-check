@@ -31,8 +31,29 @@ model Clinic {
   sessions         DiagnosisSession[]
   accessLogs       AccessLog[]
   ctaClicks        CTAClick[]
+  channels         Channel[]
 
   @@map("clinics")
+}
+
+// 経路（QRコード別）
+model Channel {
+  id          String   @id @default(uuid())
+  clinicId    String   @map("clinic_id")
+  code        String   @unique // QRコード用の短いコード
+  name        String   // 例: "ポスティング用", "駅看板", "Instagram広告"
+  description String?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  clinic     Clinic             @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  sessions   DiagnosisSession[]
+  accessLogs AccessLog[]
+  ctaClicks  CTAClick[]
+
+  @@index([clinicId])
+  @@map("channels")
 }
 
 // サブスクリプション
@@ -90,6 +111,7 @@ model ClinicDiagnosis {
 model DiagnosisSession {
   id              String    @id @default(uuid())
   clinicId        String?   @map("clinic_id")
+  channelId       String?   @map("channel_id")
   diagnosisTypeId String    @map("diagnosis_type_id")
   isDemo          Boolean   @default(false) @map("is_demo")
   userAge         Int?      @map("user_age")
@@ -101,9 +123,11 @@ model DiagnosisSession {
   createdAt       DateTime  @default(now()) @map("created_at")
 
   clinic        Clinic?       @relation(fields: [clinicId], references: [id], onDelete: SetNull)
+  channel       Channel?      @relation(fields: [channelId], references: [id], onDelete: SetNull)
   diagnosisType DiagnosisType @relation(fields: [diagnosisTypeId], references: [id])
   ctaClicks     CTAClick[]
 
+  @@index([channelId])
   @@map("diagnosis_sessions")
 }
 
@@ -111,15 +135,18 @@ model DiagnosisSession {
 model AccessLog {
   id                String   @id @default(uuid())
   clinicId          String?  @map("clinic_id")
+  channelId         String?  @map("channel_id")
   diagnosisTypeSlug String?  @map("diagnosis_type_slug")
   eventType         String   @map("event_type")
   userAgent         String?  @map("user_agent")
   referer           String?
   createdAt         DateTime @default(now()) @map("created_at")
 
-  clinic Clinic? @relation(fields: [clinicId], references: [id], onDelete: SetNull)
+  clinic  Clinic?  @relation(fields: [clinicId], references: [id], onDelete: SetNull)
+  channel Channel? @relation(fields: [channelId], references: [id], onDelete: SetNull)
 
   @@index([clinicId, createdAt])
+  @@index([channelId, createdAt])
   @@map("access_logs")
 }
 
@@ -128,12 +155,15 @@ model CTAClick {
   id        String   @id @default(uuid())
   sessionId String?  @map("session_id")
   clinicId  String?  @map("clinic_id")
+  channelId String?  @map("channel_id")
   ctaType   String   @map("cta_type")
   createdAt DateTime @default(now()) @map("created_at")
 
   session DiagnosisSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
   clinic  Clinic?           @relation(fields: [clinicId], references: [id], onDelete: SetNull)
+  channel Channel?          @relation(fields: [channelId], references: [id], onDelete: SetNull)
 
   @@index([clinicId, createdAt])
+  @@index([channelId, createdAt])
   @@map("cta_clicks")
 }

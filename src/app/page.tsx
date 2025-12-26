@@ -123,8 +123,43 @@ export default function Home() {
           </div>
         </div>
 
+        {/* 経路別計測セクション */}
+        <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-8 mb-16">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold mb-2">どの施策が効果的？経路別に計測</h2>
+            <p className="text-gray-600">
+              チラシ、看板、SNS...それぞれ別のQRコードを発行して効果を比較できます
+            </p>
+          </div>
+          <div className="bg-white rounded-lg p-6 shadow-sm">
+            <div className="grid md:grid-cols-4 gap-4 text-center text-sm">
+              <div className="p-4 rounded-lg bg-gray-50">
+                <div className="font-bold text-gray-800">ポスティング用</div>
+                <div className="text-2xl font-bold text-primary mt-2">234</div>
+                <div className="text-gray-500">診断完了</div>
+              </div>
+              <div className="p-4 rounded-lg bg-gray-50">
+                <div className="font-bold text-gray-800">駅看板用</div>
+                <div className="text-2xl font-bold text-primary mt-2">89</div>
+                <div className="text-gray-500">診断完了</div>
+              </div>
+              <div className="p-4 rounded-lg bg-gray-50">
+                <div className="font-bold text-gray-800">Instagram広告</div>
+                <div className="text-2xl font-bold text-primary mt-2">156</div>
+                <div className="text-gray-500">診断完了</div>
+              </div>
+              <div className="p-4 rounded-lg bg-gray-50">
+                <div className="font-bold text-gray-800">ホームページ</div>
+                <div className="text-2xl font-bold text-primary mt-2">312</div>
+                <div className="text-gray-500">診断完了</div>
+              </div>
+            </div>
+            <p className="text-center text-gray-500 text-xs mt-4">※ダッシュボード画面のイメージです</p>
+          </div>
+        </div>
+
         {/* 特徴セクション */}
-        <div className="grid md:grid-cols-3 gap-8 mb-16">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
           <div className="bg-white rounded-xl p-6 shadow-sm border">
             <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
               <span className="text-2xl">⚡</span>
@@ -144,12 +179,21 @@ export default function Home() {
             </p>
           </div>
           <div className="bg-white rounded-xl p-6 shadow-sm border">
+            <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mb-4">
+              <span className="text-2xl">🎯</span>
+            </div>
+            <h3 className="font-bold text-lg mb-2">経路別にQRコード発行</h3>
+            <p className="text-gray-600 text-sm">
+              チラシ用、看板用、SNS用など、施策ごとに別々のQRコードを作成。
+            </p>
+          </div>
+          <div className="bg-white rounded-xl p-6 shadow-sm border">
             <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
               <span className="text-2xl">📊</span>
             </div>
-            <h3 className="font-bold text-lg mb-2">効果を数字で確認</h3>
+            <h3 className="font-bold text-lg mb-2">効果を比較・分析</h3>
             <p className="text-gray-600 text-sm">
-              QRコード読み取り数、診断完了数、予約クリック数を可視化。
+              どの経路からの診断が多いか、予約につながったかを可視化。
             </p>
           </div>
         </div>
@@ -168,7 +212,7 @@ export default function Home() {
             </li>
             <li className="flex items-center gap-2">
               <span className="text-green-500">✓</span>
-              QRコード・埋め込みコード発行
+              経路別QRコード発行（無制限）
             </li>
             <li className="flex items-center gap-2">
               <span className="text-green-500">✓</span>
@@ -176,7 +220,7 @@ export default function Home() {
             </li>
             <li className="flex items-center gap-2">
               <span className="text-green-500">✓</span>
-              アクセス統計・分析機能
+              経路別アクセス統計・効果比較
             </li>
           </ul>
           <div className="mt-8">
