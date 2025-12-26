@@ -50,6 +50,16 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const clinicPage: ClinicPage = body.clinicPage;
 
+    // URLの形式を検証するヘルパー関数
+    const isValidUrl = (url: string): boolean => {
+      try {
+        const parsed = new URL(url);
+        return parsed.protocol === "http:" || parsed.protocol === "https:";
+      } catch {
+        return false;
+      }
+    };
+
     // バリデーション
     if (clinicPage.photos) {
       if (!Array.isArray(clinicPage.photos)) {
@@ -66,7 +76,21 @@ export async function PUT(request: NextRequest) {
             { status: 400 }
           );
         }
+        if (!isValidUrl(photo.url)) {
+          return NextResponse.json(
+            { error: "写真URLの形式が正しくありません" },
+            { status: 400 }
+          );
+        }
       }
+    }
+
+    // 院長写真URLの検証
+    if (clinicPage.director?.photoUrl && !isValidUrl(clinicPage.director.photoUrl)) {
+      return NextResponse.json(
+        { error: "院長写真URLの形式が正しくありません" },
+        { status: 400 }
+      );
     }
 
     const clinic = await prisma.clinic.update({

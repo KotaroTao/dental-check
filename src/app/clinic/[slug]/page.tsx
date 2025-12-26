@@ -14,6 +14,22 @@ interface ClinicData {
   ctaConfig: CTAConfig;
 }
 
+// Googleマップ埋め込みURLを安全に抽出
+function extractGoogleMapsUrl(embedCode: string): string | null {
+  // iframeからsrc属性を抽出
+  const srcMatch = embedCode.match(/src=["']([^"']+)["']/);
+  if (!srcMatch) return null;
+
+  const url = srcMatch[1];
+  // GoogleマップのURLかどうかを検証
+  if (!url.startsWith("https://www.google.com/maps/embed") &&
+      !url.startsWith("https://maps.google.com/")) {
+    return null;
+  }
+
+  return url;
+}
+
 async function getClinic(slug: string): Promise<ClinicData | null> {
   const clinic = await prisma.clinic.findUnique({
     where: { slug },
@@ -180,12 +196,19 @@ export default async function ClinicPublicPage({
             {clinicPage.access?.note && (
               <p className="text-sm text-gray-600 mb-4">{clinicPage.access.note}</p>
             )}
-            {clinicPage.access?.mapEmbed && (
-              <div
-                className="w-full aspect-video rounded-lg overflow-hidden"
-                dangerouslySetInnerHTML={{ __html: clinicPage.access.mapEmbed }}
-              />
-            )}
+            {clinicPage.access?.mapEmbed && (() => {
+              const mapUrl = extractGoogleMapsUrl(clinicPage.access.mapEmbed);
+              return mapUrl ? (
+                <iframe
+                  src={mapUrl}
+                  className="w-full aspect-video rounded-lg"
+                  style={{ border: 0 }}
+                  allowFullScreen
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
+              ) : null;
+            })()}
           </section>
         )}
 
@@ -289,3 +312,6 @@ export async function generateMetadata({
     description: clinic.clinicPage.director?.profile || `${clinic.name}の医院紹介ページです`,
   };
 }
+
+// 静的生成を無効化（動的ルート）
+export const dynamic = "force-dynamic";
