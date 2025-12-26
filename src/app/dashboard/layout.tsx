@@ -94,6 +94,12 @@ export default function DashboardLayout({
                 経路・QRコード
               </Link>
               <Link
+                href="/dashboard/embed"
+                className="text-gray-600 hover:text-gray-900"
+              >
+                埋め込みコード
+              </Link>
+              <Link
                 href="/dashboard/clinic"
                 className="text-gray-600 hover:text-gray-900"
               >
@@ -104,6 +110,12 @@ export default function DashboardLayout({
                 className="text-gray-600 hover:text-gray-900"
               >
                 設定
+              </Link>
+              <Link
+                href="/dashboard/billing"
+                className="text-gray-600 hover:text-gray-900"
+              >
+                契約・お支払い
               </Link>
             </nav>
           </div>

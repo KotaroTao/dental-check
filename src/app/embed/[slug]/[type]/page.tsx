@@ -3,29 +3,28 @@ import { diagnosisTypes } from "@/data/diagnosis-types";
 import { DiagnosisFlow } from "@/components/diagnosis/diagnosis-flow";
 import { prisma } from "@/lib/prisma";
 import { checkSubscription } from "@/lib/subscription";
-import type { Channel, Clinic } from "@/types/clinic";
+import type { Clinic } from "@/types/clinic";
+import type { Metadata } from "next";
 
 interface Props {
   params: Promise<{
-    code: string;
+    slug: string;
     type: string;
   }>;
 }
 
-async function getChannelAndClinic(code: string) {
-  // チャンネルを取得
-  const channel = (await prisma.channel.findUnique({
-    where: { code },
-  })) as Channel | null;
-
-  if (!channel || !channel.isActive) {
-    return null;
-  }
-
-  // 医院情報を取得
+async function getClinic(slug: string) {
   const clinic = (await prisma.clinic.findUnique({
-    where: { id: channel.clinicId },
-  })) as Clinic | null;
+    where: { slug },
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      logoUrl: true,
+      mainColor: true,
+      ctaConfig: true,
+    },
+  })) as Pick<Clinic, "id" | "slug" | "name" | "logoUrl" | "mainColor" | "ctaConfig"> | null;
 
   if (!clinic) {
     return null;
@@ -37,11 +36,22 @@ async function getChannelAndClinic(code: string) {
     return null;
   }
 
-  return { channel, clinic };
+  return clinic;
 }
 
-export default async function ClinicDiagnosisPage({ params }: Props) {
-  const { code, type } = await params;
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug, type } = await params;
+  const diagnosis = diagnosisTypes[type];
+  const clinic = await getClinic(slug);
+
+  return {
+    title: diagnosis && clinic ? `${diagnosis.name} - ${clinic.name}` : "診断ツール",
+    robots: "noindex, nofollow",
+  };
+}
+
+export default async function EmbedDiagnosisPage({ params }: Props) {
+  const { slug, type } = await params;
 
   // 診断タイプを取得
   const diagnosis = diagnosisTypes[type];
@@ -49,32 +59,30 @@ export default async function ClinicDiagnosisPage({ params }: Props) {
     notFound();
   }
 
-  // チャンネルと医院情報を取得
-  const data = await getChannelAndClinic(code);
-  if (!data) {
+  // 医院情報を取得
+  const clinic = await getClinic(slug);
+  if (!clinic) {
     notFound();
   }
-
-  const { channel, clinic } = data;
 
   return (
     <main
       className="min-h-screen"
       style={{ backgroundColor: clinic.mainColor + "10" }}
     >
-      {/* 医院ヘッダー */}
+      {/* 医院ヘッダー（コンパクト版） */}
       <header className="bg-white border-b">
-        <div className="container mx-auto px-4 py-3">
-          <div className="flex items-center gap-3">
+        <div className="px-4 py-2">
+          <div className="flex items-center justify-center gap-2">
             {clinic.logoUrl && (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={clinic.logoUrl}
                 alt={clinic.name}
-                className="h-8 w-auto"
+                className="h-6 w-auto"
               />
             )}
-            <span className="font-medium text-gray-800">{clinic.name}</span>
+            <span className="font-medium text-gray-800 text-sm">{clinic.name}</span>
           </div>
         </div>
       </header>
@@ -87,23 +95,26 @@ export default async function ClinicDiagnosisPage({ params }: Props) {
         ctaConfig={clinic.ctaConfig}
         clinicName={clinic.name}
         mainColor={clinic.mainColor}
-        channelId={channel.id}
       />
 
-      {/* アクセストラッキング用の非表示コンポーネント */}
-      <AccessTracker channelId={channel.id} diagnosisType={type} />
+      {/* 埋め込みトラッキング */}
+      <EmbedTracker clinicSlug={slug} diagnosisType={type} />
     </main>
   );
 }
 
-// アクセストラッキングコンポーネント
-function AccessTracker({
-  channelId,
+// 埋め込みトラッキングコンポーネント
+function EmbedTracker({
+  clinicSlug,
   diagnosisType,
 }: {
-  channelId: string;
+  clinicSlug: string;
   diagnosisType: string;
 }) {
+  // XSS対策: JSON.stringifyでエスケープ
+  const safeClinicSlug = JSON.stringify(clinicSlug);
+  const safeDiagnosisType = JSON.stringify(diagnosisType);
+
   return (
     <script
       dangerouslySetInnerHTML={{
@@ -112,11 +123,11 @@ function AccessTracker({
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              channelId: '${channelId}',
-              diagnosisType: '${diagnosisType}',
-              eventType: 'page_view'
+              clinicSlug: ${safeClinicSlug},
+              diagnosisType: ${safeDiagnosisType},
+              eventType: 'embed_view'
             })
-          }).catch(() => {});
+          }).catch(function() {});
         `,
       }}
     />
