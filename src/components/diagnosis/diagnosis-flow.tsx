@@ -14,7 +14,7 @@ interface Props {
 }
 
 export function DiagnosisFlow({ diagnosis, isDemo, clinicSlug }: Props) {
-  const { userAge, currentStep, answers, resultPattern, reset } =
+  const { userAge, currentStep, resultPattern, reset } =
     useDiagnosisStore();
 
   // コンポーネントがマウントされたらリセット

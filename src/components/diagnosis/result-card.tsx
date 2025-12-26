@@ -15,8 +15,8 @@ interface Props {
   clinicSlug?: string;
 }
 
-export function ResultCard({ diagnosis, isDemo, clinicSlug }: Props) {
-  const { userAge, totalScore, resultPattern, oralAge, reset } =
+export function ResultCard({ diagnosis, isDemo }: Props) {
+  const { userAge, resultPattern, oralAge, reset } =
     useDiagnosisStore();
 
   if (!resultPattern) return null;
