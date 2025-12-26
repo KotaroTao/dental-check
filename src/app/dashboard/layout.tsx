@@ -94,6 +94,12 @@ export default function DashboardLayout({
                 経路・QRコード
               </Link>
               <Link
+                href="/dashboard/embed"
+                className="text-gray-600 hover:text-gray-900"
+              >
+                埋め込みコード
+              </Link>
+              <Link
                 href="/dashboard/clinic"
                 className="text-gray-600 hover:text-gray-900"
               >
