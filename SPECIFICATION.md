@@ -6,7 +6,7 @@
 **DentalCheck（デンタルチェック）**
 
 ### 1.2 サービス概要
-選択式の簡単な質問に答えることで、お口の健康状態や矯正の必要性などを簡易診断できるWEBサービス。診断結果画面には歯科医院が自由にカスタマイズ可能な予約フォームやCTAを設置でき、来院促進につなげる。
+選択式の簡単な質問に答えることで、お口の健康状態や矯正の必要性などを簡易診断できるWEBサービス。歯科医院はQRコードをチラシやホームページに掲載し、診断結果画面で予約フォームやSNSへの誘導を自由にカスタマイズできる。
 
 ### 1.3 ターゲットユーザー
 
@@ -17,12 +17,17 @@
 
 #### 管理者ユーザー（歯科医院）
 - 集患・マーケティングに活用したい歯科医院
-- 患者とのタッチポイントを増やしたい歯科医院
+- チラシやホームページでの集患を強化したい歯科医院
 
 ### 1.4 主な目的
-1. エンドユーザーが手軽にお口の状態をセルフチェックできる
-2. 歯科医院への受診を自然に促す導線を作る
-3. 歯科医院がLPやSNSで活用できる集患ツールを提供する
+1. 一般の人の関心を惹き、歯科医院への受診を促す
+2. QRコードを活用したオフライン→オンライン導線の構築
+3. 歯科医院が手軽に使える集患ツールを提供
+
+### 1.5 ビジネスモデル
+- **月額料金**: 3,000円（税抜）/ 3,300円（税込）
+- **無料トライアル**: 14日間
+- **決済**: Pay.jp による自動継続課金
 
 ---
 
@@ -36,91 +41,181 @@
 |--------|------|--------|----------|
 | お口年齢診断 | 成人全般 | 10問 | 約2分 |
 | 子供の矯正タイミングチェック | 保護者（子供：3〜12歳） | 10問 | 約2分 |
-| 歯周病リスクチェック | 成人（30歳以上推奨） | 10問 | 約2分 |
-| ホワイトニング適性診断 | 成人全般 | 8問 | 約1.5分 |
+
+※診断コンテンツは運営側で随時追加可能な設計とする
 
 #### 2.1.2 診断フロー
 ```
-[トップページ] → [診断選択] → [質問画面(1〜10問)] → [結果画面] → [予約/CTA]
+[QRコード読み取り] → [プロフィール入力] → [質問画面(1〜10問)] → [結果画面] → [医院紹介/CTA]
 ```
 
-#### 2.1.3 質問形式
-- **単一選択式**：1つの選択肢を選ぶ
-- **複数選択式**：該当するものをすべて選ぶ
-- **スケール式**：1〜5段階で評価する
+#### 2.1.3 プロフィール入力（診断開始前）
+- **年齢**: 必須（数値入力 or 年代選択）
+- **性別**: 任意（男性/女性/回答しない）
+- 結果のパーソナライズと統計分析に活用
 
-#### 2.1.4 結果算出ロジック
+#### 2.1.4 質問形式
+- **単一選択式**: 1つの選択肢を選ぶ
+- **複数選択式**: 該当するものをすべて選ぶ（一部の質問）
+
+#### 2.1.5 結果算出ロジック
 - 各回答に点数を設定（重み付け可能）
 - 合計点数に基づいて結果カテゴリを判定
 - カテゴリごとにメッセージとアドバイスを表示
+- 年齢を考慮したパーソナライズ（「同年代の平均より...」等）
 
 ### 2.2 結果画面機能
 
 #### 2.2.1 結果表示要素
 - **診断結果タイトル**（例：「あなたのお口年齢は○○歳です」）
-- **結果サマリー**（グラフ・アイコン等で視覚化）
+- **結果サマリー**（アイコン等で視覚化）
 - **詳細アドバイス**（改善ポイント等）
 - **注意事項**（医療診断ではない旨の免責）
 
-#### 2.2.2 CTA（Call to Action）エリア
-歯科医院がカスタマイズ可能なエリア：
-- 予約フォーム埋め込み
-- 電話番号リンク
-- LINE公式アカウントへの誘導
-- 外部予約システムへのリンク
-- カスタムHTMLの設置
+#### 2.2.2 医院カスタマイズエリア（CTA）
+歯科医院が自由に設定可能：
+
+| 項目 | 説明 |
+|------|------|
+| 見出しテキスト | 「ご予約・ご相談はこちら」等 |
+| 院長コメント | 院長からのメッセージ（任意） |
+| 予約ボタン | WEB予約システムへのリンク |
+| 電話ボタン | タップで電話発信 |
+| LINEボタン | LINE公式アカウントへの誘導 |
+| Instagram | Instagramアカウントへのリンク |
+| その他SNS | Facebook、X等 |
+| 医院紹介ページへのリンク | 詳細情報ページへ誘導 |
 
 #### 2.2.3 シェア機能
-- Twitter/Xシェア
+- X（Twitter）シェア
 - LINEシェア
 - URLコピー
-- 結果画像ダウンロード（OGP画像）
 
-### 2.3 管理機能（歯科医院向け）
+#### 2.2.4 OGP画像自動生成
+- SNSシェア時に表示される画像を自動生成
+- 診断結果（例：お口年齢42歳）を含む
+- 医院ロゴを表示（設定されている場合）
 
-#### 2.3.1 アカウント管理
-- 医院アカウント登録・ログイン
-- 医院情報編集（名前、住所、電話番号等）
-- パスワード変更・リセット
+### 2.3 医院紹介ミニページ
 
-#### 2.3.2 診断カスタマイズ
-- 使用する診断の選択（有効/無効）
-- 結果画面のCTAエリア編集
-- カラーテーマの選択
-- ロゴ・画像のアップロード
+診断結果から遷移できる医院紹介ページ：
 
-#### 2.3.3 分析・レポート
-- 診断実施数（日別/月別）
-- 診断完了率
-- 結果分布
-- CTA クリック率
+| 項目 | 必須/任意 |
+|------|-----------|
+| 医院名 | 必須 |
+| 医院写真（外観/内観） | 任意（複数可） |
+| 院長写真 | 任意 |
+| 院長プロフィール | 任意 |
+| 診療時間 | 任意 |
+| 休診日 | 任意 |
+| アクセス・住所 | 任意 |
+| Googleマップ埋め込み | 任意 |
+| 電話番号 | 任意 |
+| 予約リンク | 任意 |
 
-#### 2.3.4 埋め込みコード発行
-- iframe埋め込みコード
+### 2.4 QRコード機能
+
+#### 2.4.1 QRコード発行
+- 診断タイプごとにQRコードを発行
+- 医院固有のURLをエンコード
+- ダウンロード形式：PNG、SVG
+- サイズ選択：S/M/L（印刷用途に対応）
+
+#### 2.4.2 活用シーン
+- チラシ・ポスター
+- 名刺
+- ホームページ
+- 院内POP
+- SNS投稿
+
+#### 2.4.3 アクセス計測
+各診断コンテンツごとに記録：
+- QRコード読み取り（アクセス）回数
+- アクセス日時
+- 診断完了数
+- CTAクリック数（予約ボタン、電話、LINE等）
+
+### 2.5 埋め込み機能
+
+#### 2.5.1 埋め込み形式
+| 形式 | 説明 |
+|------|------|
+| iframe（フルページ） | ページ内に診断画面を埋め込み |
+| ポップアップ/モーダル | ボタンクリックで診断を開始 |
+| リンクボタン | 「診断を始める」ボタンのみ設置 |
+
+#### 2.5.2 発行物
+- 埋め込みコード（HTML）
 - 直接リンクURL
-- QRコード生成
+- QRコード画像
 
-### 2.4 システム管理機能（運営者向け）
+### 2.6 医院管理機能
 
-#### 2.4.1 医院管理
-- 医院アカウントの一覧・検索
-- 医院アカウントの有効/無効切り替え
+#### 2.6.1 アカウント管理
+- 医院アカウント登録（メール認証）
+- ログイン/ログアウト
+- パスワード変更・リセット
+- 医院基本情報の編集
 
-#### 2.4.2 診断コンテンツ管理
-- 診断テンプレートの追加・編集・削除
-- 質問・選択肢・スコアの編集
-- 結果パターンの編集
+#### 2.6.2 診断設定
+- 使用する診断の有効/無効切り替え
+- 結果画面のCTAエリア編集
+- 医院ロゴのアップロード
+- メインカラーの設定（1色）
 
-#### 2.4.3 全体統計
-- 総診断実施数
-- 医院別利用状況
-- 人気診断ランキング
+#### 2.6.3 医院紹介ページ編集
+- 各項目の入力・編集
+- 画像のアップロード
+- プレビュー機能
+
+#### 2.6.4 統計ダッシュボード
+シンプルな数値表示：
+- QRコード読み取り数（日別/月別）
+- 診断完了数
+- CTAクリック数（種類別）
+- 診断完了率
+
+#### 2.6.5 QRコード・埋め込みコード発行
+- 診断タイプ選択
+- QRコードダウンロード
+- 埋め込みコードコピー
+
+### 2.7 サブスクリプション・決済機能
+
+#### 2.7.1 料金プラン
+- **月額**: 3,000円（税抜）
+- **無料トライアル**: 14日間（クレジットカード登録必要）
+
+#### 2.7.2 Pay.jp連携
+- クレジットカード登録
+- 自動継続課金（毎月同日）
+- 課金履歴の確認
+- カード情報の変更
+- 解約手続き
+
+#### 2.7.3 トライアル管理
+- トライアル開始日の記録
+- トライアル終了3日前にリマインドメール
+- トライアル終了後、自動で有料プランへ移行
+- 解約した場合はトライアル終了で利用停止
+
+#### 2.7.4 アカウント状態
+| 状態 | 説明 |
+|------|------|
+| trial | 無料トライアル中 |
+| active | 有料契約中 |
+| past_due | 支払い遅延（リトライ中） |
+| canceled | 解約済み |
+| suspended | 利用停止 |
 
 ---
 
 ## 3. 診断コンテンツ詳細設計
 
 ### 3.1 お口年齢診断
+
+#### 対象
+成人全般（20歳以上推奨）
 
 #### 質問一覧
 
@@ -145,11 +240,14 @@
 | 31-50 | 実年齢+10歳 | 注意 | お口のケアに改善の余地があります。定期検診を受けてみましょう。 |
 | 51-70 | 実年齢+5歳 | やや注意 | まずまずのケアができていますが、もう少し意識を高めましょう。 |
 | 71-85 | 実年齢相当 | 良好 | 良いケアができています。この調子で続けましょう。 |
-| 86-100 | 実年齢-5歳 | 優秀 | 素晴らしいお口のケアです！このまま維持してください。 |
+| 86-100 | 実年齢-5歳 | 優秀 | 素晴らしいお口のケアです！定期検診で維持していきましょう。 |
 
 ---
 
 ### 3.2 子供の矯正タイミングチェック
+
+#### 対象
+お子さん（3〜12歳）をお持ちの保護者
 
 #### 質問一覧
 
@@ -177,81 +275,30 @@
 
 ---
 
-### 3.3 歯周病リスクチェック
-
-#### 質問一覧
-
-| No | 質問 | 選択肢 | スコア |
-|----|------|--------|--------|
-| 1 | 歯磨き時に歯茎から血が出ますか？ | よく出る/たまに出る/出ない | 15/8/0 |
-| 2 | 歯茎が赤く腫れていますか？ | はい/少し/いいえ | 15/8/0 |
-| 3 | 口臭が気になりますか？ | 常に/時々/いいえ | 10/5/0 |
-| 4 | 歯が以前より長くなった気がしますか？ | はい/少し/いいえ | 15/8/0 |
-| 5 | 歯と歯の間にものが詰まりやすくなりましたか？ | はい/時々/いいえ | 10/5/0 |
-| 6 | 歯がグラグラする感じはありますか？ | はい/少し/いいえ | 15/8/0 |
-| 7 | 喫煙習慣はありますか？ | 吸う/以前吸っていた/吸わない | 10/5/0 |
-| 8 | 糖尿病と診断されていますか？ | はい/予備軍/いいえ | 10/5/0 |
-| 9 | ストレスを感じることが多いですか？ | 多い/普通/少ない | 5/3/0 |
-| 10 | 最後に歯石取りをしたのはいつですか？ | 1年以上前/半年〜1年前/半年以内 | 10/5/0 |
-
-#### 結果パターン
-
-| スコア範囲 | リスクレベル | タイトル | メッセージ |
-|------------|--------------|----------|------------|
-| 0-25 | 低 | 歯周病リスクは低めです | 現在の習慣を続けてください。ただし、定期的な検診で予防を心がけましょう。 |
-| 26-50 | 中 | やや注意が必要です | いくつかの気になるポイントがあります。歯科での検診とクリーニングをおすすめします。 |
-| 51-75 | 高 | 歯周病のリスクが高いです | 歯周病の兆候がいくつか見られます。早めに歯科医院を受診してください。 |
-| 76-100 | 非常に高 | すぐに歯科受診を | 歯周病が進行している可能性があります。できるだけ早く専門的な治療を受けてください。 |
-
----
-
-### 3.4 ホワイトニング適性診断
-
-#### 質問一覧
-
-| No | 質問 | 選択肢 | スコア |
-|----|------|--------|--------|
-| 1 | 歯の色が気になりますか？ | とても気になる/少し気になる/気にならない | 適性判定 |
-| 2 | コーヒー、紅茶、ワインをよく飲みますか？ | 毎日/週数回/ほとんど飲まない | 情報収集 |
-| 3 | 喫煙習慣はありますか？ | 吸う/以前吸っていた/吸わない | 情報収集 |
-| 4 | 知覚過敏（冷たいものがしみる）はありますか？ | ある/少しある/ない | -10/-5/10 |
-| 5 | 虫歯の治療中、または治療が必要な歯はありますか？ | ある/わからない/ない | -15/-5/10 |
-| 6 | 前歯に被せ物や詰め物はありますか？ | 多数ある/少しある/ない | 情報収集 |
-| 7 | 妊娠中または授乳中ですか？ | はい/いいえ | -20/10 |
-| 8 | ホワイトニングの経験はありますか？ | ある/ない | 情報収集 |
-
-#### 結果パターン
-
-| スコア範囲 | 適性 | タイトル | メッセージ |
-|------------|------|----------|------------|
-| 負数 | 要相談 | まずは歯科医師にご相談ください | ホワイトニングの前に確認すべき点があります。歯科医院でカウンセリングを受けてから検討しましょう。 |
-| 0-20 | 条件付き可 | 条件付きで可能です | ホワイトニングは可能ですが、いくつか確認事項があります。専門家に相談することをおすすめします。 |
-| 21-40 | 適性あり | ホワイトニングに適しています | ホワイトニングを始めるのに良いコンディションです。種類や方法について相談してみましょう。 |
-
----
-
 ## 4. 画面設計・UI/UX仕様
 
 ### 4.1 画面一覧
 
 | 画面名 | URL例 | 説明 |
 |--------|-------|------|
-| トップページ | / | サービス紹介、診断一覧 |
-| 診断選択画面 | /diagnosis | 利用可能な診断の一覧 |
-| 診断実施画面 | /diagnosis/:type | 質問に回答する画面 |
-| 結果画面 | /result/:id | 診断結果とCTA表示 |
-| 医院ログイン | /clinic/login | 医院向けログイン |
-| 医院ダッシュボード | /clinic/dashboard | 統計・管理トップ |
-| CTA設定画面 | /clinic/settings/cta | 結果画面のCTAカスタマイズ |
-| 埋め込みコード画面 | /clinic/embed | 埋め込みコード発行 |
-| 管理者ログイン | /admin/login | 運営者向けログイン |
-| 管理者ダッシュボード | /admin/dashboard | 全体統計・管理 |
+| トップページ | / | サービス紹介、医院向けLP |
+| 診断プロフィール入力 | /d/:clinicSlug/:diagnosisType | 年齢等の入力 |
+| 診断実施画面 | /d/:clinicSlug/:diagnosisType/q/:step | 質問に回答 |
+| 結果画面 | /d/:clinicSlug/:diagnosisType/result/:id | 診断結果とCTA |
+| 医院紹介ページ | /c/:clinicSlug | 医院の詳細情報 |
+| 医院登録 | /signup | 新規登録 |
+| 医院ログイン | /login | ログイン |
+| ダッシュボード | /dashboard | 統計トップ |
+| CTA設定 | /dashboard/cta | 結果画面カスタマイズ |
+| 医院情報編集 | /dashboard/clinic | 医院紹介ページ編集 |
+| QRコード発行 | /dashboard/qr | QRコード・埋め込みコード |
+| 契約・支払い | /dashboard/billing | サブスクリプション管理 |
 
 ### 4.2 診断実施画面 UI仕様
 
 ```
 ┌─────────────────────────────────────────────┐
-│  [ロゴ]          お口年齢診断               │
+│  [医院ロゴ]        お口年齢診断             │
 ├─────────────────────────────────────────────┤
 │                                             │
 │   ━━━━━━━━━━●━━━━━━━━━━  (5/10)            │
@@ -284,17 +331,15 @@
 
 ```
 ┌─────────────────────────────────────────────┐
-│  [ロゴ]          診断結果                   │
+│  [医院ロゴ]        診断結果                 │
 ├─────────────────────────────────────────────┤
 │                                             │
 │         🦷 あなたのお口年齢は               │
 │                                             │
 │              【 42歳 】                     │
-│           （実年齢より+7歳）                │
+│         （実年齢35歳より+7歳）              │
 │                                             │
-│   ┌─────────────────────────────────────┐   │
-│   │  [グラフ: 結果の視覚化]              │   │
-│   └─────────────────────────────────────┘   │
+│   同年代の平均より少し高めです              │
 │                                             │
 │   📝 アドバイス                             │
 │   歯磨きの回数や歯間ケアに改善の            │
@@ -305,11 +350,14 @@
 │  ┌─────────────────────────────────────┐   │
 │  │  🏥 ○○歯科クリニック                 │   │
 │  │                                       │   │
-│  │  お気軽にご相談ください               │   │
+│  │  👨‍⚕️ 院長より                         │   │
+│  │  「気になる結果が出た方は             │   │
+│  │   お気軽にご相談ください」            │   │
 │  │                                       │   │
-│  │  [📞 電話予約] [📱 LINE予約]          │   │
+│  │  [📞 電話予約] [📱 LINE]              │   │
+│  │  [🗓️ WEB予約] [📷 Instagram]          │   │
 │  │                                       │   │
-│  │  [🗓️ WEB予約はこちら]                 │   │
+│  │  [▶ 医院について詳しく見る]           │   │
 │  └─────────────────────────────────────┘   │
 ├─────────────────────────────────────────────┤
 │                                             │
@@ -325,8 +373,10 @@
 | デバイス | 画面幅 | 対応方針 |
 |----------|--------|----------|
 | スマートフォン | 〜767px | メイン対応（縦スクロール基本） |
-| タブレット | 768px〜1023px | 2カラムレイアウト可 |
-| PC | 1024px〜 | 中央寄せ、最大幅制限 |
+| タブレット | 768px〜1023px | スマホレイアウトを拡大 |
+| PC | 1024px〜 | 中央寄せ、最大幅480px |
+
+※主要ターゲットはスマートフォン（QRコード読み取り）
 
 ### 4.5 アクセシビリティ対応
 
@@ -334,7 +384,6 @@
 - スクリーンリーダー対応（aria-label等）
 - 十分な色コントラスト比
 - フォーカス状態の明確な表示
-- 文字サイズ変更対応
 
 ---
 
@@ -361,6 +410,8 @@
 | ORM | Prisma |
 | 認証 | NextAuth.js |
 | バリデーション | Zod |
+| 決済 | Pay.jp |
+| メール | Resend |
 
 #### インフラ・データベース
 | 項目 | 技術 |
@@ -368,7 +419,8 @@
 | ホスティング | Vercel |
 | データベース | PostgreSQL (Supabase or Neon) |
 | ファイルストレージ | Cloudflare R2 or Vercel Blob |
-| CDN | Vercel Edge Network |
+| OGP画像生成 | Vercel OG (@vercel/og) |
+| QRコード生成 | qrcode (npm) |
 
 ### 5.2 API設計
 
@@ -376,43 +428,53 @@
 
 | メソッド | エンドポイント | 説明 |
 |----------|----------------|------|
-| GET | /api/diagnosis | 診断一覧取得 |
-| GET | /api/diagnosis/:type | 診断詳細・質問取得 |
-| POST | /api/diagnosis/:type/submit | 診断結果送信 |
+| GET | /api/c/:clinicSlug | 医院情報取得 |
+| GET | /api/d/:clinicSlug/:type | 診断情報・質問取得 |
+| POST | /api/d/:clinicSlug/:type/start | 診断開始（プロフィール送信） |
+| POST | /api/d/:clinicSlug/:type/submit | 診断結果送信 |
 | GET | /api/result/:id | 結果取得 |
+| POST | /api/track/cta | CTAクリック記録 |
 
 #### 医院管理者向けAPI
 
 | メソッド | エンドポイント | 説明 |
 |----------|----------------|------|
-| POST | /api/clinic/auth/login | ログイン |
-| POST | /api/clinic/auth/logout | ログアウト |
+| POST | /api/auth/signup | 新規登録 |
+| POST | /api/auth/login | ログイン |
+| POST | /api/auth/logout | ログアウト |
+| POST | /api/auth/reset-password | パスワードリセット |
 | GET | /api/clinic/profile | 医院情報取得 |
 | PUT | /api/clinic/profile | 医院情報更新 |
-| GET | /api/clinic/settings | 設定取得 |
-| PUT | /api/clinic/settings | 設定更新 |
+| POST | /api/clinic/logo | ロゴアップロード |
+| GET | /api/clinic/cta | CTA設定取得 |
+| PUT | /api/clinic/cta | CTA設定更新 |
 | GET | /api/clinic/stats | 統計取得 |
-| GET | /api/clinic/embed-code | 埋め込みコード取得 |
+| GET | /api/clinic/stats/daily | 日別統計 |
+| GET | /api/clinic/qr/:type | QRコード生成 |
+| GET | /api/clinic/embed/:type | 埋め込みコード取得 |
 
-#### システム管理者向けAPI
+#### 決済API（Pay.jp連携）
 
 | メソッド | エンドポイント | 説明 |
 |----------|----------------|------|
-| GET | /api/admin/clinics | 医院一覧 |
-| GET | /api/admin/stats | 全体統計 |
-| GET | /api/admin/diagnosis | 診断テンプレート一覧 |
-| POST | /api/admin/diagnosis | 診断テンプレート作成 |
-| PUT | /api/admin/diagnosis/:id | 診断テンプレート更新 |
+| POST | /api/billing/card | カード登録・更新 |
+| DELETE | /api/billing/card | カード削除 |
+| GET | /api/billing/subscription | 契約情報取得 |
+| POST | /api/billing/subscribe | 有料プラン開始 |
+| POST | /api/billing/cancel | 解約 |
+| GET | /api/billing/invoices | 請求履歴 |
+| POST | /api/webhook/payjp | Pay.jp Webhook |
 
 ### 5.3 セキュリティ要件
 
 - HTTPS必須
-- CSRF対策
+- CSRF対策（Next.js標準）
 - XSS対策（エスケープ処理）
 - SQLインジェクション対策（Prismaによるパラメータ化）
 - レート制限（API呼び出し制限）
 - 入力値バリデーション（Zod）
 - 認証トークンの安全な管理（HttpOnly Cookie）
+- Pay.jp Webhookの署名検証
 
 ---
 
@@ -422,59 +484,54 @@
 
 ```
 ┌───────────────┐       ┌───────────────┐
-│    Clinic     │       │  DiagnosisType │
+│    Clinic     │       │  Subscription │
 ├───────────────┤       ├───────────────┤
-│ id            │       │ id            │
-│ name          │       │ name          │
-│ email         │       │ slug          │
-│ password_hash │       │ description   │
-│ phone         │       │ question_count│
-│ address       │       │ is_active     │
-│ logo_url      │       │ created_at    │
-│ settings      │       │ updated_at    │
-│ created_at    │       └───────────────┘
-│ updated_at    │              │
-└───────────────┘              │
-       │                       │
-       │         ┌─────────────┘
-       │         │
-       ▼         ▼
-┌───────────────────────────┐
-│    ClinicDiagnosisConfig  │
-├───────────────────────────┤
-│ id                        │
-│ clinic_id (FK)            │
-│ diagnosis_type_id (FK)    │
-│ is_enabled                │
-│ cta_config (JSON)         │
-│ theme_config (JSON)       │
-│ created_at                │
-│ updated_at                │
-└───────────────────────────┘
-
-┌───────────────┐       ┌───────────────┐
-│   Question    │       │    Choice     │
-├───────────────┤       ├───────────────┤
-│ id            │◄──────│ id            │
-│ diagnosis_id  │       │ question_id   │
-│ order         │       │ text          │
-│ text          │       │ score         │
-│ type          │       │ order         │
-│ created_at    │       │ created_at    │
-└───────────────┘       └───────────────┘
-
-┌───────────────┐       ┌───────────────┐
-│ ResultPattern │       │ DiagnosisResult│
-├───────────────┤       ├───────────────┤
-│ id            │       │ id            │
-│ diagnosis_id  │       │ diagnosis_id  │
-│ min_score     │       │ clinic_id     │
-│ max_score     │       │ result_id     │
-│ title         │       │ total_score   │
-│ message       │       │ answers (JSON)│
-│ advice        │       │ created_at    │
-│ created_at    │       └───────────────┘
-└───────────────┘
+│ id            │───────│ id            │
+│ name          │       │ clinic_id(FK) │
+│ slug          │       │ status        │
+│ email         │       │ payjp_sub_id  │
+│ password_hash │       │ current_period│
+│ phone         │       │ trial_end     │
+│ logo_url      │       │ canceled_at   │
+│ main_color    │       └───────────────┘
+│ cta_config    │
+│ clinic_page   │       ┌───────────────┐
+│ status        │       │  DiagnosisType│
+│ created_at    │       ├───────────────┤
+└───────────────┘       │ id            │
+       │                │ name          │
+       │                │ slug          │
+       │                │ description   │
+       ▼                │ questions(JSON│
+┌───────────────────┐   │ results (JSON)│
+│  ClinicDiagnosis  │   │ is_active     │
+├───────────────────┤   └───────────────┘
+│ id                │          │
+│ clinic_id (FK)    │          │
+│ diagnosis_type_id │◄─────────┘
+│ is_enabled        │
+│ created_at        │
+└───────────────────┘
+       │
+       ▼
+┌───────────────────┐    ┌───────────────┐
+│  DiagnosisSession │    │   AccessLog   │
+├───────────────────┤    ├───────────────┤
+│ id                │    │ id            │
+│ clinic_id         │    │ clinic_id     │
+│ diagnosis_type_id │    │ diagnosis_type│
+│ user_age          │    │ event_type    │
+│ user_gender       │    │ created_at    │
+│ answers (JSON)    │    └───────────────┘
+│ total_score       │
+│ result_category   │    ┌───────────────┐
+│ completed_at      │    │   CTAClick    │
+│ created_at        │    ├───────────────┤
+└───────────────────┘    │ id            │
+                         │ session_id    │
+                         │ cta_type      │
+                         │ created_at    │
+                         └───────────────┘
 ```
 
 ### 6.2 主要テーブル定義
@@ -483,14 +540,47 @@
 ```sql
 CREATE TABLE clinics (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug VARCHAR(100) UNIQUE NOT NULL,
   name VARCHAR(255) NOT NULL,
   email VARCHAR(255) UNIQUE NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
   phone VARCHAR(20),
-  address TEXT,
   logo_url VARCHAR(500),
-  settings JSONB DEFAULT '{}',
-  is_active BOOLEAN DEFAULT true,
+  main_color VARCHAR(7) DEFAULT '#2563eb',
+
+  -- CTA設定（JSON）
+  cta_config JSONB DEFAULT '{}',
+
+  -- 医院紹介ページ（JSON）
+  clinic_page JSONB DEFAULT '{}',
+
+  -- アカウント状態
+  status VARCHAR(20) DEFAULT 'trial',
+
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+#### Subscription（サブスクリプション）
+```sql
+CREATE TABLE subscriptions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  clinic_id UUID REFERENCES clinics(id) UNIQUE,
+
+  -- Pay.jp情報
+  payjp_customer_id VARCHAR(100),
+  payjp_subscription_id VARCHAR(100),
+
+  -- 状態
+  status VARCHAR(20) DEFAULT 'trial',
+
+  -- 期間
+  trial_end TIMESTAMP,
+  current_period_start TIMESTAMP,
+  current_period_end TIMESTAMP,
+  canceled_at TIMESTAMP,
+
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -500,120 +590,141 @@ CREATE TABLE clinics (
 ```sql
 CREATE TABLE diagnosis_types (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name VARCHAR(255) NOT NULL,
   slug VARCHAR(100) UNIQUE NOT NULL,
+  name VARCHAR(255) NOT NULL,
   description TEXT,
-  question_count INTEGER NOT NULL,
-  estimated_minutes INTEGER DEFAULT 2,
+
+  -- 質問データ（JSON配列）
+  questions JSONB NOT NULL,
+
+  -- 結果パターン（JSON配列）
+  result_patterns JSONB NOT NULL,
+
   is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-#### Question（質問）
-```sql
-CREATE TABLE questions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  diagnosis_type_id UUID REFERENCES diagnosis_types(id),
-  order_index INTEGER NOT NULL,
-  text TEXT NOT NULL,
-  question_type VARCHAR(20) DEFAULT 'single', -- single, multiple, scale
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 ```
 
-#### Choice（選択肢）
+#### DiagnosisSession（診断セッション）
 ```sql
-CREATE TABLE choices (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  question_id UUID REFERENCES questions(id),
-  order_index INTEGER NOT NULL,
-  text VARCHAR(255) NOT NULL,
-  score INTEGER DEFAULT 0,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-#### ResultPattern（結果パターン）
-```sql
-CREATE TABLE result_patterns (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  diagnosis_type_id UUID REFERENCES diagnosis_types(id),
-  min_score INTEGER NOT NULL,
-  max_score INTEGER NOT NULL,
-  category VARCHAR(100) NOT NULL,
-  title VARCHAR(255) NOT NULL,
-  message TEXT NOT NULL,
-  advice TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-#### DiagnosisResult（診断結果）
-```sql
-CREATE TABLE diagnosis_results (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  diagnosis_type_id UUID REFERENCES diagnosis_types(id),
-  clinic_id UUID REFERENCES clinics(id),
-  result_pattern_id UUID REFERENCES result_patterns(id),
-  total_score INTEGER NOT NULL,
-  answers JSONB NOT NULL, -- 回答詳細
-  user_age INTEGER, -- 任意入力
-  session_id VARCHAR(100), -- 匿名トラッキング用
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-#### ClinicDiagnosisConfig（医院別診断設定）
-```sql
-CREATE TABLE clinic_diagnosis_configs (
+CREATE TABLE diagnosis_sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   clinic_id UUID REFERENCES clinics(id),
   diagnosis_type_id UUID REFERENCES diagnosis_types(id),
-  is_enabled BOOLEAN DEFAULT true,
-  cta_config JSONB DEFAULT '{}', -- CTAボタン設定
-  theme_config JSONB DEFAULT '{}', -- カラーテーマ等
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(clinic_id, diagnosis_type_id)
+
+  -- ユーザー情報
+  user_age INTEGER,
+  user_gender VARCHAR(10),
+
+  -- 回答・結果
+  answers JSONB,
+  total_score INTEGER,
+  result_category VARCHAR(50),
+
+  -- 完了フラグ
+  completed_at TIMESTAMP,
+
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+```
+
+#### AccessLog（アクセスログ）
+```sql
+CREATE TABLE access_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  clinic_id UUID REFERENCES clinics(id),
+  diagnosis_type_slug VARCHAR(100),
+
+  -- イベント種別: 'qr_scan', 'page_view', 'diagnosis_start', 'diagnosis_complete'
+  event_type VARCHAR(50) NOT NULL,
+
+  -- 追加情報
+  user_agent TEXT,
+  referer TEXT,
+
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- インデックス
+CREATE INDEX idx_access_logs_clinic_date ON access_logs(clinic_id, created_at);
+```
+
+#### CTAClick（CTAクリック記録）
+```sql
+CREATE TABLE cta_clicks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_id UUID REFERENCES diagnosis_sessions(id),
+  clinic_id UUID REFERENCES clinics(id),
+
+  -- クリック種別: 'phone', 'line', 'reservation', 'instagram', 'clinic_page'
+  cta_type VARCHAR(50) NOT NULL,
+
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- インデックス
+CREATE INDEX idx_cta_clicks_clinic_date ON cta_clicks(clinic_id, created_at);
 ```
 
 ### 6.3 CTA設定JSON構造
 
 ```json
 {
-  "cta_config": {
-    "heading": "ご予約・ご相談はこちら",
-    "subheading": "お気軽にお問い合わせください",
-    "buttons": [
-      {
-        "type": "phone",
-        "label": "電話予約",
-        "value": "03-1234-5678",
-        "icon": "phone"
-      },
-      {
-        "type": "line",
-        "label": "LINE予約",
-        "value": "https://line.me/R/ti/p/@xxxxx",
-        "icon": "line"
-      },
-      {
-        "type": "link",
-        "label": "WEB予約",
-        "value": "https://example.com/reserve",
-        "icon": "calendar"
-      }
-    ],
-    "custom_html": "<div>カスタムHTML</div>",
-    "show_clinic_info": true
+  "heading": "ご予約・ご相談はこちら",
+  "director_comment": "気になる結果が出た方はお気軽にご相談ください。",
+  "buttons": [
+    {
+      "type": "phone",
+      "label": "電話予約",
+      "value": "03-1234-5678",
+      "enabled": true
+    },
+    {
+      "type": "line",
+      "label": "LINE予約",
+      "value": "https://line.me/R/ti/p/@xxxxx",
+      "enabled": true
+    },
+    {
+      "type": "reservation",
+      "label": "WEB予約",
+      "value": "https://example.com/reserve",
+      "enabled": true
+    },
+    {
+      "type": "instagram",
+      "label": "Instagram",
+      "value": "https://instagram.com/xxxxx",
+      "enabled": false
+    }
+  ],
+  "show_clinic_link": true
+}
+```
+
+### 6.4 医院紹介ページJSON構造
+
+```json
+{
+  "photos": [
+    {"url": "https://...", "caption": "外観"},
+    {"url": "https://...", "caption": "診察室"}
+  ],
+  "director": {
+    "name": "山田 太郎",
+    "photo_url": "https://...",
+    "profile": "○○大学歯学部卒業。..."
   },
-  "theme_config": {
-    "primary_color": "#2563eb",
-    "secondary_color": "#f59e0b",
-    "background_color": "#ffffff"
+  "hours": {
+    "weekday": "9:00-18:00",
+    "saturday": "9:00-13:00",
+    "sunday": "休診",
+    "note": "祝日休診"
+  },
+  "access": {
+    "address": "東京都○○区...",
+    "map_embed": "<iframe>...</iframe>",
+    "note": "○○駅徒歩5分"
   }
 }
 ```
@@ -628,24 +739,21 @@ CREATE TABLE clinic_diagnosis_configs (
 |------|--------|
 | ページ読み込み時間（LCP） | 2.5秒以内 |
 | 操作応答時間（FID） | 100ms以内 |
-| レイアウトシフト（CLS） | 0.1以下 |
-| API応答時間 | 200ms以内（95パーセンタイル） |
+| API応答時間 | 300ms以内（95パーセンタイル） |
 
 ### 7.2 可用性
 
 | 項目 | 目標値 |
 |------|--------|
 | 稼働率 | 99.5%以上 |
-| 計画メンテナンス | 月1回、深夜帯 |
 | 障害復旧時間 | 4時間以内 |
 
 ### 7.3 スケーラビリティ
 
-| 項目 | 初期想定 | 将来想定 |
-|------|----------|----------|
-| 同時接続数 | 100 | 1,000 |
-| 日間診断数 | 1,000 | 10,000 |
-| 登録医院数 | 50 | 500 |
+| 項目 | 初期想定 |
+|------|----------|
+| 登録医院数 | 〜100 |
+| 日間診断数 | 〜1,000 |
 
 ### 7.4 対応ブラウザ
 
@@ -653,7 +761,6 @@ CREATE TABLE clinic_diagnosis_configs (
 |----------|------------|
 | Chrome | 最新2バージョン |
 | Safari | 最新2バージョン |
-| Firefox | 最新2バージョン |
 | Edge | 最新2バージョン |
 | iOS Safari | iOS 14以上 |
 | Android Chrome | Android 10以上 |
@@ -663,28 +770,32 @@ CREATE TABLE clinic_diagnosis_configs (
 ## 8. 開発フェーズ
 
 ### Phase 1: MVP（最小実用版）
-- [ ] プロジェクトセットアップ
-- [ ] データベース設計・構築
-- [ ] お口年齢診断の実装
+- [ ] プロジェクトセットアップ（Next.js, Prisma, DB）
+- [ ] 診断機能（お口年齢診断）
+- [ ] プロフィール入力画面
 - [ ] 結果画面（基本版）
-- [ ] シェア機能
+- [ ] QRコード発行
+- [ ] アクセス計測（基本）
 
 ### Phase 2: 医院管理機能
-- [ ] 医院アカウント機能
-- [ ] CTAカスタマイズ機能
-- [ ] 埋め込みコード発行
-- [ ] 基本統計機能
+- [ ] 医院登録・認証
+- [ ] ダッシュボード
+- [ ] CTA設定機能
+- [ ] 医院紹介ページ編集
+- [ ] 統計表示
 
-### Phase 3: 診断拡充
+### Phase 3: 決済・サブスク
+- [ ] Pay.jp連携
+- [ ] サブスクリプション管理
+- [ ] トライアル機能
+- [ ] 請求・解約フロー
+
+### Phase 4: 機能拡充
 - [ ] 子供の矯正タイミングチェック
-- [ ] 歯周病リスクチェック
-- [ ] ホワイトニング適性診断
-
-### Phase 4: 機能強化
-- [ ] 詳細分析・レポート
-- [ ] 管理者機能
-- [ ] テーマカスタマイズ拡張
-- [ ] LINE連携
+- [ ] OGP画像生成
+- [ ] シェア機能
+- [ ] 埋め込み形式選択
+- [ ] CTAクリック計測
 
 ---
 
@@ -698,7 +809,7 @@ CREATE TABLE clinic_diagnosis_configs (
 
 ### 9.2 プライバシーポリシー
 
-- 収集する情報（診断回答、アクセスログ等）
+- 収集する情報（年齢、性別、診断回答、アクセスログ等）
 - 利用目的（サービス提供、統計分析）
 - 第三者提供の有無
 - Cookie使用について
@@ -708,47 +819,29 @@ CREATE TABLE clinic_diagnosis_configs (
 - サービス内容
 - 禁止事項
 - 免責事項
-- 知的財産権
+- 料金・支払い条件
+- 解約条件
+
+### 9.4 特定商取引法に基づく表記
+
+月額課金サービスのため必須
 
 ---
 
-## 10. 今後の拡張案
+## 10. 将来の拡張案（参考）
 
-### 10.1 機能拡張案
-- AI による個別アドバイス生成
-- 診断履歴の保存・比較機能
-- 予約システムとの連携（API連携）
-- 多言語対応（英語、中国語等）
-- 音声入力対応
+※初期リリースには含めない
 
-### 10.2 診断コンテンツ拡張案
-- インプラント適性診断
-- 入れ歯のお悩みチェック
-- 顎関節症リスクチェック
-- 口腔ケア習慣診断
-- 子供の虫歯リスクチェック
+- 歯周病リスクチェック（診断追加）
+- ホワイトニング適性診断（診断追加）
+- 子供の虫歯リスクチェック（診断追加）
+- 顎関節症リスクチェック（診断追加）
+- 複数スタッフアカウント対応
+- CSVエクスポート機能
+- LINE通知連携
 
 ---
 
-## 付録
-
-### A. 用語集
-
-| 用語 | 説明 |
-|------|------|
-| CTA | Call to Action。ユーザーに行動を促すボタンやリンク |
-| OGP | Open Graph Protocol。SNSシェア時に表示される情報 |
-| 診断テンプレート | 質問と結果パターンのセット |
-
-### B. 参考資料
-
-- Next.js ドキュメント: https://nextjs.org/docs
-- Prisma ドキュメント: https://www.prisma.io/docs
-- Tailwind CSS: https://tailwindcss.com/docs
-- shadcn/ui: https://ui.shadcn.com/
-
----
-
-**ドキュメントバージョン**: 1.0
+**ドキュメントバージョン**: 2.0
 **最終更新日**: 2024年1月
 **作成者**: DentalCheck開発チーム
