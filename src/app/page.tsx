@@ -128,33 +128,40 @@ export default function Home() {
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold mb-2">どの施策が効果的？経路別に計測</h2>
             <p className="text-gray-600">
-              チラシ、看板、SNS...それぞれ別のQRコードを発行して効果を比較できます
+              経路名は自由に設定OK。それぞれ別のQRコードを発行して効果を比較できます
             </p>
           </div>
           <div className="bg-white rounded-lg p-6 shadow-sm">
-            <div className="grid md:grid-cols-4 gap-4 text-center text-sm">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center text-sm">
               <div className="p-4 rounded-lg bg-gray-50">
-                <div className="font-bold text-gray-800">ポスティング用</div>
+                <div className="font-bold text-gray-800">チラシ①（駅前）</div>
                 <div className="text-2xl font-bold text-primary mt-2">234</div>
                 <div className="text-gray-500">診断完了</div>
               </div>
               <div className="p-4 rounded-lg bg-gray-50">
-                <div className="font-bold text-gray-800">駅看板用</div>
+                <div className="font-bold text-gray-800">チラシ②（住宅街）</div>
                 <div className="text-2xl font-bold text-primary mt-2">89</div>
                 <div className="text-gray-500">診断完了</div>
               </div>
               <div className="p-4 rounded-lg bg-gray-50">
-                <div className="font-bold text-gray-800">Instagram広告</div>
+                <div className="font-bold text-gray-800">医院前看板</div>
                 <div className="text-2xl font-bold text-primary mt-2">156</div>
                 <div className="text-gray-500">診断完了</div>
               </div>
               <div className="p-4 rounded-lg bg-gray-50">
-                <div className="font-bold text-gray-800">ホームページ</div>
+                <div className="font-bold text-gray-800">Instagram広告</div>
                 <div className="text-2xl font-bold text-primary mt-2">312</div>
                 <div className="text-gray-500">診断完了</div>
               </div>
             </div>
-            <p className="text-center text-gray-500 text-xs mt-4">※ダッシュボード画面のイメージです</p>
+            <div className="flex flex-wrap justify-center gap-2 mt-4 text-xs text-gray-500">
+              <span className="bg-gray-100 px-2 py-1 rounded">例: 駅看板</span>
+              <span className="bg-gray-100 px-2 py-1 rounded">ホームページ</span>
+              <span className="bg-gray-100 px-2 py-1 rounded">LINE広告</span>
+              <span className="bg-gray-100 px-2 py-1 rounded">紹介カード</span>
+              <span className="bg-gray-100 px-2 py-1 rounded">など自由に追加</span>
+            </div>
+            <p className="text-center text-gray-500 text-xs mt-3">※ダッシュボード画面のイメージです</p>
           </div>
         </div>
 
@@ -184,7 +191,7 @@ export default function Home() {
             </div>
             <h3 className="font-bold text-lg mb-2">経路別にQRコード発行</h3>
             <p className="text-gray-600 text-sm">
-              チラシ用、看板用、SNS用など、施策ごとに別々のQRコードを作成。
+              「チラシ①」「医院前看板」など、自由な名前でQRコードを何個でも作成。
             </p>
           </div>
           <div className="bg-white rounded-xl p-6 shadow-sm border">
