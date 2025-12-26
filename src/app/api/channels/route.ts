@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ユニークなコードを生成
-    const code = generateChannelCode();
+    const code = await generateUniqueChannelCode();
 
     const channel = (await prisma.channel.create({
       data: {
@@ -66,11 +66,26 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function generateChannelCode(): string {
+async function generateUniqueChannelCode(): Promise<string> {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
-  let result = "";
-  for (let i = 0; i < 8; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  const maxAttempts = 10;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    let code = "";
+    for (let i = 0; i < 8; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+
+    // 重複チェック
+    const existing = await prisma.channel.findUnique({
+      where: { code },
+    });
+
+    if (!existing) {
+      return code;
+    }
   }
-  return result;
+
+  // フォールバック: タイムスタンプベースのコード
+  return Date.now().toString(36).slice(-8);
 }

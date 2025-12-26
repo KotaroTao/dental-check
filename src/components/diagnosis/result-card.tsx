@@ -151,13 +151,15 @@ export function ResultCard({ diagnosis, isDemo, ctaConfig, clinicName, mainColor
           </div>
 
           {/* もう一度診断 */}
-          <div className="text-center pt-2">
-            <Link href="/demo">
-              <Button variant="ghost" onClick={reset}>
-                別の診断を試す
-              </Button>
-            </Link>
-          </div>
+          {isDemo && (
+            <div className="text-center pt-2">
+              <Link href="/demo">
+                <Button variant="ghost" onClick={reset}>
+                  別の診断を試す
+                </Button>
+              </Link>
+            </div>
+          )}
 
           {/* 免責事項 */}
           <p className="text-xs text-center text-gray-400 pt-4 border-t">
