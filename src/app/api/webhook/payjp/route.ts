@@ -1,10 +1,51 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import crypto from "crypto";
+
+const WEBHOOK_SECRET = process.env.PAYJP_WEBHOOK_SECRET;
+
+// Webhook署名を検証
+function verifyWebhookSignature(
+  payload: string,
+  signature: string | null
+): boolean {
+  if (!WEBHOOK_SECRET) {
+    console.warn("PAYJP_WEBHOOK_SECRET is not set. Skipping signature verification.");
+    return true; // 開発環境用
+  }
+
+  if (!signature) {
+    return false;
+  }
+
+  const expectedSignature = crypto
+    .createHmac("sha256", WEBHOOK_SECRET)
+    .update(payload)
+    .digest("hex");
+
+  return crypto.timingSafeEqual(
+    Buffer.from(signature),
+    Buffer.from(expectedSignature)
+  );
+}
 
 // Pay.jp Webhookの処理
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    // 署名検証用にraw bodyを取得
+    const payload = await request.text();
+    const signature = request.headers.get("x-payjp-webhook-token");
+
+    // 署名を検証
+    if (!verifyWebhookSignature(payload, signature)) {
+      console.error("Webhook signature verification failed");
+      return NextResponse.json(
+        { error: "Invalid signature" },
+        { status: 401 }
+      );
+    }
+
+    const body = JSON.parse(payload);
     const { type, data } = body;
 
     console.log("Pay.jp Webhook received:", type);
