@@ -6,15 +6,20 @@ import { DiagnosisType } from "@/data/diagnosis-types";
 import { ProfileForm } from "./profile-form";
 import { QuestionCard } from "./question-card";
 import { ResultCard } from "./result-card";
+import type { CTAConfig } from "@/types/clinic";
 
 interface Props {
   diagnosis: DiagnosisType;
   isDemo: boolean;
   clinicSlug?: string;
+  ctaConfig?: CTAConfig;
+  clinicName?: string;
+  mainColor?: string;
+  channelId?: string;
 }
 
-export function DiagnosisFlow({ diagnosis, isDemo, clinicSlug }: Props) {
-  const { userAge, currentStep, answers, resultPattern, reset } =
+export function DiagnosisFlow({ diagnosis, isDemo, ctaConfig, clinicName, mainColor, channelId }: Props) {
+  const { userAge, currentStep, resultPattern, reset } =
     useDiagnosisStore();
 
   // コンポーネントがマウントされたらリセット
@@ -35,7 +40,14 @@ export function DiagnosisFlow({ diagnosis, isDemo, clinicSlug }: Props) {
   if (resultPattern !== null) {
     return (
       <div className="container mx-auto px-4 py-8 max-w-lg">
-        <ResultCard diagnosis={diagnosis} isDemo={isDemo} clinicSlug={clinicSlug} />
+        <ResultCard
+          diagnosis={diagnosis}
+          isDemo={isDemo}
+          ctaConfig={ctaConfig}
+          clinicName={clinicName}
+          mainColor={mainColor}
+          channelId={channelId}
+        />
       </div>
     );
   }
