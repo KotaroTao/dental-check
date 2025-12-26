@@ -4,6 +4,7 @@ import { DiagnosisFlow } from "@/components/diagnosis/diagnosis-flow";
 import { prisma } from "@/lib/prisma";
 import { checkSubscription } from "@/lib/subscription";
 import type { Clinic } from "@/types/clinic";
+import type { Metadata } from "next";
 
 interface Props {
   params: Promise<{
@@ -38,6 +39,17 @@ async function getClinic(slug: string) {
   return clinic;
 }
 
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug, type } = await params;
+  const diagnosis = diagnosisTypes[type];
+  const clinic = await getClinic(slug);
+
+  return {
+    title: diagnosis && clinic ? `${diagnosis.name} - ${clinic.name}` : "診断ツール",
+    robots: "noindex, nofollow",
+  };
+}
+
 export default async function EmbedDiagnosisPage({ params }: Props) {
   const { slug, type } = await params;
 
@@ -54,64 +66,40 @@ export default async function EmbedDiagnosisPage({ params }: Props) {
   }
 
   return (
-    <html lang="ja">
-      <head>
-        <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="robots" content="noindex, nofollow" />
-        <title>{diagnosis.name} - {clinic.name}</title>
-        <style dangerouslySetInnerHTML={{
-          __html: `
-            * {
-              margin: 0;
-              padding: 0;
-              box-sizing: border-box;
-            }
-            body {
-              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-              background: transparent;
-              min-height: 100vh;
-            }
-          `
-        }} />
-      </head>
-      <body>
-        <main
-          className="min-h-screen"
-          style={{ backgroundColor: clinic.mainColor + "10" }}
-        >
-          {/* 医院ヘッダー（コンパクト版） */}
-          <header className="bg-white border-b">
-            <div className="px-4 py-2">
-              <div className="flex items-center justify-center gap-2">
-                {clinic.logoUrl && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={clinic.logoUrl}
-                    alt={clinic.name}
-                    className="h-6 w-auto"
-                  />
-                )}
-                <span className="font-medium text-gray-800 text-sm">{clinic.name}</span>
-              </div>
-            </div>
-          </header>
+    <main
+      className="min-h-screen"
+      style={{ backgroundColor: clinic.mainColor + "10" }}
+    >
+      {/* 医院ヘッダー（コンパクト版） */}
+      <header className="bg-white border-b">
+        <div className="px-4 py-2">
+          <div className="flex items-center justify-center gap-2">
+            {clinic.logoUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={clinic.logoUrl}
+                alt={clinic.name}
+                className="h-6 w-auto"
+              />
+            )}
+            <span className="font-medium text-gray-800 text-sm">{clinic.name}</span>
+          </div>
+        </div>
+      </header>
 
-          {/* 診断フロー */}
-          <DiagnosisFlow
-            diagnosis={diagnosis}
-            isDemo={false}
-            clinicSlug={clinic.slug}
-            ctaConfig={clinic.ctaConfig}
-            clinicName={clinic.name}
-            mainColor={clinic.mainColor}
-          />
+      {/* 診断フロー */}
+      <DiagnosisFlow
+        diagnosis={diagnosis}
+        isDemo={false}
+        clinicSlug={clinic.slug}
+        ctaConfig={clinic.ctaConfig}
+        clinicName={clinic.name}
+        mainColor={clinic.mainColor}
+      />
 
-          {/* 埋め込みトラッキング */}
-          <EmbedTracker clinicSlug={slug} diagnosisType={type} />
-        </main>
-      </body>
-    </html>
+      {/* 埋め込みトラッキング */}
+      <EmbedTracker clinicSlug={slug} diagnosisType={type} />
+    </main>
   );
 }
 
@@ -123,6 +111,10 @@ function EmbedTracker({
   clinicSlug: string;
   diagnosisType: string;
 }) {
+  // XSS対策: JSON.stringifyでエスケープ
+  const safeClinicSlug = JSON.stringify(clinicSlug);
+  const safeDiagnosisType = JSON.stringify(diagnosisType);
+
   return (
     <script
       dangerouslySetInnerHTML={{
@@ -131,11 +123,11 @@ function EmbedTracker({
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              clinicSlug: '${clinicSlug}',
-              diagnosisType: '${diagnosisType}',
+              clinicSlug: ${safeClinicSlug},
+              diagnosisType: ${safeDiagnosisType},
               eventType: 'embed_view'
             })
-          }).catch(() => {});
+          }).catch(function() {});
         `,
       }}
     />

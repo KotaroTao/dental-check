@@ -2,6 +2,16 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+// 有効なCSSカラーかチェック（hex形式のみ許可）
+function isValidHexColor(color: string): boolean {
+  return /^#[0-9A-Fa-f]{6}$/.test(color);
+}
+
+// 安全なカラー値を取得
+function getSafeColor(color: string): string {
+  return isValidHexColor(color) ? color : "#2563eb";
+}
+
 // 埋め込みコードを取得
 export async function GET() {
   try {
@@ -36,7 +46,7 @@ export async function GET() {
         directUrl: `${appUrl}/clinic/${clinic.slug}`,
         iframeCode: generateIframeCode(`${appUrl}/embed/${clinic.slug}/oral-age`),
         scriptCode: generateScriptCode(clinic.slug, "oral-age"),
-        buttonCode: generateButtonCode(`${appUrl}/embed/${clinic.slug}/oral-age`, clinic.mainColor, "お口年齢診断を受ける"),
+        buttonCode: generateButtonCode(`${appUrl}/embed/${clinic.slug}/oral-age`, getSafeColor(clinic.mainColor), "お口年齢診断を受ける"),
       },
       {
         type: "child-orthodontics",
@@ -46,7 +56,7 @@ export async function GET() {
         directUrl: `${appUrl}/clinic/${clinic.slug}`,
         iframeCode: generateIframeCode(`${appUrl}/embed/${clinic.slug}/child-orthodontics`),
         scriptCode: generateScriptCode(clinic.slug, "child-orthodontics"),
-        buttonCode: generateButtonCode(`${appUrl}/embed/${clinic.slug}/child-orthodontics`, clinic.mainColor, "子供の矯正診断を受ける"),
+        buttonCode: generateButtonCode(`${appUrl}/embed/${clinic.slug}/child-orthodontics`, getSafeColor(clinic.mainColor), "子供の矯正診断を受ける"),
       },
     ];
 
