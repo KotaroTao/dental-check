@@ -105,6 +105,12 @@ export default function DashboardLayout({
               >
                 設定
               </Link>
+              <Link
+                href="/dashboard/billing"
+                className="text-gray-600 hover:text-gray-900"
+              >
+                契約・お支払い
+              </Link>
             </nav>
           </div>
           <div className="flex items-center gap-4">

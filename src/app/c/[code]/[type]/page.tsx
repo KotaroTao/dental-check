@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { diagnosisTypes } from "@/data/diagnosis-types";
 import { DiagnosisFlow } from "@/components/diagnosis/diagnosis-flow";
 import { prisma } from "@/lib/prisma";
+import { checkSubscription } from "@/lib/subscription";
 import type { Channel, Clinic } from "@/types/clinic";
 
 interface Props {
@@ -26,7 +27,13 @@ async function getChannelAndClinic(code: string) {
     where: { id: channel.clinicId },
   })) as Clinic | null;
 
-  if (!clinic || clinic.status === "suspended") {
+  if (!clinic) {
+    return null;
+  }
+
+  // サブスクリプション状態をチェック
+  const subscriptionCheck = await checkSubscription(clinic.id);
+  if (!subscriptionCheck.isActive) {
     return null;
   }
 
