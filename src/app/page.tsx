@@ -589,9 +589,9 @@ export default function Home() {
         <div className="container mx-auto px-4 relative">
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-3xl md:text-5xl font-bold text-white mb-6">
-              今すぐ始めて、
+              <span className="inline-block">今すぐ始めて、</span>
               <br />
-              新患獲得を加速させましょう
+              <span className="inline-block mt-[0.4em]">新患獲得を加速させましょう</span>
             </h2>
             <p className="text-gray-300 text-lg mb-10 max-w-xl mx-auto">
               14日間の無料トライアルで、すべての機能をお試しいただけます。
