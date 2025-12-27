@@ -38,7 +38,7 @@ export default function LegalPage() {
                   運営責任者
                 </th>
                 <td className="px-6 py-4 text-sm text-gray-900">
-                  代表取締役 [お名前]
+                  代表取締役 田尾耕太郎
                 </td>
               </tr>
               <tr>
@@ -46,7 +46,7 @@ export default function LegalPage() {
                   所在地
                 </th>
                 <td className="px-6 py-4 text-sm text-gray-900">
-                  [住所を記載]
+                  兵庫県西宮市北名次町5-9-301
                 </td>
               </tr>
               <tr>
@@ -54,8 +54,7 @@ export default function LegalPage() {
                   電話番号
                 </th>
                 <td className="px-6 py-4 text-sm text-gray-900">
-                  [電話番号]<br />
-                  <span className="text-gray-500 text-xs">※お問い合わせはメールにてお願いいたします</span>
+                  お問い合わせはメールにてお願いいたします
                 </td>
               </tr>
               <tr>
@@ -63,7 +62,7 @@ export default function LegalPage() {
                   メールアドレス
                 </th>
                 <td className="px-6 py-4 text-sm text-gray-900">
-                  [メールアドレス]
+                  mail@function-t.com
                 </td>
               </tr>
               <tr>
