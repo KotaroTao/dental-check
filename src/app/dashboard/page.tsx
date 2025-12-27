@@ -10,6 +10,7 @@ const PERIOD_OPTIONS = [
   { value: "today", label: "今日" },
   { value: "week", label: "今週" },
   { value: "month", label: "今月" },
+  { value: "custom", label: "期間指定" },
 ];
 
 // 診断タイプの表示名
@@ -60,6 +61,19 @@ export default function DashboardPage() {
   const [selectedChannelId, setSelectedChannelId] = useState("");
   const [selectedDiagnosisType, setSelectedDiagnosisType] = useState("");
 
+  // カスタム期間
+  const getDefaultDates = () => {
+    const end = new Date();
+    const start = new Date();
+    start.setMonth(start.getMonth() - 1);
+    return {
+      start: start.toISOString().split("T")[0],
+      end: end.toISOString().split("T")[0],
+    };
+  };
+  const [customStartDate, setCustomStartDate] = useState(() => getDefaultDates().start);
+  const [customEndDate, setCustomEndDate] = useState(() => getDefaultDates().end);
+
   // 日付をフォーマット
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -89,6 +103,10 @@ export default function DashboardPage() {
     try {
       const params = new URLSearchParams({ period });
       if (selectedChannelId) params.set("channelId", selectedChannelId);
+      if (period === "custom") {
+        params.set("startDate", customStartDate);
+        params.set("endDate", customEndDate);
+      }
 
       const response = await fetch(`/api/dashboard/stats?${params}`);
       if (response.ok) {
@@ -98,7 +116,7 @@ export default function DashboardPage() {
     } catch (error) {
       console.error("Failed to fetch stats:", error);
     }
-  }, [period, selectedChannelId]);
+  }, [period, selectedChannelId, customStartDate, customEndDate]);
 
   // 履歴データ取得
   const fetchHistory = useCallback(async (offset = 0, append = false) => {
@@ -113,6 +131,10 @@ export default function DashboardPage() {
       });
       if (selectedChannelId) params.set("channelId", selectedChannelId);
       if (selectedDiagnosisType) params.set("diagnosisType", selectedDiagnosisType);
+      if (period === "custom") {
+        params.set("startDate", customStartDate);
+        params.set("endDate", customEndDate);
+      }
 
       const response = await fetch(`/api/dashboard/history?${params}`);
       if (response.ok) {
@@ -131,7 +153,7 @@ export default function DashboardPage() {
       setIsLoading(false);
       setIsLoadingMore(false);
     }
-  }, [period, selectedChannelId, selectedDiagnosisType]);
+  }, [period, selectedChannelId, selectedDiagnosisType, customStartDate, customEndDate]);
 
   // 初回読み込み
   useEffect(() => {
@@ -301,7 +323,7 @@ export default function DashboardPage() {
             <BarChart3 className="w-5 h-5" />
             統計サマリー
           </h2>
-          <div className="flex gap-2 ml-auto">
+          <div className="flex flex-wrap gap-2 ml-auto items-center">
             <select
               value={period}
               onChange={(e) => setPeriod(e.target.value)}
@@ -313,6 +335,23 @@ export default function DashboardPage() {
                 </option>
               ))}
             </select>
+            {period === "custom" && (
+              <>
+                <input
+                  type="date"
+                  value={customStartDate}
+                  onChange={(e) => setCustomStartDate(e.target.value)}
+                  className="px-3 py-1.5 border rounded-md text-sm bg-white"
+                />
+                <span className="text-gray-500">〜</span>
+                <input
+                  type="date"
+                  value={customEndDate}
+                  onChange={(e) => setCustomEndDate(e.target.value)}
+                  className="px-3 py-1.5 border rounded-md text-sm bg-white"
+                />
+              </>
+            )}
             <select
               value={selectedChannelId}
               onChange={(e) => setSelectedChannelId(e.target.value)}
