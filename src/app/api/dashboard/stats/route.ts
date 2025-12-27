@@ -54,14 +54,14 @@ export async function GET(request: NextRequest) {
     };
 
     // 統計データを並行取得
-    const [accessCount, sessionStats, ctaCount, channels] = await Promise.all([
+    const [accessCount, completedCount, ctaCount, channels] = await Promise.all([
       // アクセス数
       prisma.accessLog.count({
         where: baseFilter,
       }),
 
-      // 診断セッション統計
-      prisma.diagnosisSession.aggregate({
+      // 診断完了数
+      prisma.diagnosisSession.count({
         where: {
           clinicId: session.clinicId,
           createdAt: {
@@ -70,9 +70,7 @@ export async function GET(request: NextRequest) {
           },
           ...(channelId && { channelId }),
           isDemo: false,
-        },
-        _count: {
-          id: true,
+          completedAt: { not: null },
         },
       }),
 
@@ -88,20 +86,6 @@ export async function GET(request: NextRequest) {
         orderBy: { createdAt: "desc" },
       }),
     ]);
-
-    // 診断完了数
-    const completedCount = await prisma.diagnosisSession.count({
-      where: {
-        clinicId: session.clinicId,
-        createdAt: {
-          gte: dateFrom,
-          lte: dateTo,
-        },
-        ...(channelId && { channelId }),
-        isDemo: false,
-        completedAt: { not: null },
-      },
-    });
 
     // 完了率を計算
     const completionRate =

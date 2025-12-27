@@ -5,12 +5,6 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { BarChart3, Users, MousePointerClick, Percent, ChevronDown } from "lucide-react";
 
-// 診断タイプの表示名
-const DIAGNOSIS_TYPE_NAMES: Record<string, string> = {
-  "oral-age": "お口年齢診断",
-  "child-orthodontics": "矯正チェック",
-};
-
 // 期間の選択肢
 const PERIOD_OPTIONS = [
   { value: "today", label: "今日" },
