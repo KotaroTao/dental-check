@@ -50,8 +50,8 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
     });
 
-    // デバッグ用：シーディング結果を含める
-    return NextResponse.json({ diagnoses, _debug: { seedResult } });
+    // デバッグ用：シーディング結果を含める（v2）
+    return NextResponse.json({ diagnoses, _debug: { seedResult, timestamp: new Date().toISOString() } });
   } catch (error) {
     console.error("Failed to fetch diagnoses:", error);
     const errorMessage = error instanceof Error ? error.message : String(error);
