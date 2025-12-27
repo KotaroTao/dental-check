@@ -12,7 +12,7 @@ export default function LegalPage() {
               <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
                 <Sparkles className="w-5 h-5 text-white" />
               </div>
-              <span className="font-bold text-lg text-gray-900">くるくる診断 for Dental</span>
+              <span className="font-bold text-lg text-gray-900">くるくる診断DX<span className="text-[0.5em]"> for Dental</span></span>
             </Link>
           </div>
         </div>
@@ -156,7 +156,7 @@ export default function LegalPage() {
       <footer className="bg-gray-900 py-8 mt-12">
         <div className="container mx-auto px-4 text-center">
           <p className="text-gray-500 text-sm">
-            &copy; 2026 くるくる診断 for Dental. All rights reserved.
+            &copy; 2026 くるくる診断DX for Dental. All rights reserved.
           </p>
           <p className="text-gray-500 text-sm mt-1">
             運営: <a href="https://function-t.com/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors">株式会社ファンクション・ティ</a>

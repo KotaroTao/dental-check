@@ -12,7 +12,7 @@ export default function TermsPage() {
               <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
                 <Sparkles className="w-5 h-5 text-white" />
               </div>
-              <span className="font-bold text-lg text-gray-900">くるくる診断 for Dental</span>
+              <span className="font-bold text-lg text-gray-900">くるくる診断DX<span className="text-[0.5em]"> for Dental</span></span>
             </Link>
           </div>
         </div>
@@ -26,7 +26,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-xl font-bold text-gray-900 mb-4">第1条（適用）</h2>
             <p className="text-gray-700 leading-relaxed">
-              本規約は、株式会社ファンクション・ティ（以下「当社」）が提供する「くるくる診断 for Dental」（以下「本サービス」）の
+              本規約は、株式会社ファンクション・ティ（以下「当社」）が提供する「くるくる診断DX for Dental」（以下「本サービス」）の
               利用に関する条件を定めるものです。ユーザーは本規約に同意した上で本サービスを利用するものとします。
             </p>
           </section>
@@ -140,7 +140,7 @@ export default function TermsPage() {
       <footer className="bg-gray-900 py-8 mt-12">
         <div className="container mx-auto px-4 text-center">
           <p className="text-gray-500 text-sm">
-            &copy; 2026 くるくる診断 for Dental. All rights reserved.
+            &copy; 2026 くるくる診断DX for Dental. All rights reserved.
           </p>
           <p className="text-gray-500 text-sm mt-1">
             運営: <a href="https://function-t.com/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors">株式会社ファンクション・ティ</a>

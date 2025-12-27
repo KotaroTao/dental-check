@@ -1,4 +1,4 @@
-# くるくる診断 for Dental - 運用手順書
+# くるくる診断DX for Dental - 運用手順書
 
 ## Windows PC 開発環境
 
