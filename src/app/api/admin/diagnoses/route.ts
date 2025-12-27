@@ -4,19 +4,17 @@ import { getAdminSession } from "@/lib/admin-auth";
 import { oralAgeDiagnosis, childOrthodonticsDiagnosis } from "@/data/diagnosis-types";
 
 // ハードコードの診断をDBにシードする
-async function seedDefaultDiagnoses() {
-  console.log("[Seed] Starting seed process...");
+async function seedDefaultDiagnoses(): Promise<{ success: boolean; error?: string; created?: string[] }> {
   const defaultDiagnoses = [oralAgeDiagnosis, childOrthodonticsDiagnosis];
+  const created: string[] = [];
 
   for (const diagnosis of defaultDiagnoses) {
     try {
-      console.log(`[Seed] Checking for existing diagnosis: ${diagnosis.slug}`);
       const existing = await prisma.diagnosisType.findUnique({
         where: { slug: diagnosis.slug },
       });
 
       if (!existing) {
-        console.log(`[Seed] Creating diagnosis: ${diagnosis.slug}`);
         await prisma.diagnosisType.create({
           data: {
             slug: diagnosis.slug,
@@ -27,15 +25,14 @@ async function seedDefaultDiagnoses() {
             isActive: true,
           },
         });
-        console.log(`[Seed] Created: ${diagnosis.slug}`);
-      } else {
-        console.log(`[Seed] Already exists: ${diagnosis.slug}`);
+        created.push(diagnosis.slug);
       }
     } catch (error) {
-      console.error(`[Seed] Error seeding ${diagnosis.slug}:`, error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return { success: false, error: `Error seeding ${diagnosis.slug}: ${errorMessage}` };
     }
   }
-  console.log("[Seed] Seed process completed");
+  return { success: true, created };
 }
 
 // 診断一覧取得
@@ -47,17 +44,19 @@ export async function GET() {
     }
 
     // 初回アクセス時にデフォルトの診断をシード
-    await seedDefaultDiagnoses();
+    const seedResult = await seedDefaultDiagnoses();
 
     const diagnoses = await prisma.diagnosisType.findMany({
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json({ diagnoses });
+    // デバッグ用：シーディング結果を含める
+    return NextResponse.json({ diagnoses, _debug: { seedResult } });
   } catch (error) {
     console.error("Failed to fetch diagnoses:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
-      { error: "診断の取得に失敗しました" },
+      { error: "診断の取得に失敗しました", _debug: { errorMessage } },
       { status: 500 }
     );
   }
