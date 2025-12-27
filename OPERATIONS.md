@@ -1,6 +1,32 @@
 # くるくる診断 for Dental - 運用手順書
 
-## サーバー情報
+## ローカル開発環境
+
+### 起動方法
+```bash
+cd /home/user/dental-check
+npm install
+npm run dev -- -p 3001
+```
+
+### アクセスURL
+
+| 画面 | URL |
+|------|-----|
+| トップページ | http://localhost:3001 |
+| 医院ログイン | http://localhost:3001/login |
+| 医院ダッシュボード | http://localhost:3001/dashboard |
+| 管理者ログイン | http://localhost:3001/admin/login |
+| 管理者ダッシュボード | http://localhost:3001/admin/diagnoses |
+
+### ローカルDB（開発時）
+ローカル開発時はSQLiteまたはPostgreSQLを使用。`.env`ファイルで`DATABASE_URL`を設定。
+
+---
+
+## 本番環境（Xserver VPS）
+
+### サーバー情報
 
 | 項目 | 値 |
 |------|-----|
@@ -178,6 +204,35 @@ docker exec dental-check-nginx nginx -t
 
 - 開発ブランチ: `claude/dental-clinic-tool-dev-FVPKz`
 - リポジトリ: `https://github.com/KotaroTao/dental-check`
+
+### ローカル→本番 反映手順（クイックリファレンス）
+
+1. **ローカルで修正をコミット＆プッシュ**
+```bash
+git add .
+git commit -m "修正内容"
+git push origin claude/dental-clinic-tool-dev-FVPKz
+```
+
+2. **本番サーバーにSSH接続**
+```bash
+ssh -i ~/Downloads/dental-check-key.pem root@210.131.223.161
+```
+
+3. **本番サーバーでデプロイ**
+```bash
+cd /var/www/dental-check
+git pull origin claude/dental-clinic-tool-dev-FVPKz
+docker compose -f docker-compose.production.yml --env-file .env.production build --no-cache
+docker compose -f docker-compose.production.yml --env-file .env.production up -d
+```
+
+### セッション間で引き継ぐ情報
+
+作業を中断・再開する際は、以下を確認：
+- 現在のブランチ: `git branch --show-current`
+- 未コミットの変更: `git status`
+- リモートとの差分: `git fetch origin && git status`
 
 ## 運営会社情報
 
