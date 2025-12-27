@@ -5,26 +5,37 @@ import { oralAgeDiagnosis, childOrthodonticsDiagnosis } from "@/data/diagnosis-t
 
 // ハードコードの診断をDBにシードする
 async function seedDefaultDiagnoses() {
+  console.log("[Seed] Starting seed process...");
   const defaultDiagnoses = [oralAgeDiagnosis, childOrthodonticsDiagnosis];
 
   for (const diagnosis of defaultDiagnoses) {
-    const existing = await prisma.diagnosisType.findUnique({
-      where: { slug: diagnosis.slug },
-    });
-
-    if (!existing) {
-      await prisma.diagnosisType.create({
-        data: {
-          slug: diagnosis.slug,
-          name: diagnosis.name,
-          description: diagnosis.description,
-          questions: diagnosis.questions,
-          resultPatterns: diagnosis.resultPatterns,
-          isActive: true,
-        },
+    try {
+      console.log(`[Seed] Checking for existing diagnosis: ${diagnosis.slug}`);
+      const existing = await prisma.diagnosisType.findUnique({
+        where: { slug: diagnosis.slug },
       });
+
+      if (!existing) {
+        console.log(`[Seed] Creating diagnosis: ${diagnosis.slug}`);
+        await prisma.diagnosisType.create({
+          data: {
+            slug: diagnosis.slug,
+            name: diagnosis.name,
+            description: diagnosis.description,
+            questions: diagnosis.questions,
+            resultPatterns: diagnosis.resultPatterns,
+            isActive: true,
+          },
+        });
+        console.log(`[Seed] Created: ${diagnosis.slug}`);
+      } else {
+        console.log(`[Seed] Already exists: ${diagnosis.slug}`);
+      }
+    } catch (error) {
+      console.error(`[Seed] Error seeding ${diagnosis.slug}:`, error);
     }
   }
+  console.log("[Seed] Seed process completed");
 }
 
 // 診断一覧取得
