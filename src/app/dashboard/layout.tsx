@@ -89,12 +89,6 @@ export default function DashboardLayout({
                 ダッシュボード
               </Link>
               <Link
-                href="/dashboard/channels"
-                className="text-gray-600 hover:text-gray-900"
-              >
-                経路
-              </Link>
-              <Link
                 href="/dashboard/embed"
                 className="text-gray-600 hover:text-gray-900"
               >

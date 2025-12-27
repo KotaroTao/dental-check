@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { BarChart3, Users, MousePointerClick, Percent, ChevronDown } from "lucide-react";
+import { BarChart3, Users, MousePointerClick, Percent, ChevronDown, QrCode, Plus, Settings, Trash2 } from "lucide-react";
 
 // 期間の選択肢
 const PERIOD_OPTIONS = [
@@ -11,6 +11,12 @@ const PERIOD_OPTIONS = [
   { value: "week", label: "今週" },
   { value: "month", label: "今月" },
 ];
+
+// 診断タイプの表示名
+const DIAGNOSIS_TYPE_NAMES: Record<string, string> = {
+  "oral-age": "お口年齢診断",
+  "child-orthodontics": "矯正チェック",
+};
 
 interface Stats {
   accessCount: number;
@@ -21,8 +27,12 @@ interface Stats {
 
 interface Channel {
   id: string;
+  code: string;
   name: string;
+  description: string | null;
   diagnosisTypeSlug: string;
+  isActive: boolean;
+  createdAt: string;
 }
 
 interface HistoryItem {
@@ -61,6 +71,19 @@ export default function DashboardPage() {
     return `${year}/${month}/${day} ${hours}:${minutes}`;
   };
 
+  // 経路一覧取得
+  const fetchChannels = useCallback(async () => {
+    try {
+      const response = await fetch("/api/channels");
+      if (response.ok) {
+        const data = await response.json();
+        setChannels(data.channels);
+      }
+    } catch (error) {
+      console.error("Failed to fetch channels:", error);
+    }
+  }, []);
+
   // 統計データ取得
   const fetchStats = useCallback(async () => {
     try {
@@ -71,7 +94,6 @@ export default function DashboardPage() {
       if (response.ok) {
         const data = await response.json();
         setStats(data.stats);
-        setChannels(data.channels);
       }
     } catch (error) {
       console.error("Failed to fetch stats:", error);
@@ -111,18 +133,45 @@ export default function DashboardPage() {
     }
   }, [period, selectedChannelId, selectedDiagnosisType]);
 
-  // 初回読み込み・フィルター変更時
+  // 初回読み込み
+  useEffect(() => {
+    fetchChannels();
+  }, [fetchChannels]);
+
+  // フィルター変更時
   useEffect(() => {
     fetchStats();
     fetchHistory(0, false);
   }, [fetchStats, fetchHistory]);
+
+  // 経路削除
+  const handleDeleteChannel = async (id: string) => {
+    if (!confirm("この経路を削除しますか？関連するアクセスログも削除されます。")) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/channels/${id}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        setChannels(channels.filter((c) => c.id !== id));
+        // 統計も再取得
+        fetchStats();
+        fetchHistory(0, false);
+      }
+    } catch (error) {
+      console.error("Failed to delete channel:", error);
+    }
+  };
 
   // もっと見る
   const handleLoadMore = () => {
     fetchHistory(history.length, true);
   };
 
-  if (isLoading && !stats) {
+  if (isLoading && !stats && channels.length === 0) {
     return <div className="text-gray-500">読み込み中...</div>;
   }
 
@@ -130,9 +179,119 @@ export default function DashboardPage() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">ダッシュボード</h1>
-        <Link href="/dashboard/channels/new">
-          <Button>+ 新しい経路を作成</Button>
-        </Link>
+      </div>
+
+      {/* 経路セクション */}
+      <div className="bg-white rounded-xl shadow-sm border">
+        <div className="p-6 border-b flex items-center justify-between">
+          <h2 className="text-lg font-bold flex items-center gap-2">
+            <QrCode className="w-5 h-5" />
+            経路
+          </h2>
+          <Link href="/dashboard/channels/new">
+            <Button className="gap-2" size="sm">
+              <Plus className="w-4 h-4" />
+              新しい経路を作成
+            </Button>
+          </Link>
+        </div>
+
+        {channels.length === 0 ? (
+          <div className="p-12 text-center">
+            <QrCode className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              まだ経路がありません
+            </h3>
+            <p className="text-gray-500 mb-6">
+              経路を作成して計測を始めましょう
+            </p>
+            <Link href="/dashboard/channels/new">
+              <Button>最初の経路を作成する</Button>
+            </Link>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b">
+                <tr>
+                  <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">
+                    経路名
+                  </th>
+                  <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">
+                    診断
+                  </th>
+                  <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">
+                    コード
+                  </th>
+                  <th className="text-center px-6 py-3 text-sm font-medium text-gray-500">
+                    ステータス
+                  </th>
+                  <th className="text-right px-6 py-3 text-sm font-medium text-gray-500">
+                    操作
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {channels.map((channel) => (
+                  <tr key={channel.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4">
+                      <div className="font-medium">{channel.name}</div>
+                      {channel.description && (
+                        <div className="text-sm text-gray-500">
+                          {channel.description}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-50 text-blue-700">
+                        {DIAGNOSIS_TYPE_NAMES[channel.diagnosisTypeSlug] || channel.diagnosisTypeSlug}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <code className="bg-gray-100 px-2 py-1 rounded text-sm">
+                        {channel.code}
+                      </code>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      {channel.isActive ? (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          有効
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                          無効
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-end gap-2">
+                        <Link href={`/dashboard/channels/${channel.id}`}>
+                          <Button variant="outline" size="sm" className="gap-1">
+                            <QrCode className="w-4 h-4" />
+                            詳細
+                          </Button>
+                        </Link>
+                        <Link href={`/dashboard/channels/${channel.id}/edit`}>
+                          <Button variant="ghost" size="sm">
+                            <Settings className="w-4 h-4" />
+                          </Button>
+                        </Link>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteChannel(channel.id)}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* 統計サマリー */}
