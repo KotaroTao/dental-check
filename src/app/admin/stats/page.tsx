@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -72,11 +72,7 @@ export default function AdminStatsPage() {
   const [error, setError] = useState("");
   const [period, setPeriod] = useState(30);
 
-  useEffect(() => {
-    fetchStats();
-  }, [period]);
-
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     setIsLoading(true);
     try {
       const response = await fetch(`/api/admin/stats?days=${period}`);
@@ -91,7 +87,11 @@ export default function AdminStatsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [period]);
+
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
 
   if (isLoading) {
     return (

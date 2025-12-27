@@ -22,7 +22,9 @@ export async function GET(request: Request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const days = parseInt(searchParams.get("days") || "30");
+    const rawDays = parseInt(searchParams.get("days") || "30");
+    // バリデーション: 1〜365日の範囲に制限
+    const days = Math.max(1, Math.min(365, isNaN(rawDays) ? 30 : rawDays));
 
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
