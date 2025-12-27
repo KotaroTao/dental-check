@@ -143,8 +143,8 @@ export default function Home() {
                   チラシを配っても、予約が来ない...
                 </h2>
                 <p className="text-gray-600 max-w-xl mx-auto text-lg leading-relaxed">
-                  「虫歯かも」「歯並びが気になる」——潜在患者は
-                  <span className="font-bold text-red-500">自覚がないと動きません</span>。
+                  「虫歯かも」「歯並びが気になる」——<br />
+                  潜在患者は<span className="font-bold text-red-500">自覚がないと動きません</span>。
                 </p>
                 <div className="mt-8 pt-8 border-t border-gray-100">
                   <p className="text-gray-700">
