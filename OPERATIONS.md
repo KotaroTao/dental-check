@@ -95,6 +95,14 @@ docker exec -it dental-check-db psql -U dental_user -d dental_check
 
 ## 管理者操作
 
+### 管理画面
+
+| 項目 | 値 |
+|------|-----|
+| URL | https://qrqr-dental.com/admin/login |
+| メールアドレス | mail@function-t.com |
+| パスワード | MUNP1687 |
+
 ### 管理者アカウント作成
 ```bash
 docker run --rm --network dental-check_dental-network \
@@ -111,11 +119,6 @@ docker run --rm --network dental-check_dental-network \
   -e DATABASE_URL='postgresql://dental_user:PASSWORD@db:5432/dental_check' \
   -v $(pwd):/app -w /app node:20 \
   sh -c "npm install prisma@5.22.0 @prisma/client@5.22.0 && node scripts/seed-diagnoses.js"
-```
-
-### 管理画面URL
-```
-https://qrqr-dental.com/admin/login
 ```
 
 ## SSL証明書
