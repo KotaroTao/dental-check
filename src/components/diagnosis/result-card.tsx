@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useDiagnosisStore } from "@/lib/diagnosis-store";
 import { DiagnosisType } from "@/data/diagnosis-types";
@@ -21,8 +22,29 @@ interface Props {
 }
 
 export function ResultCard({ diagnosis, isDemo, clinicSlug, ctaConfig, clinicName, mainColor, channelId }: Props) {
-  const { userAge, resultPattern, oralAge, reset } =
+  const { userAge, userGender, answers, totalScore, resultPattern, oralAge, reset } =
     useDiagnosisStore();
+  const hasTrackedRef = useRef(false);
+
+  // 診断完了をトラッキング（非デモモードのみ、1回だけ）
+  useEffect(() => {
+    if (isDemo || !channelId || !resultPattern || hasTrackedRef.current) return;
+    hasTrackedRef.current = true;
+
+    fetch("/api/track/complete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        channelId,
+        diagnosisType: diagnosis.slug,
+        userAge,
+        userGender,
+        answers,
+        totalScore,
+        resultCategory: resultPattern.category,
+      }),
+    }).catch(() => {});
+  }, [isDemo, channelId, diagnosis.slug, resultPattern, userAge, userGender, answers, totalScore]);
 
   if (!resultPattern) return null;
 

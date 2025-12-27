@@ -6,9 +6,20 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { channelId, diagnosisType, eventType } = body;
 
+    // チャンネルから医院IDを取得
+    let clinicId: string | null = null;
+    if (channelId) {
+      const channel = await prisma.channel.findUnique({
+        where: { id: channelId },
+        select: { clinicId: true },
+      });
+      clinicId = channel?.clinicId || null;
+    }
+
     // アクセスログを記録
     await prisma.accessLog.create({
       data: {
+        clinicId,
         channelId: channelId || null,
         diagnosisTypeSlug: diagnosisType || null,
         eventType: eventType || "page_view",

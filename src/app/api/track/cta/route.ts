@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { channelId, ctaType, diagnosisType } = body;
+    const { channelId, ctaType } = body;
 
     if (!channelId || !ctaType) {
       return NextResponse.json(
@@ -13,12 +13,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // チャンネルから医院IDを取得
+    const channel = await prisma.channel.findUnique({
+      where: { id: channelId },
+      select: { clinicId: true },
+    });
+    const clinicId = channel?.clinicId || null;
+
     // CTAクリックを記録
-    await prisma.ctaClick.create({
+    await prisma.cTAClick.create({
       data: {
+        clinicId,
         channelId,
         ctaType, // booking, phone, line, instagram
-        diagnosisTypeSlug: diagnosisType || null,
       },
     });
 
