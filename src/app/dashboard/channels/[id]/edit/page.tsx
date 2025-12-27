@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,12 +22,9 @@ interface Channel {
   isActive: boolean;
 }
 
-export default function EditChannelPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = use(params);
+export default function EditChannelPage() {
+  const params = useParams();
+  const id = params.id as string;
   const router = useRouter();
   const [channel, setChannel] = useState<Channel | null>(null);
   const [formData, setFormData] = useState({
