@@ -92,7 +92,7 @@ export function DiagnosisForm({ initialData, isEditing = false }: Props) {
         { id: newId, text: "", choices: [{ text: "", score: 0 }] },
       ],
     });
-    setExpandedQuestions(new Set([...expandedQuestions, formData.questions.length]));
+    setExpandedQuestions(new Set([...Array.from(expandedQuestions), formData.questions.length]));
   };
 
   // 設問の削除
@@ -150,7 +150,7 @@ export function DiagnosisForm({ initialData, isEditing = false }: Props) {
         { minScore: 0, maxScore: 100, category: "", title: "", message: "" },
       ],
     });
-    setExpandedResults(new Set([...expandedResults, formData.resultPatterns.length]));
+    setExpandedResults(new Set([...Array.from(expandedResults), formData.resultPatterns.length]));
   };
 
   // 結果パターンの削除
