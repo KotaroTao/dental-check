@@ -648,6 +648,9 @@ export default function Home() {
               <a href="#pricing" className="text-sm text-gray-400 hover:text-white transition-colors">
                 料金
               </a>
+              <Link href="/legal" className="text-sm text-gray-400 hover:text-white transition-colors">
+                特定商取引法に基づく表記
+              </Link>
             </div>
             <div className="text-center md:text-right">
               <p className="text-gray-500 text-sm">
