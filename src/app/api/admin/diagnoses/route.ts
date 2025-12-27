@@ -1,6 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAdminSession } from "@/lib/admin-auth";
+import { oralAgeDiagnosis, childOrthodonticsDiagnosis } from "@/data/diagnosis-types";
+
+// ハードコードの診断をDBにシードする
+async function seedDefaultDiagnoses() {
+  const defaultDiagnoses = [oralAgeDiagnosis, childOrthodonticsDiagnosis];
+
+  for (const diagnosis of defaultDiagnoses) {
+    const existing = await prisma.diagnosisType.findUnique({
+      where: { slug: diagnosis.slug },
+    });
+
+    if (!existing) {
+      await prisma.diagnosisType.create({
+        data: {
+          slug: diagnosis.slug,
+          name: diagnosis.name,
+          description: diagnosis.description,
+          questions: diagnosis.questions,
+          resultPatterns: diagnosis.resultPatterns,
+          isActive: true,
+        },
+      });
+    }
+  }
+}
 
 // 診断一覧取得
 export async function GET() {
@@ -9,6 +34,9 @@ export async function GET() {
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    // 初回アクセス時にデフォルトの診断をシード
+    await seedDefaultDiagnoses();
 
     const diagnoses = await prisma.diagnosisType.findMany({
       orderBy: { createdAt: "desc" },

@@ -28,6 +28,7 @@ const mockStorage: Record<string, Record<string, unknown>[]> = {
   accessLogs: [],
   ctaClicks: [],
   diagnosisSessions: [],
+  diagnosisTypes: [],
 };
 
 function createMockModel(modelName: string) {
@@ -89,6 +90,35 @@ function createMockModel(modelName: string) {
         );
       }).length;
     },
+    upsert: async (args: {
+      where: Record<string, unknown>;
+      update: Record<string, unknown>;
+      create: Record<string, unknown>;
+    }) => {
+      const items = mockStorage[modelName] || [];
+      const key = Object.keys(args.where)[0];
+      const existingIndex = items.findIndex(
+        (item) => item[key] === args.where[key]
+      );
+      if (existingIndex !== -1) {
+        items[existingIndex] = {
+          ...items[existingIndex],
+          ...args.update,
+          updatedAt: new Date(),
+        };
+        return items[existingIndex];
+      } else {
+        const item = {
+          id: `mock-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          ...args.create,
+        };
+        if (!mockStorage[modelName]) mockStorage[modelName] = [];
+        mockStorage[modelName].push(item);
+        return item;
+      }
+    },
   };
 }
 
@@ -103,15 +133,25 @@ function createMockPrisma(): MockPrismaClient {
     accessLog: createMockModel("accessLogs"),
     ctaClick: createMockModel("ctaClicks"),
     diagnosisSession: createMockModel("diagnosisSessions"),
+    diagnosisType: createMockModel("diagnosisTypes"),
   };
 }
 
-export const prisma: MockPrismaClient =
-  globalForPrisma.prisma ??
-  (PrismaClientConstructor
-    ? new PrismaClientConstructor({
+function createPrismaClient(): MockPrismaClient {
+  if (PrismaClientConstructor) {
+    try {
+      return new PrismaClientConstructor({
         log: process.env.NODE_ENV === "development" ? ["query"] : [],
-      })
-    : createMockPrisma());
+      });
+    } catch {
+      // If PrismaClient fails to initialize, use mock
+      return createMockPrisma();
+    }
+  }
+  return createMockPrisma();
+}
+
+export const prisma: MockPrismaClient =
+  globalForPrisma.prisma ?? createPrismaClient();
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
