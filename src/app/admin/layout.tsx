@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Shield, FileText, LogOut } from "lucide-react";
+import { Shield, FileText, LogOut, BarChart3 } from "lucide-react";
 
 interface Admin {
   id: string;
@@ -87,6 +87,15 @@ export default function AdminLayout({
               >
                 <FileText className="w-4 h-4" />
                 診断管理
+              </Link>
+              <Link
+                href="/admin/stats"
+                className={`flex items-center gap-2 hover:text-gray-300 ${
+                  pathname.startsWith("/admin/stats") ? "text-white" : "text-gray-400"
+                }`}
+              >
+                <BarChart3 className="w-4 h-4" />
+                統計
               </Link>
             </nav>
           </div>
