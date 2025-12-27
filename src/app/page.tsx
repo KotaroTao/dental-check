@@ -31,12 +31,12 @@ export default function Home() {
       <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-white/20">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-2">
+            <Link href="/" className="flex items-center gap-2">
               <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
                 <Sparkles className="w-5 h-5 text-white" />
               </div>
               <span className="font-bold text-lg text-gray-900">くるくる診断 for Dental</span>
-            </div>
+            </Link>
             <div className="hidden md:flex items-center gap-8">
               <a href="#features" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
                 機能
@@ -97,18 +97,12 @@ export default function Home() {
             </p>
 
             {/* CTAボタン */}
-            <div className="animate-fade-in-up animation-delay-300 flex flex-col sm:flex-row gap-6 justify-center mb-12">
+            <div className="animate-fade-in-up animation-delay-300 flex justify-center mb-12">
               <Link href="/demo">
-                <Button size="2xl" variant="gradient" className="w-full sm:w-auto group shadow-xl shadow-blue-500/30 hover:shadow-2xl hover:shadow-blue-500/40 transition-all duration-300 hover:scale-105">
+                <Button size="2xl" variant="outline" className="w-full sm:w-auto border-2 border-gray-800 text-gray-800 hover:bg-gray-800 hover:text-white transition-all duration-300 hover:scale-105 group">
                   <Play className="w-6 h-6 mr-2" />
                   無料で診断を試す
                   <ArrowRight className="w-6 h-6 ml-2 transition-transform group-hover:translate-x-1" />
-                </Button>
-              </Link>
-              <Link href="/signup">
-                <Button size="2xl" variant="outline" className="w-full sm:w-auto border-2 border-gray-800 text-gray-800 hover:bg-gray-800 hover:text-white transition-all duration-300 hover:scale-105">
-                  <Building2 className="w-6 h-6 mr-2" />
-                  医院として登録
                 </Button>
               </Link>
             </div>
