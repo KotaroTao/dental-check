@@ -135,29 +135,36 @@ export default function AdminDiagnosesPage() {
                   </div>
                   <div className="flex gap-2">
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       size="sm"
                       onClick={() => toggleActive(diagnosis.id, diagnosis.isActive)}
-                      title={diagnosis.isActive ? "非公開にする" : "公開する"}
                     >
                       {diagnosis.isActive ? (
-                        <Eye className="w-4 h-4" />
+                        <>
+                          <Eye className="w-4 h-4 mr-1" />
+                          公開中
+                        </>
                       ) : (
-                        <EyeOff className="w-4 h-4" />
+                        <>
+                          <EyeOff className="w-4 h-4 mr-1" />
+                          非公開
+                        </>
                       )}
                     </Button>
                     <Link href={`/admin/diagnoses/${diagnosis.id}`}>
-                      <Button variant="ghost" size="sm">
-                        <Edit className="w-4 h-4" />
+                      <Button variant="outline" size="sm">
+                        <Edit className="w-4 h-4 mr-1" />
+                        編集
                       </Button>
                     </Link>
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       size="sm"
                       onClick={() => handleDelete(diagnosis.id, diagnosis.name)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-4 h-4 mr-1" />
+                      削除
                     </Button>
                   </div>
                 </div>
