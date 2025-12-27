@@ -68,7 +68,7 @@ export default function ChannelsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">経路・QRコード</h1>
+        <h1 className="text-2xl font-bold">経路管理</h1>
         <Link href="/dashboard/channels/new">
           <Button className="gap-2">
             <Plus className="w-4 h-4" />
@@ -84,7 +84,7 @@ export default function ChannelsPage() {
             まだ経路がありません
           </h2>
           <p className="text-gray-500 mb-6">
-            経路を作成してQRコードを発行しましょう
+            経路を作成して計測を始めましょう
           </p>
           <Link href="/dashboard/channels/new">
             <Button>最初の経路を作成する</Button>
@@ -149,7 +149,7 @@ export default function ChannelsPage() {
                       <Link href={`/dashboard/channels/${channel.id}`}>
                         <Button variant="outline" size="sm" className="gap-1">
                           <QrCode className="w-4 h-4" />
-                          QRコード
+                          詳細
                         </Button>
                       </Link>
                       <Link href={`/dashboard/channels/${channel.id}/edit`}>

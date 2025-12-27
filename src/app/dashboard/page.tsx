@@ -237,7 +237,7 @@ export default function DashboardPage() {
               まだ診断完了履歴がありません
             </h3>
             <p className="text-gray-500">
-              QRコードから診断が完了されると、ここに履歴が表示されます
+              診断が完了されると、ここに履歴が表示されます
             </p>
           </div>
         ) : (

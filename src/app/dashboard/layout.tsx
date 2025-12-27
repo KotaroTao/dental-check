@@ -92,7 +92,7 @@ export default function DashboardLayout({
                 href="/dashboard/channels"
                 className="text-gray-600 hover:text-gray-900"
               >
-                経路・QRコード
+                経路
               </Link>
               <Link
                 href="/dashboard/embed"

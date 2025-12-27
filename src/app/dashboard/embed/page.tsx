@@ -229,7 +229,7 @@ export default function EmbedPage() {
         <ul className="text-sm text-yellow-800 space-y-1 list-disc list-inside">
           <li>埋め込みコードは契約中のみ動作します</li>
           <li>トライアル期間終了後は有料プランへの登録が必要です</li>
-          <li>アクセス統計は「経路・QRコード」ページで確認できます</li>
+          <li>アクセス統計は「経路」ページで確認できます</li>
         </ul>
       </div>
     </div>
