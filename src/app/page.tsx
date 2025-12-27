@@ -12,7 +12,6 @@ import {
   BarChart3,
   Check,
   ArrowRight,
-  ChevronDown,
   FileText,
   Globe,
   Instagram,
@@ -32,12 +31,12 @@ export default function Home() {
       <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-white/20">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-2">
+            <Link href="/" className="flex items-center gap-2">
               <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
                 <Sparkles className="w-5 h-5 text-white" />
               </div>
               <span className="font-bold text-lg text-gray-900">くるくる診断 for Dental</span>
-            </div>
+            </Link>
             <div className="hidden md:flex items-center gap-8">
               <a href="#features" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
                 機能
@@ -84,10 +83,10 @@ export default function Home() {
             </div>
 
             {/* メインタイトル */}
-            <h1 className="animate-fade-in-up text-4xl md:text-6xl lg:text-7xl font-bold text-gray-900 leading-tight mb-6">
+            <h1 className="animate-fade-in-up text-4xl md:text-6xl lg:text-7xl font-bold text-gray-900 leading-[1.3em] mb-6">
               <span className="inline-block">「ちょっと気になる」を</span>
               <br />
-              <span className="inline-block mt-2 text-gradient-primary">来院予約に変える。</span>
+              <span className="inline-block mt-[0.4em] text-gradient-primary">来院予約に変える。</span>
             </h1>
 
             {/* サブタイトル */}
@@ -98,18 +97,12 @@ export default function Home() {
             </p>
 
             {/* CTAボタン */}
-            <div className="animate-fade-in-up animation-delay-300 flex flex-col sm:flex-row gap-4 justify-center mb-12">
+            <div className="animate-fade-in-up animation-delay-300 flex justify-center mb-12">
               <Link href="/demo">
-                <Button size="xl" variant="gradient" className="w-full sm:w-auto group">
-                  <Play className="w-5 h-5 mr-2" />
+                <Button size="2xl" variant="outline" className="w-full sm:w-auto border-2 border-gray-800 text-gray-800 hover:bg-gray-800 hover:text-white transition-all duration-300 hover:scale-105 group">
+                  <Play className="w-6 h-6 mr-2" />
                   無料で診断を試す
-                  <ArrowRight className="w-5 h-5 ml-2 transition-transform group-hover:translate-x-1" />
-                </Button>
-              </Link>
-              <Link href="/signup">
-                <Button size="xl" variant="outline" className="w-full sm:w-auto">
-                  <Building2 className="w-5 h-5 mr-2" />
-                  医院として登録
+                  <ArrowRight className="w-6 h-6 ml-2 transition-transform group-hover:translate-x-1" />
                 </Button>
               </Link>
             </div>
@@ -129,11 +122,6 @@ export default function Home() {
                 <span>解約いつでもOK</span>
               </div>
             </div>
-          </div>
-
-          {/* スクロール指示 */}
-          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 animate-bounce-gentle">
-            <ChevronDown className="w-6 h-6 text-gray-400" />
           </div>
         </div>
       </section>
@@ -155,8 +143,8 @@ export default function Home() {
                   チラシを配っても、予約が来ない...
                 </h2>
                 <p className="text-gray-600 max-w-xl mx-auto text-lg leading-relaxed">
-                  「虫歯かも」「歯並びが気になる」——潜在患者は
-                  <span className="font-bold text-red-500">自覚がないと動きません</span>。
+                  「虫歯かも」「歯並びが気になる」——<br />
+                  潜在患者は<span className="font-bold text-red-500">自覚がないと動きません</span>。
                 </p>
                 <div className="mt-8 pt-8 border-t border-gray-100">
                   <p className="text-gray-700">
@@ -601,9 +589,9 @@ export default function Home() {
         <div className="container mx-auto px-4 relative">
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-3xl md:text-5xl font-bold text-white mb-6">
-              今すぐ始めて、
+              <span className="inline-block">今すぐ始めて、</span>
               <br />
-              新患獲得を加速させましょう
+              <span className="inline-block mt-[0.4em]">新患獲得を加速させましょう</span>
             </h2>
             <p className="text-gray-300 text-lg mb-10 max-w-xl mx-auto">
               14日間の無料トライアルで、すべての機能をお試しいただけます。
@@ -638,7 +626,7 @@ export default function Home() {
               </div>
               <span className="font-bold text-lg text-white">くるくる診断 for Dental</span>
             </div>
-            <div className="flex items-center gap-8">
+            <div className="flex flex-wrap items-center justify-center gap-6 md:gap-8">
               <a href="#features" className="text-sm text-gray-400 hover:text-white transition-colors">
                 機能
               </a>
@@ -648,6 +636,15 @@ export default function Home() {
               <a href="#pricing" className="text-sm text-gray-400 hover:text-white transition-colors">
                 料金
               </a>
+              <Link href="/terms" className="text-sm text-gray-400 hover:text-white transition-colors">
+                利用規約
+              </Link>
+              <Link href="/privacy" className="text-sm text-gray-400 hover:text-white transition-colors">
+                プライバシーポリシー
+              </Link>
+              <Link href="/legal" className="text-sm text-gray-400 hover:text-white transition-colors">
+                特定商取引法に基づく表記
+              </Link>
             </div>
             <div className="text-center md:text-right">
               <p className="text-gray-500 text-sm">
