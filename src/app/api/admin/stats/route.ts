@@ -1,23 +1,11 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
-
-// 管理者認証チェック
-async function getAdminSession() {
-  const cookieStore = await cookies();
-  const sessionToken = cookieStore.get("admin_session")?.value;
-  if (!sessionToken) return null;
-
-  const admin = await prisma.admin.findFirst({
-    where: { id: sessionToken },
-  });
-  return admin;
-}
+import { getAdminSession } from "@/lib/admin-auth";
 
 export async function GET(request: Request) {
   try {
-    const admin = await getAdminSession();
-    if (!admin) {
+    const session = await getAdminSession();
+    if (!session) {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
     }
 
