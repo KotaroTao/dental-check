@@ -83,10 +83,10 @@ export default function Home() {
             </div>
 
             {/* メインタイトル */}
-            <h1 className="animate-fade-in-up text-4xl md:text-6xl lg:text-7xl font-bold text-gray-900 leading-[1.3] mb-6">
+            <h1 className="animate-fade-in-up text-4xl md:text-6xl lg:text-7xl font-bold text-gray-900 leading-[1.3em] mb-6">
               <span className="inline-block">「ちょっと気になる」を</span>
               <br />
-              <span className="inline-block mt-2 text-gradient-primary">来院予約に変える。</span>
+              <span className="inline-block mt-[1.3em] text-gradient-primary">来院予約に変える。</span>
             </h1>
 
             {/* サブタイトル */}
