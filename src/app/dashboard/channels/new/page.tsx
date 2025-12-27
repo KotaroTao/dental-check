@@ -8,17 +8,24 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft } from "lucide-react";
 
+// 利用可能な診断タイプ
+const DIAGNOSIS_TYPES = [
+  { slug: "oral-age", name: "お口年齢診断" },
+  { slug: "child-orthodontics", name: "子供の矯正タイミングチェック" },
+];
+
 export default function NewChannelPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
     name: "",
     description: "",
+    diagnosisTypeSlug: "",
   });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -29,6 +36,11 @@ export default function NewChannelPage() {
 
     if (!formData.name.trim()) {
       setError("経路名を入力してください");
+      return;
+    }
+
+    if (!formData.diagnosisTypeSlug) {
+      setError("診断タイプを選択してください");
       return;
     }
 
@@ -92,6 +104,30 @@ export default function NewChannelPage() {
             />
             <p className="text-xs text-gray-500">
               どこで使うQRコードか分かる名前をつけてください
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="diagnosisTypeSlug">
+              診断タイプ <span className="text-red-500">*</span>
+            </Label>
+            <select
+              id="diagnosisTypeSlug"
+              name="diagnosisTypeSlug"
+              value={formData.diagnosisTypeSlug}
+              onChange={handleChange}
+              disabled={isLoading}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <option value="">選択してください</option>
+              {DIAGNOSIS_TYPES.map((type) => (
+                <option key={type.slug} value={type.slug}>
+                  {type.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500">
+              この経路で使用する診断を選択してください
             </p>
           </div>
 

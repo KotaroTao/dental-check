@@ -115,13 +115,13 @@ Get-Content backup.sql | docker exec -i dental-local-db psql -U dental_user -d d
 cd C:\Users\hacha\Documents\dental-check
 git add .
 git commit -m "修正内容"
-git push origin claude/dental-clinic-tool-dev-FVPKz
+git push origin claude/plan-qr-measurements-wb4qE
 ```
 
 **最新コードを取得:**
 ```cmd
 cd C:\Users\hacha\Documents\dental-check
-git pull origin claude/dental-clinic-tool-dev-FVPKz
+git pull origin claude/plan-qr-measurements-wb4qE
 ```
 
 ---
@@ -214,7 +214,7 @@ docker compose -f docker-compose.production.yml --env-file .env.production up -d
 ### ビルド＆デプロイ
 ```bash
 cd /var/www/dental-check
-git pull origin claude/dental-clinic-tool-dev-FVPKz
+git pull origin claude/plan-qr-measurements-wb4qE
 docker compose -f docker-compose.production.yml --env-file .env.production build --no-cache
 docker compose -f docker-compose.production.yml --env-file .env.production up -d
 ```
@@ -330,7 +330,7 @@ docker exec dental-check-nginx nginx -t
 
 ## Git ブランチ
 
-- 開発ブランチ: `claude/dental-clinic-tool-dev-FVPKz`
+- 開発ブランチ: `claude/plan-qr-measurements-wb4qE`
 - リポジトリ: `https://github.com/KotaroTao/dental-check`
 
 ### ローカル→本番 反映手順（クイックリファレンス）
@@ -339,7 +339,7 @@ docker exec dental-check-nginx nginx -t
 ```bash
 git add .
 git commit -m "修正内容"
-git push origin claude/dental-clinic-tool-dev-FVPKz
+git push origin claude/plan-qr-measurements-wb4qE
 ```
 
 2. **本番サーバーにSSH接続**
@@ -350,7 +350,7 @@ ssh -i ~/Downloads/dental-check-key.pem root@210.131.223.161
 3. **本番サーバーでデプロイ**
 ```bash
 cd /var/www/dental-check
-git pull origin claude/dental-clinic-tool-dev-FVPKz
+git pull origin claude/plan-qr-measurements-wb4qE
 docker compose -f docker-compose.production.yml --env-file .env.production build --no-cache
 docker compose -f docker-compose.production.yml --env-file .env.production up -d
 ```

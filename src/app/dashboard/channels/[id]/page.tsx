@@ -7,11 +7,18 @@ import QRCode from "qrcode";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Download, Copy, ExternalLink } from "lucide-react";
 
+// 診断タイプの表示名
+const DIAGNOSIS_TYPE_NAMES: Record<string, string> = {
+  "oral-age": "お口年齢診断",
+  "child-orthodontics": "子供の矯正タイミングチェック",
+};
+
 interface Channel {
   id: string;
   code: string;
   name: string;
   description: string | null;
+  diagnosisTypeSlug: string;
   isActive: boolean;
 }
 
@@ -24,7 +31,7 @@ export default function ChannelDetailPage() {
 
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
   const diagnosisUrl = channel
-    ? `${baseUrl}/c/${channel.code}/oral-age`
+    ? `${baseUrl}/c/${channel.code}/${channel.diagnosisTypeSlug}`
     : "";
 
   useEffect(() => {
@@ -61,10 +68,10 @@ export default function ChannelDetailPage() {
   }, [channel, diagnosisUrl]);
 
   const handleDownload = () => {
-    if (!canvasRef.current) return;
+    if (!canvasRef.current || !channel) return;
 
     const link = document.createElement("a");
-    link.download = `qr-${channel?.name || "code"}.png`;
+    link.download = `qr-${channel.name}.png`;
     link.href = canvasRef.current.toDataURL("image/png");
     link.click();
   };
@@ -82,6 +89,9 @@ export default function ChannelDetailPage() {
   if (!channel) {
     return <div className="text-gray-500">経路が見つかりません</div>;
   }
+
+  const diagnosisTypeName =
+    DIAGNOSIS_TYPE_NAMES[channel.diagnosisTypeSlug] || channel.diagnosisTypeSlug;
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -112,22 +122,34 @@ export default function ChannelDetailPage() {
           </span>
         </div>
 
-        <div className="border-t pt-4">
-          <div className="text-sm text-gray-500 mb-1">経路コード</div>
-          <code className="bg-gray-100 px-3 py-1.5 rounded text-sm font-mono">
-            {channel.code}
-          </code>
+        <div className="grid grid-cols-2 gap-4 border-t pt-4">
+          <div>
+            <div className="text-sm text-gray-500 mb-1">経路コード</div>
+            <code className="bg-gray-100 px-3 py-1.5 rounded text-sm font-mono">
+              {channel.code}
+            </code>
+          </div>
+          <div>
+            <div className="text-sm text-gray-500 mb-1">診断タイプ</div>
+            <span className="inline-flex items-center px-3 py-1.5 rounded text-sm font-medium bg-blue-50 text-blue-700">
+              {diagnosisTypeName}
+            </span>
+          </div>
         </div>
       </div>
 
       {/* QRコードセクション */}
-      <div className="bg-white rounded-xl shadow-sm border p-6 mb-6">
+      <div className="bg-white rounded-xl shadow-sm border p-6">
         <h2 className="text-lg font-bold mb-4">QRコード</h2>
 
         <div className="flex flex-col items-center">
           <div className="bg-white p-4 rounded-lg border mb-4">
             <canvas ref={canvasRef} />
           </div>
+
+          <p className="text-sm text-gray-600 mb-4">
+            このQRコードをスキャンすると「{diagnosisTypeName}」が開始されます
+          </p>
 
           <div className="flex gap-3 mb-6">
             <Button onClick={handleDownload} className="gap-2">
@@ -152,47 +174,6 @@ export default function ChannelDetailPage() {
                 </Button>
               </a>
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 診断タイプ選択 */}
-      <div className="bg-white rounded-xl shadow-sm border p-6">
-        <h2 className="text-lg font-bold mb-4">診断タイプ別URL</h2>
-
-        <div className="space-y-4">
-          <div className="bg-gray-50 rounded-lg p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="font-medium">お口年齢診断</span>
-              <a
-                href={`${baseUrl}/c/${channel.code}/oral-age`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary text-sm hover:underline"
-              >
-                プレビュー
-              </a>
-            </div>
-            <code className="text-xs text-gray-600 break-all">
-              {baseUrl}/c/{channel.code}/oral-age
-            </code>
-          </div>
-
-          <div className="bg-gray-50 rounded-lg p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="font-medium">子供の矯正タイミングチェック</span>
-              <a
-                href={`${baseUrl}/c/${channel.code}/child-orthodontics`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary text-sm hover:underline"
-              >
-                プレビュー
-              </a>
-            </div>
-            <code className="text-xs text-gray-600 break-all">
-              {baseUrl}/c/{channel.code}/child-orthodontics
-            </code>
           </div>
         </div>
       </div>

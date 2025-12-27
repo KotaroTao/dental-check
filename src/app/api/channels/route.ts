@@ -35,11 +35,18 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, description } = body;
+    const { name, description, diagnosisTypeSlug } = body;
 
     if (!name || name.trim() === "") {
       return NextResponse.json(
         { error: "経路名を入力してください" },
+        { status: 400 }
+      );
+    }
+
+    if (!diagnosisTypeSlug || diagnosisTypeSlug.trim() === "") {
+      return NextResponse.json(
+        { error: "診断タイプを選択してください" },
         { status: 400 }
       );
     }
@@ -52,6 +59,7 @@ export async function POST(request: NextRequest) {
         clinicId: session.clinicId,
         name: name.trim(),
         description: description?.trim() || null,
+        diagnosisTypeSlug: diagnosisTypeSlug.trim(),
         code,
       },
     })) as Channel;
