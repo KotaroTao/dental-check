@@ -36,7 +36,7 @@ export default function Home() {
               <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
                 <Sparkles className="w-5 h-5 text-white" />
               </div>
-              <span className="font-bold text-lg text-gray-900">デンタルチェック</span>
+              <span className="font-bold text-lg text-gray-900">くるくる診断 for Dental</span>
             </div>
             <div className="hidden md:flex items-center gap-8">
               <a href="#features" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
@@ -636,7 +636,7 @@ export default function Home() {
               <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
                 <Sparkles className="w-5 h-5 text-white" />
               </div>
-              <span className="font-bold text-lg text-white">デンタルチェック</span>
+              <span className="font-bold text-lg text-white">くるくる診断 for Dental</span>
             </div>
             <div className="flex items-center gap-8">
               <a href="#features" className="text-sm text-gray-400 hover:text-white transition-colors">
@@ -649,9 +649,14 @@ export default function Home() {
                 料金
               </a>
             </div>
-            <p className="text-gray-500 text-sm">
-              &copy; 2025 デンタルチェック. All rights reserved.
-            </p>
+            <div className="text-center md:text-right">
+              <p className="text-gray-500 text-sm">
+                &copy; 2026 くるくる診断 for Dental. All rights reserved.
+              </p>
+              <p className="text-gray-500 text-sm mt-1">
+                運営: <a href="https://function-t.com/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors">株式会社ファンクション・ティ</a>
+              </p>
+            </div>
           </div>
         </div>
       </footer>

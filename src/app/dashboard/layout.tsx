@@ -78,7 +78,7 @@ export default function DashboardLayout({
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-8">
             <Link href="/dashboard" className="font-bold text-xl">
-              歯科集患ツール
+              くるくる診断 for Dental
             </Link>
             <nav className="hidden md:flex items-center gap-6">
               <Link
