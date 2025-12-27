@@ -12,7 +12,6 @@ import {
   BarChart3,
   Check,
   ArrowRight,
-  ChevronDown,
   FileText,
   Globe,
   Instagram,
@@ -84,7 +83,7 @@ export default function Home() {
             </div>
 
             {/* メインタイトル */}
-            <h1 className="animate-fade-in-up text-4xl md:text-6xl lg:text-7xl font-bold text-gray-900 leading-tight mb-6">
+            <h1 className="animate-fade-in-up text-4xl md:text-6xl lg:text-7xl font-bold text-gray-900 leading-[1.3] mb-6">
               <span className="inline-block">「ちょっと気になる」を</span>
               <br />
               <span className="inline-block mt-2 text-gradient-primary">来院予約に変える。</span>
@@ -98,17 +97,17 @@ export default function Home() {
             </p>
 
             {/* CTAボタン */}
-            <div className="animate-fade-in-up animation-delay-300 flex flex-col sm:flex-row gap-4 justify-center mb-12">
+            <div className="animate-fade-in-up animation-delay-300 flex flex-col sm:flex-row gap-6 justify-center mb-12">
               <Link href="/demo">
-                <Button size="xl" variant="gradient" className="w-full sm:w-auto group">
-                  <Play className="w-5 h-5 mr-2" />
+                <Button size="2xl" variant="gradient" className="w-full sm:w-auto group shadow-xl shadow-blue-500/30 hover:shadow-2xl hover:shadow-blue-500/40 transition-all duration-300 hover:scale-105">
+                  <Play className="w-6 h-6 mr-2" />
                   無料で診断を試す
-                  <ArrowRight className="w-5 h-5 ml-2 transition-transform group-hover:translate-x-1" />
+                  <ArrowRight className="w-6 h-6 ml-2 transition-transform group-hover:translate-x-1" />
                 </Button>
               </Link>
               <Link href="/signup">
-                <Button size="xl" variant="outline" className="w-full sm:w-auto">
-                  <Building2 className="w-5 h-5 mr-2" />
+                <Button size="2xl" variant="outline" className="w-full sm:w-auto border-2 border-gray-800 text-gray-800 hover:bg-gray-800 hover:text-white transition-all duration-300 hover:scale-105">
+                  <Building2 className="w-6 h-6 mr-2" />
                   医院として登録
                 </Button>
               </Link>
@@ -129,11 +128,6 @@ export default function Home() {
                 <span>解約いつでもOK</span>
               </div>
             </div>
-          </div>
-
-          {/* スクロール指示 */}
-          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 animate-bounce-gentle">
-            <ChevronDown className="w-6 h-6 text-gray-400" />
           </div>
         </div>
       </section>
