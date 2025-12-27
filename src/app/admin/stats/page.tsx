@@ -74,16 +74,18 @@ export default function AdminStatsPage() {
 
   const fetchStats = useCallback(async () => {
     setIsLoading(true);
+    setError("");
     try {
       const response = await fetch(`/api/admin/stats?days=${period}`);
       if (response.ok) {
         const data = await response.json();
         setStats(data);
       } else {
-        setError("統計の取得に失敗しました");
+        const errorData = await response.json().catch(() => ({}));
+        setError(errorData.error || `統計の取得に失敗しました (${response.status})`);
       }
-    } catch {
-      setError("統計の取得に失敗しました");
+    } catch (e) {
+      setError(`統計の取得に失敗しました: ${e instanceof Error ? e.message : "不明なエラー"}`);
     } finally {
       setIsLoading(false);
     }
