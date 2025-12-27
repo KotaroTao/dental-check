@@ -632,7 +632,7 @@ export default function Home() {
               </div>
               <span className="font-bold text-lg text-white">くるくる診断 for Dental</span>
             </div>
-            <div className="flex items-center gap-8">
+            <div className="flex flex-wrap items-center justify-center gap-6 md:gap-8">
               <a href="#features" className="text-sm text-gray-400 hover:text-white transition-colors">
                 機能
               </a>
@@ -642,6 +642,12 @@ export default function Home() {
               <a href="#pricing" className="text-sm text-gray-400 hover:text-white transition-colors">
                 料金
               </a>
+              <Link href="/terms" className="text-sm text-gray-400 hover:text-white transition-colors">
+                利用規約
+              </Link>
+              <Link href="/privacy" className="text-sm text-gray-400 hover:text-white transition-colors">
+                プライバシーポリシー
+              </Link>
               <Link href="/legal" className="text-sm text-gray-400 hover:text-white transition-colors">
                 特定商取引法に基づく表記
               </Link>
