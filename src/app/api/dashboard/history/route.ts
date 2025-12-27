@@ -113,7 +113,16 @@ export async function GET(request: NextRequest) {
     };
 
     // 履歴データを整形
-    const history = sessions.map((s) => {
+    type SessionWithRelations = {
+      id: string;
+      createdAt: Date;
+      resultCategory: string | null;
+      channel: { id: string; name: string } | null;
+      diagnosisType: { slug: string; name: string } | null;
+      ctaClicks: { ctaType: string }[];
+    };
+
+    const history = (sessions as SessionWithRelations[]).map((s) => {
       const ctaClick = s.ctaClicks[0];
       return {
         id: s.id,
