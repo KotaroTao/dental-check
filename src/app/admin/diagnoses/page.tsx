@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Edit, Trash2, Eye, EyeOff } from "lucide-react";
+import { Plus, Edit, Trash2, Eye, EyeOff, ExternalLink } from "lucide-react";
 
 interface DiagnosisType {
   id: string;
@@ -132,6 +132,15 @@ export default function AdminDiagnosesPage() {
                     <p className="text-sm text-gray-500 mt-1">
                       スラッグ: {diagnosis.slug}
                     </p>
+                    <a
+                      href={`/demo/${diagnosis.slug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 mt-1"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      診断ページを開く
+                    </a>
                   </div>
                   <div className="flex gap-2">
                     <Button
