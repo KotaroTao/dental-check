@@ -52,7 +52,8 @@ export default function AdminLayout({
 
   const handleLogout = async () => {
     await fetch("/api/admin/auth/logout", { method: "POST" });
-    router.push("/admin/login");
+    // キャッシュをクリアしてハードリダイレクト
+    window.location.href = "/admin/login";
   };
 
   if (isLoginPage) {

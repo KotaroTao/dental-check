@@ -48,7 +48,8 @@ export default function DashboardLayout({
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/");
+    // キャッシュをクリアしてハードリダイレクト
+    window.location.href = "/";
   };
 
   if (isLoading) {
