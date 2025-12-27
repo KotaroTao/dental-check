@@ -148,7 +148,7 @@ export default function NewChannelPage() {
             <Button type="submit" disabled={isLoading} className="flex-1">
               {isLoading ? "作成中..." : "経路を作成"}
             </Button>
-            <Link href="/dashboard/channels">
+            <Link href="/dashboard">
               <Button type="button" variant="outline" disabled={isLoading}>
                 キャンセル
               </Button>
