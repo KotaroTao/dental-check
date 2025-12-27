@@ -5,11 +5,18 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { QrCode, Plus, Settings, Trash2 } from "lucide-react";
 
+// 診断タイプの表示名
+const DIAGNOSIS_TYPE_NAMES: Record<string, string> = {
+  "oral-age": "お口年齢診断",
+  "child-orthodontics": "矯正チェック",
+};
+
 interface Channel {
   id: string;
   code: string;
   name: string;
   description: string | null;
+  diagnosisTypeSlug: string;
   isActive: boolean;
   createdAt: string;
 }
@@ -92,6 +99,9 @@ export default function ChannelsPage() {
                   経路名
                 </th>
                 <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">
+                  診断
+                </th>
+                <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">
                   コード
                 </th>
                 <th className="text-center px-6 py-3 text-sm font-medium text-gray-500">
@@ -112,6 +122,11 @@ export default function ChannelsPage() {
                         {channel.description}
                       </div>
                     )}
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-50 text-blue-700">
+                      {DIAGNOSIS_TYPE_NAMES[channel.diagnosisTypeSlug] || channel.diagnosisTypeSlug}
+                    </span>
                   </td>
                   <td className="px-6 py-4">
                     <code className="bg-gray-100 px-2 py-1 rounded text-sm">

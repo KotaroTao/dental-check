@@ -80,6 +80,7 @@ export interface Channel {
   code: string;
   name: string;
   description: string | null;
+  diagnosisTypeSlug: string;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
