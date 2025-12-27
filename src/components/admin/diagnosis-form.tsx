@@ -362,9 +362,10 @@ export function DiagnosisForm({ initialData, isEditing = false }: Props) {
                             onChange={(e) =>
                               updateChoice(qIndex, cIndex, "score", e.target.value)
                             }
-                            placeholder="スコア"
-                            className="w-24"
+                            placeholder="点数"
+                            className="w-20"
                           />
+                          <span className="text-gray-500 text-sm">点</span>
                           <Button
                             type="button"
                             variant="ghost"
