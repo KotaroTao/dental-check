@@ -24,18 +24,15 @@ export function QuestionCard({ diagnosis, questionIndex, totalQuestions }: Props
   // 既存の回答があれば復元
   useEffect(() => {
     if (answers[questionIndex] !== undefined) {
-      const existingChoice = question.choices.findIndex(
-        (c) => c.score === answers[questionIndex]
-      );
-      setSelectedIndex(existingChoice >= 0 ? existingChoice : null);
+      setSelectedIndex(answers[questionIndex].choiceIndex);
     } else {
       setSelectedIndex(null);
     }
-  }, [questionIndex, answers, question.choices]);
+  }, [questionIndex, answers]);
 
   const handleSelect = (index: number) => {
     setSelectedIndex(index);
-    setAnswer(questionIndex, question.choices[index].score);
+    setAnswer(questionIndex, index, question.choices[index].score);
   };
 
   const handleNext = () => {

@@ -1,6 +1,11 @@
 import { create } from "zustand";
 import { DiagnosisType, ResultPattern } from "@/data/diagnosis-types";
 
+interface Answer {
+  choiceIndex: number;
+  score: number;
+}
+
 interface DiagnosisState {
   // プロフィール
   userAge: number | null;
@@ -8,7 +13,7 @@ interface DiagnosisState {
 
   // 診断進行状態
   currentStep: number;
-  answers: number[];
+  answers: Answer[];
 
   // 結果
   totalScore: number | null;
@@ -17,7 +22,7 @@ interface DiagnosisState {
 
   // アクション
   setProfile: (age: number, gender: string | null) => void;
-  setAnswer: (step: number, score: number) => void;
+  setAnswer: (step: number, choiceIndex: number, score: number) => void;
   nextStep: () => void;
   prevStep: () => void;
   calculateResult: (diagnosis: DiagnosisType) => void;
@@ -35,9 +40,9 @@ export const useDiagnosisStore = create<DiagnosisState>((set, get) => ({
 
   setProfile: (age, gender) => set({ userAge: age, userGender: gender }),
 
-  setAnswer: (step, score) => {
+  setAnswer: (step, choiceIndex, score) => {
     const answers = [...get().answers];
-    answers[step] = score;
+    answers[step] = { choiceIndex, score };
     set({ answers });
   },
 
@@ -50,7 +55,7 @@ export const useDiagnosisStore = create<DiagnosisState>((set, get) => ({
 
   calculateResult: (diagnosis) => {
     const { answers, userAge } = get();
-    const totalScore = answers.reduce((sum, score) => sum + score, 0);
+    const totalScore = answers.reduce((sum, answer) => sum + answer.score, 0);
 
     const resultPattern =
       diagnosis.resultPatterns.find(
