@@ -124,9 +124,9 @@ run_migration() {
     echo "データベースの起動を待機中..."
     sleep 10
 
-    # マイグレーション実行
+    # マイグレーション実行（Prismaバージョンを固定）
     docker compose -f docker-compose.production.yml --env-file .env.production run --rm app \
-        npx prisma migrate deploy
+        npx prisma@5.22.0 db push --skip-generate
 
     echo -e "${GREEN}マイグレーション完了${NC}"
 }
