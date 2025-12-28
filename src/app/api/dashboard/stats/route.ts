@@ -53,6 +53,18 @@ export async function GET(request: NextRequest) {
       ...(channelId && { channelId }),
     };
 
+    // 診断完了者のフィルター条件
+    const completedFilter = {
+      clinicId: session.clinicId,
+      createdAt: {
+        gte: dateFrom,
+        lte: dateTo,
+      },
+      ...(channelId && { channelId }),
+      isDemo: false,
+      completedAt: { not: null },
+    };
+
     // 統計データを並行取得
     const [
       accessCount,
@@ -62,6 +74,8 @@ export async function GET(request: NextRequest) {
       clinicPageViews,
       ctaFromResult,
       ctaFromClinicPage,
+      genderStats,
+      completedSessions,
     ] = await Promise.all([
       // アクセス数（診断ページ）
       prisma.accessLog.count({
@@ -130,6 +144,19 @@ export async function GET(request: NextRequest) {
           },
         },
       }),
+
+      // 性別統計
+      prisma.diagnosisSession.groupBy({
+        by: ['userGender'],
+        where: completedFilter,
+        _count: { id: true },
+      }),
+
+      // 年齢データを取得（年齢層統計用）
+      prisma.diagnosisSession.findMany({
+        where: completedFilter,
+        select: { userAge: true },
+      }),
     ]);
 
     // CTAクリックをタイプ別に整理
@@ -153,6 +180,39 @@ export async function GET(request: NextRequest) {
     const clinicPageConversionRate =
       clinicPageViews > 0 ? Math.round((ctaFromClinicPage / clinicPageViews) * 100 * 10) / 10 : 0;
 
+    // 性別統計を整理
+    const genderByType: Record<string, number> = {
+      male: 0,
+      female: 0,
+      other: 0,
+    };
+    for (const stat of genderStats) {
+      if (stat.userGender && genderByType.hasOwnProperty(stat.userGender)) {
+        genderByType[stat.userGender] = stat._count.id;
+      }
+    }
+
+    // 年齢層統計を計算
+    const ageRanges: Record<string, number> = {
+      "~19": 0,
+      "20-29": 0,
+      "30-39": 0,
+      "40-49": 0,
+      "50-59": 0,
+      "60~": 0,
+    };
+    for (const session of completedSessions) {
+      const age = session.userAge;
+      if (age !== null) {
+        if (age < 20) ageRanges["~19"]++;
+        else if (age < 30) ageRanges["20-29"]++;
+        else if (age < 40) ageRanges["30-39"]++;
+        else if (age < 50) ageRanges["40-49"]++;
+        else if (age < 60) ageRanges["50-59"]++;
+        else ageRanges["60~"]++;
+      }
+    }
+
     return NextResponse.json({
       stats: {
         accessCount,
@@ -166,6 +226,9 @@ export async function GET(request: NextRequest) {
         ctaFromClinicPage,
         resultConversionRate,
         clinicPageConversionRate,
+        // 年齢・性別統計
+        genderByType,
+        ageRanges,
       },
       channels,
       period: {

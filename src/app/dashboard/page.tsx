@@ -33,6 +33,9 @@ interface Stats {
   ctaFromClinicPage: number;
   resultConversionRate: number;
   clinicPageConversionRate: number;
+  // 年齢・性別統計
+  genderByType?: Record<string, number>;
+  ageRanges?: Record<string, number>;
 }
 
 // CTAタイプの表示名
@@ -63,13 +66,33 @@ interface Channel {
 interface HistoryItem {
   id: string;
   createdAt: string;
+  userAge: number | null;
+  userGender: string | null;
   diagnosisType: string;
   diagnosisTypeSlug: string;
   channelName: string;
   channelId: string;
   resultCategory: string;
   ctaType: string | null;
+  ctaClickCount: number;
 }
+
+// 性別の表示名
+const GENDER_NAMES: Record<string, string> = {
+  male: "男性",
+  female: "女性",
+  other: "-",
+};
+
+// 年齢層の表示名
+const AGE_RANGE_NAMES: Record<string, string> = {
+  "~19": "~19歳",
+  "20-29": "20代",
+  "30-39": "30代",
+  "40-49": "40代",
+  "50-59": "50代",
+  "60~": "60歳~",
+};
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);
@@ -545,6 +568,69 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* 年齢・性別統計 */}
+        {stats?.completedCount && stats.completedCount > 0 && (
+          <div className="mt-6 pt-6 border-t">
+            <h3 className="text-sm font-medium text-gray-700 mb-4 flex items-center gap-2">
+              <Users className="w-4 h-4" />
+              年齢・性別分布
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* 性別分布 */}
+              <div>
+                <h4 className="text-xs font-medium text-gray-500 mb-3">性別</h4>
+                <div className="space-y-2">
+                  {stats.genderByType && Object.entries(stats.genderByType).map(([gender, count]) => {
+                    const total = Object.values(stats.genderByType!).reduce((a, b) => a + b, 0);
+                    const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
+                    return (
+                      <div key={gender} className="flex items-center gap-3">
+                        <span className="text-sm text-gray-600 w-16">{GENDER_NAMES[gender] || gender}</span>
+                        <div className="flex-1 h-6 bg-gray-100 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${
+                              gender === "male" ? "bg-blue-500" : gender === "female" ? "bg-pink-500" : "bg-gray-400"
+                            }`}
+                            style={{ width: `${percentage}%` }}
+                          />
+                        </div>
+                        <span className="text-sm font-medium text-gray-700 w-20 text-right">
+                          {count}人 ({percentage}%)
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 年齢層分布 */}
+              <div>
+                <h4 className="text-xs font-medium text-gray-500 mb-3">年齢層</h4>
+                <div className="space-y-2">
+                  {stats.ageRanges && Object.entries(stats.ageRanges).map(([range, count]) => {
+                    const total = Object.values(stats.ageRanges!).reduce((a, b) => a + b, 0);
+                    const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
+                    return (
+                      <div key={range} className="flex items-center gap-3">
+                        <span className="text-sm text-gray-600 w-16">{AGE_RANGE_NAMES[range] || range}</span>
+                        <div className="flex-1 h-6 bg-gray-100 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-indigo-500"
+                            style={{ width: `${percentage}%` }}
+                          />
+                        </div>
+                        <span className="text-sm font-medium text-gray-700 w-20 text-right">
+                          {count}人 ({percentage}%)
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 診断実施エリア */}
@@ -601,19 +687,25 @@ export default function DashboardPage() {
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">
+                    <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">
                       日時
                     </th>
-                    <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">
+                    <th className="text-center px-2 py-3 text-sm font-medium text-gray-500">
+                      年齢
+                    </th>
+                    <th className="text-center px-2 py-3 text-sm font-medium text-gray-500">
+                      性別
+                    </th>
+                    <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">
                       診断
                     </th>
-                    <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">
+                    <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">
                       経路
                     </th>
-                    <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">
+                    <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">
                       結果
                     </th>
-                    <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">
+                    <th className="text-center px-4 py-3 text-sm font-medium text-gray-500">
                       CTA
                     </th>
                   </tr>
@@ -621,26 +713,36 @@ export default function DashboardPage() {
                 <tbody className="divide-y">
                   {history.map((item) => (
                     <tr key={item.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 text-sm text-gray-600 whitespace-nowrap">
+                      <td className="px-4 py-4 text-sm text-gray-600 whitespace-nowrap">
                         {formatDate(item.createdAt)}
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-2 py-4 text-center">
+                        <span className="text-sm text-gray-700">
+                          {item.userAge !== null ? `${item.userAge}歳` : "-"}
+                        </span>
+                      </td>
+                      <td className="px-2 py-4 text-center">
+                        <span className="text-sm text-gray-700">
+                          {item.userGender || "-"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4">
                         <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-50 text-blue-700">
                           {item.diagnosisType}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm">
+                      <td className="px-4 py-4 text-sm">
                         {item.channelName}
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-4">
                         <span className="text-sm text-gray-700">
                           {item.resultCategory}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
-                        {item.ctaType ? (
+                      <td className="px-4 py-4 text-center">
+                        {item.ctaClickCount > 0 ? (
                           <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-50 text-green-700">
-                            {CTA_TYPE_NAMES[item.ctaType] || item.ctaType}
+                            {item.ctaClickCount}回
                           </span>
                         ) : (
                           <span className="text-gray-400">−</span>
@@ -660,11 +762,16 @@ export default function DashboardPage() {
                     <div className="text-sm text-gray-500">
                       {formatDate(item.createdAt)}
                     </div>
-                    {item.ctaType && (
+                    {item.ctaClickCount > 0 && (
                       <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-green-700">
-                        {CTA_TYPE_NAMES[item.ctaType] || item.ctaType}
+                        CTA {item.ctaClickCount}回
                       </span>
                     )}
+                  </div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-sm text-gray-600">
+                      {item.userAge !== null ? `${item.userAge}歳` : "-"} / {item.userGender || "-"}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2 mb-2">
                     <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700">

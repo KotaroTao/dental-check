@@ -20,12 +20,12 @@ export function ProfileForm({ diagnosisName }: Props) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const ageNum = parseInt(age, 10);
-    if (ageNum > 0 && ageNum < 120) {
+    if (ageNum > 0 && ageNum < 120 && gender) {
       setProfile(ageNum, gender);
     }
   };
 
-  const isValid = age && parseInt(age, 10) > 0 && parseInt(age, 10) < 120;
+  const isValid = age && parseInt(age, 10) > 0 && parseInt(age, 10) < 120 && gender;
 
   return (
     <Card>
@@ -53,7 +53,7 @@ export function ProfileForm({ diagnosisName }: Props) {
           </div>
 
           <div className="space-y-2">
-            <Label>性別（任意）</Label>
+            <Label>性別 *</Label>
             <RadioGroup
               value={gender || ""}
               onValueChange={(value) => setGender(value || null)}
