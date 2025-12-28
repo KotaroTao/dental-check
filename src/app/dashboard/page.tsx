@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { BarChart3, Users, MousePointerClick, Percent, ChevronDown, QrCode, Plus, Settings, Trash2 } from "lucide-react";
+import { BarChart3, Users, MousePointerClick, Percent, ChevronDown, QrCode, Plus, Settings, Trash2, Building2, TrendingUp } from "lucide-react";
 import { LocationSection } from "@/components/dashboard/location-section";
 
 // 期間の選択肢
@@ -26,6 +26,12 @@ interface Stats {
   completionRate: number;
   ctaCount: number;
   ctaByType?: Record<string, number>;
+  // コンバージョン関連
+  clinicPageViews: number;
+  ctaFromResult: number;
+  ctaFromClinicPage: number;
+  resultConversionRate: number;
+  clinicPageConversionRate: number;
 }
 
 // CTAタイプの表示名
@@ -492,6 +498,48 @@ export default function DashboardPage() {
                   ))}
               </div>
             )}
+          </div>
+        </div>
+
+        {/* コンバージョン率 */}
+        <div className="mt-6 pt-6 border-t">
+          <h3 className="text-sm font-medium text-gray-700 mb-4 flex items-center gap-2">
+            <TrendingUp className="w-4 h-4" />
+            コンバージョン率
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* 診断結果→CTA */}
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-4 border border-green-100">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-gray-600">診断結果 → CTA</span>
+                <span className="text-2xl font-bold text-green-600">
+                  {stats?.resultConversionRate || 0}%
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <span>診断完了 {stats?.completedCount.toLocaleString() || 0}件</span>
+                <span>→</span>
+                <span>クリック {stats?.ctaFromResult.toLocaleString() || 0}件</span>
+              </div>
+            </div>
+
+            {/* 医院紹介ページ→CTA */}
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-100">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-1 text-sm text-gray-600">
+                  <Building2 className="w-4 h-4" />
+                  医院紹介ページ → CTA
+                </div>
+                <span className="text-2xl font-bold text-blue-600">
+                  {stats?.clinicPageConversionRate || 0}%
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <span>ページ閲覧 {stats?.clinicPageViews.toLocaleString() || 0}件</span>
+                <span>→</span>
+                <span>クリック {stats?.ctaFromClinicPage.toLocaleString() || 0}件</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>

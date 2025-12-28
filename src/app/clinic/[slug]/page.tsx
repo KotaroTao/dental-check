@@ -5,6 +5,7 @@ import { Clock, MapPin, User, Stethoscope, CheckCircle, Bell } from "lucide-reac
 import { PhotoCarousel } from "./photo-carousel";
 import { FloatingCTA } from "./floating-cta";
 import { ClinicCTA } from "./clinic-cta";
+import { PageViewTracker } from "./page-view-tracker";
 
 interface ClinicData {
   id: string;
@@ -95,6 +96,9 @@ export default async function ClinicPublicPage({
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* ページビュー追跡 */}
+      <PageViewTracker clinicId={clinic.id} />
+
       {/* ヘッダー */}
       <header
         className="text-white py-8"

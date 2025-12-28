@@ -54,10 +54,21 @@ export async function GET(request: NextRequest) {
     };
 
     // 統計データを並行取得
-    const [accessCount, completedCount, ctaClicks, channels] = await Promise.all([
-      // アクセス数
+    const [
+      accessCount,
+      completedCount,
+      ctaClicks,
+      channels,
+      clinicPageViews,
+      ctaFromResult,
+      ctaFromClinicPage,
+    ] = await Promise.all([
+      // アクセス数（診断ページ）
       prisma.accessLog.count({
-        where: baseFilter,
+        where: {
+          ...baseFilter,
+          eventType: { not: "clinic_page_view" },
+        },
       }),
 
       // 診断完了数
@@ -87,6 +98,38 @@ export async function GET(request: NextRequest) {
         select: { id: true, name: true, diagnosisTypeSlug: true },
         orderBy: { createdAt: "desc" },
       }),
+
+      // 医院紹介ページの閲覧数
+      prisma.accessLog.count({
+        where: {
+          clinicId: session.clinicId,
+          eventType: "clinic_page_view",
+          createdAt: {
+            gte: dateFrom,
+            lte: dateTo,
+          },
+        },
+      }),
+
+      // 診断結果からのCTAクリック（channelIdがある）
+      prisma.cTAClick.count({
+        where: {
+          ...baseFilter,
+          channelId: { not: null },
+        },
+      }),
+
+      // 医院紹介ページからのCTAクリック（channelIdがない）
+      prisma.cTAClick.count({
+        where: {
+          clinicId: session.clinicId,
+          channelId: null,
+          createdAt: {
+            gte: dateFrom,
+            lte: dateTo,
+          },
+        },
+      }),
     ]);
 
     // CTAクリックをタイプ別に整理
@@ -101,6 +144,15 @@ export async function GET(request: NextRequest) {
     const completionRate =
       accessCount > 0 ? Math.round((completedCount / accessCount) * 100 * 10) / 10 : 0;
 
+    // コンバージョン率を計算
+    // 診断結果→CTAのコンバージョン率
+    const resultConversionRate =
+      completedCount > 0 ? Math.round((ctaFromResult / completedCount) * 100 * 10) / 10 : 0;
+
+    // 医院紹介ページ→CTAのコンバージョン率
+    const clinicPageConversionRate =
+      clinicPageViews > 0 ? Math.round((ctaFromClinicPage / clinicPageViews) * 100 * 10) / 10 : 0;
+
     return NextResponse.json({
       stats: {
         accessCount,
@@ -108,6 +160,12 @@ export async function GET(request: NextRequest) {
         completionRate,
         ctaCount,
         ctaByType,
+        // コンバージョン関連
+        clinicPageViews,
+        ctaFromResult,
+        ctaFromClinicPage,
+        resultConversionRate,
+        clinicPageConversionRate,
       },
       channels,
       period: {
