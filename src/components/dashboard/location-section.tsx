@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { MapPin, TrendingUp } from "lucide-react";
+import { MapPin, TrendingUp, Check, SquareCheck, Square } from "lucide-react";
 
 // Leafletはクライアントサイドのみで読み込む
 const LocationMap = dynamic(() => import("./location-map"), {
@@ -20,18 +20,39 @@ interface LocationData {
   count: number;
   latitude: number | null;
   longitude: number | null;
+  channelId: string | null;
+}
+
+interface Channel {
+  id: string;
+  name: string;
+  isActive: boolean;
 }
 
 interface LocationSectionProps {
   period: string;
-  channelId: string;
+  channels: Channel[];
   customStartDate?: string;
   customEndDate?: string;
 }
 
+// チャンネルごとの色を定義（最大10色）
+const CHANNEL_COLORS = [
+  "#3b82f6", // blue
+  "#ef4444", // red
+  "#22c55e", // green
+  "#f59e0b", // amber
+  "#8b5cf6", // violet
+  "#ec4899", // pink
+  "#06b6d4", // cyan
+  "#f97316", // orange
+  "#84cc16", // lime
+  "#6366f1", // indigo
+];
+
 export function LocationSection({
   period,
-  channelId,
+  channels,
   customStartDate,
   customEndDate,
 }: LocationSectionProps) {
@@ -39,13 +60,62 @@ export function LocationSection({
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
+  // 選択されたチャンネルID（初期値は全てのアクティブチャンネル）
+  const activeChannels = channels.filter((c) => c.isActive);
+  const [selectedChannelIds, setSelectedChannelIds] = useState<string[]>(
+    activeChannels.map((c) => c.id)
+  );
+
+  // チャンネルが変更されたら選択を更新
+  useEffect(() => {
+    const activeIds = channels.filter((c) => c.isActive).map((c) => c.id);
+    setSelectedChannelIds((prev) => {
+      // 既存の選択からアクティブでないものを除外
+      const filtered = prev.filter((id) => activeIds.includes(id));
+      // 新しく追加されたチャンネルがあれば追加
+      const newIds = activeIds.filter((id) => !prev.includes(id));
+      return [...filtered, ...newIds];
+    });
+  }, [channels]);
+
+  // チャンネルIDと色のマッピング
+  const channelColorMap: Record<string, string> = {};
+  activeChannels.forEach((channel, index) => {
+    channelColorMap[channel.id] = CHANNEL_COLORS[index % CHANNEL_COLORS.length];
+  });
+
+  const toggleChannel = (channelId: string) => {
+    setSelectedChannelIds((prev) =>
+      prev.includes(channelId)
+        ? prev.filter((id) => id !== channelId)
+        : [...prev, channelId]
+    );
+  };
+
+  const selectAll = () => {
+    setSelectedChannelIds(activeChannels.map((c) => c.id));
+  };
+
+  const deselectAll = () => {
+    setSelectedChannelIds([]);
+  };
+
+  const isAllSelected = selectedChannelIds.length === activeChannels.length;
+
   useEffect(() => {
     const fetchLocations = async () => {
+      if (selectedChannelIds.length === 0) {
+        setLocations([]);
+        setTotal(0);
+        setIsLoading(false);
+        return;
+      }
+
       setIsLoading(true);
       try {
         const params = new URLSearchParams();
         params.set("period", period);
-        if (channelId) params.set("channelId", channelId);
+        params.set("channelIds", selectedChannelIds.join(","));
         if (period === "custom" && customStartDate && customEndDate) {
           params.set("startDate", customStartDate);
           params.set("endDate", customEndDate);
@@ -65,11 +135,61 @@ export function LocationSection({
     };
 
     fetchLocations();
-  }, [period, channelId, customStartDate, customEndDate]);
+  }, [period, selectedChannelIds, customStartDate, customEndDate]);
 
   // 位置情報があるデータのみ抽出
   const validLocations = locations.filter(
     (loc) => loc.latitude && loc.longitude && loc.city
+  );
+
+  // チャンネル選択UI
+  const ChannelSelector = () => (
+    <div className="mb-4">
+      <div className="flex flex-wrap items-center gap-2 mb-2">
+        <span className="text-sm text-gray-600 font-medium">QRコード:</span>
+        <button
+          onClick={isAllSelected ? deselectAll : selectAll}
+          className="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center gap-1"
+        >
+          {isAllSelected ? (
+            <>
+              <SquareCheck className="w-3 h-3" />
+              全解除
+            </>
+          ) : (
+            <>
+              <Square className="w-3 h-3" />
+              全選択
+            </>
+          )}
+        </button>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {activeChannels.map((channel) => {
+          const isSelected = selectedChannelIds.includes(channel.id);
+          const color = channelColorMap[channel.id];
+          return (
+            <button
+              key={channel.id}
+              onClick={() => toggleChannel(channel.id)}
+              className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs border transition-colors ${
+                isSelected
+                  ? "border-current bg-opacity-10"
+                  : "border-gray-200 text-gray-400 bg-gray-50"
+              }`}
+              style={isSelected ? { color, backgroundColor: `${color}15` } : {}}
+            >
+              <span
+                className="w-2.5 h-2.5 rounded-full"
+                style={{ backgroundColor: isSelected ? color : "#d1d5db" }}
+              />
+              {channel.name}
+              {isSelected && <Check className="w-3 h-3" />}
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 
   if (isLoading) {
@@ -79,6 +199,7 @@ export function LocationSection({
           <MapPin className="w-5 h-5" />
           診断実施エリア
         </h2>
+        <ChannelSelector />
         <div className="animate-pulse">
           <div className="h-64 bg-gray-100 rounded-lg mb-4"></div>
           <div className="space-y-2">
@@ -91,21 +212,39 @@ export function LocationSection({
     );
   }
 
-  if (locations.length === 0) {
+  if (locations.length === 0 || selectedChannelIds.length === 0) {
     return (
       <div className="bg-white rounded-xl shadow-sm border p-6">
         <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
           <MapPin className="w-5 h-5" />
           診断実施エリア
         </h2>
+        <ChannelSelector />
         <div className="text-center py-8 text-gray-500">
           <MapPin className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-          <p>この期間のエリアデータはありません</p>
+          <p>{selectedChannelIds.length === 0 ? "QRコードを選択してください" : "この期間のエリアデータはありません"}</p>
           <p className="text-sm mt-1">診断が実施されると、ここに地域別の統計が表示されます</p>
         </div>
       </div>
     );
   }
+
+  // 都市別に集計（同じ都市の複数チャンネルをまとめる）
+  const cityAggregated: Record<string, { region: string | null; city: string | null; count: number; latitude: number | null; longitude: number | null }> = {};
+  for (const loc of locations) {
+    const key = `${loc.region}-${loc.city}`;
+    if (!cityAggregated[key]) {
+      cityAggregated[key] = {
+        region: loc.region,
+        city: loc.city,
+        count: 0,
+        latitude: loc.latitude,
+        longitude: loc.longitude,
+      };
+    }
+    cityAggregated[key].count += loc.count;
+  }
+  const aggregatedLocations = Object.values(cityAggregated).sort((a, b) => b.count - a.count);
 
   return (
     <div className="bg-white rounded-xl shadow-sm border p-6">
@@ -117,11 +256,17 @@ export function LocationSection({
         </span>
       </h2>
 
+      <ChannelSelector />
+
       <div className="grid md:grid-cols-2 gap-6">
         {/* 地図 */}
         <div>
           {validLocations.length > 0 ? (
-            <LocationMap locations={validLocations} />
+            <LocationMap
+              locations={validLocations}
+              channelColorMap={channelColorMap}
+              channels={activeChannels}
+            />
           ) : (
             <div className="h-64 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">
               位置データなし
@@ -136,8 +281,8 @@ export function LocationSection({
             エリア別 TOP10
           </h3>
           <div className="space-y-2">
-            {locations.slice(0, 10).map((loc, index) => {
-              const maxCount = locations[0]?.count || 1;
+            {aggregatedLocations.slice(0, 10).map((loc, index) => {
+              const maxCount = aggregatedLocations[0]?.count || 1;
               const percentage = (loc.count / maxCount) * 100;
 
               return (
@@ -162,7 +307,7 @@ export function LocationSection({
             })}
           </div>
 
-          {locations.length === 0 && (
+          {aggregatedLocations.length === 0 && (
             <p className="text-gray-400 text-sm text-center py-4">
               データがありません
             </p>

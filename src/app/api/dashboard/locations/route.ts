@@ -7,6 +7,7 @@ type LocationGroupResult = {
   city: string | null;
   latitude: number | null;
   longitude: number | null;
+  channelId: string | null;
   _count: { id: number };
 };
 
@@ -24,6 +25,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const channelId = searchParams.get("channelId");
+    const channelIds = searchParams.get("channelIds"); // カンマ区切りの複数チャンネルID
     const period = searchParams.get("period") || "month";
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
@@ -56,9 +58,16 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 市区町村別の診断完了数を集計
+    // チャンネルフィルター条件を作成
+    const channelFilter = channelIds
+      ? { channelId: { in: channelIds.split(",").filter(Boolean) } }
+      : channelId
+      ? { channelId }
+      : {};
+
+    // 市区町村別の診断完了数を集計（チャンネル別）
     const locationData = await prisma.diagnosisSession.groupBy({
-      by: ["region", "city", "latitude", "longitude"],
+      by: ["region", "city", "latitude", "longitude", "channelId"],
       where: {
         clinicId: session.clinicId,
         completedAt: { not: null },
@@ -69,7 +78,7 @@ export async function GET(request: NextRequest) {
         },
         region: { not: null },
         city: { not: null },
-        ...(channelId && { channelId }),
+        ...channelFilter,
       },
       _count: {
         id: true,
@@ -94,7 +103,7 @@ export async function GET(request: NextRequest) {
           lte: dateTo,
         },
         region: { not: null },
-        ...(channelId && { channelId }),
+        ...channelFilter,
       },
       _count: {
         id: true,
@@ -116,7 +125,7 @@ export async function GET(request: NextRequest) {
           gte: dateFrom,
           lte: dateTo,
         },
-        ...(channelId && { channelId }),
+        ...channelFilter,
       },
     });
 
@@ -127,6 +136,7 @@ export async function GET(request: NextRequest) {
       count: item._count.id,
       latitude: item.latitude,
       longitude: item.longitude,
+      channelId: item.channelId,
     }));
 
     const topRegions = (regionData as RegionGroupResult[]).map((item) => ({

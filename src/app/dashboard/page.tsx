@@ -913,7 +913,7 @@ export default function DashboardPage() {
       {/* 診断実施エリア */}
       <LocationSection
         period={period}
-        channelId={selectedChannelId}
+        channels={channels}
         customStartDate={period === "custom" ? customStartDate : undefined}
         customEndDate={period === "custom" ? customEndDate : undefined}
       />
