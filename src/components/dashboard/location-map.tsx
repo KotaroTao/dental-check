@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { MapContainer, TileLayer, CircleMarker, Tooltip, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -24,11 +24,14 @@ interface LocationMapProps {
   channels?: Channel[];
 }
 
-// 地図の表示範囲を自動調整するコンポーネント（都道府県レベルに制限）
+// 地図の表示範囲を自動調整するコンポーネント（初回のみ、都道府県レベルに制限）
 function FitBounds({ locations }: { locations: Location[] }) {
   const map = useMap();
+  const hasInitialized = useRef(false);
 
   useEffect(() => {
+    // 初回のみ実行（QRコード選択変更時はズームを維持）
+    if (hasInitialized.current) return;
     if (locations.length === 0) return;
 
     const validLocations = locations.filter(
@@ -36,6 +39,8 @@ function FitBounds({ locations }: { locations: Location[] }) {
     );
 
     if (validLocations.length === 0) return;
+
+    hasInitialized.current = true;
 
     if (validLocations.length === 1) {
       // 1件のみの場合は都道府県レベルでズーム（zoom 7）
