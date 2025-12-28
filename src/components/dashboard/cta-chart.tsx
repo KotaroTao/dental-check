@@ -23,8 +23,40 @@ const SOURCE_NAMES: Record<string, string> = {
   fromClinicPage: "医院ページ",
 };
 
+// データを集約する関数（週単位または月単位）
+function aggregateData(data: CTAChartData[], mode: "day" | "week" | "month"): CTAChartData[] {
+  if (mode === "day") return data;
+
+  const aggregated: Record<string, CTAChartData> = {};
+
+  for (const item of data) {
+    const d = new Date(item.date);
+    let key: string;
+
+    if (mode === "week") {
+      // 週の開始日（月曜日）を取得
+      const dayOfWeek = d.getDay();
+      const diff = d.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+      const weekStart = new Date(d.setDate(diff));
+      key = weekStart.toISOString().split("T")[0];
+    } else {
+      // 月の最初の日
+      key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+    }
+
+    if (!aggregated[key]) {
+      aggregated[key] = { date: key, count: 0, fromResult: 0, fromClinicPage: 0 };
+    }
+    aggregated[key].count += item.count;
+    aggregated[key].fromResult += item.fromResult;
+    aggregated[key].fromClinicPage += item.fromClinicPage;
+  }
+
+  return Object.values(aggregated).sort((a, b) => a.date.localeCompare(b.date));
+}
+
 export function CTAChart({ period, channelId, customStartDate, customEndDate }: CTAChartProps) {
-  const [data, setData] = useState<CTAChartData[]>([]);
+  const [rawData, setRawData] = useState<CTAChartData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -41,7 +73,7 @@ export function CTAChart({ period, channelId, customStartDate, customEndDate }: 
         const response = await fetch(`/api/dashboard/cta-chart?${params}`);
         if (response.ok) {
           const result = await response.json();
-          setData(result.data || []);
+          setRawData(result.data || []);
         }
       } catch (error) {
         console.error("Failed to fetch CTA chart data:", error);
@@ -53,6 +85,18 @@ export function CTAChart({ period, channelId, customStartDate, customEndDate }: 
     fetchData();
   }, [period, channelId, customStartDate, customEndDate]);
 
+  // データを適切な粒度に集約
+  const { data, aggregationMode } = useMemo(() => {
+    const count = rawData.length;
+    if (count <= 31) {
+      return { data: rawData, aggregationMode: "day" as const };
+    } else if (count <= 90) {
+      return { data: aggregateData(rawData, "week"), aggregationMode: "week" as const };
+    } else {
+      return { data: aggregateData(rawData, "month"), aggregationMode: "month" as const };
+    }
+  }, [rawData]);
+
   // 最大値を計算
   const maxCount = useMemo(() => {
     if (data.length === 0) return 10;
@@ -61,7 +105,7 @@ export function CTAChart({ period, channelId, customStartDate, customEndDate }: 
 
   // 合計を計算
   const totals = useMemo(() => {
-    return data.reduce(
+    return rawData.reduce(
       (acc, d) => ({
         total: acc.total + d.count,
         fromResult: acc.fromResult + d.fromResult,
@@ -69,7 +113,7 @@ export function CTAChart({ period, channelId, customStartDate, customEndDate }: 
       }),
       { total: 0, fromResult: 0, fromClinicPage: 0 }
     );
-  }, [data]);
+  }, [rawData]);
 
   if (isLoading) {
     return (
@@ -99,12 +143,18 @@ export function CTAChart({ period, channelId, customStartDate, customEndDate }: 
     );
   }
 
+  // 集約モードに応じたラベル
+  const aggregationLabel = aggregationMode === "week" ? "（週単位）" : aggregationMode === "month" ? "（月単位）" : "";
+
   return (
     <div className="bg-white rounded-xl shadow-sm border p-6">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <div className="flex items-center gap-2 text-gray-700">
           <BarChart3 className="w-5 h-5" />
           <span className="font-medium">CTAクリック推移</span>
+          {aggregationLabel && (
+            <span className="text-xs text-gray-400">{aggregationLabel}</span>
+          )}
         </div>
         <div className="flex items-center gap-4 text-sm">
           <div className="flex items-center gap-2">
@@ -127,61 +177,67 @@ export function CTAChart({ period, channelId, customStartDate, customEndDate }: 
           <span>0</span>
         </div>
 
-        {/* グラフエリア */}
-        <div className="ml-10 h-full flex items-end gap-1 pb-6">
-          {data.map((item, index) => (
-            <div
-              key={index}
-              className="flex-1 flex flex-col items-center gap-1 group"
-            >
-              {/* 積み上げ棒グラフ */}
+        {/* グラフエリア（横スクロール対応） */}
+        <div className="ml-10 h-full overflow-x-auto">
+          <div
+            className="h-full flex items-end gap-1 pb-6"
+            style={{ minWidth: data.length > 14 ? `${data.length * 24}px` : "100%" }}
+          >
+            {data.map((item, index) => (
               <div
-                className="w-full flex flex-col-reverse relative"
-                style={{ height: `calc(100% - 1.5rem)` }}
+                key={index}
+                className="flex-1 flex flex-col items-center gap-1 group"
+                style={{ minWidth: data.length > 14 ? "20px" : undefined }}
               >
-                {/* 診断結果からのクリック */}
+                {/* 積み上げ棒グラフ */}
                 <div
-                  className="w-full bg-green-500 rounded-t transition-all duration-300 group-hover:bg-green-600"
-                  style={{
-                    height: `${(item.fromResult / maxCount) * 100}%`,
-                    minHeight: item.fromResult > 0 ? "2px" : "0",
-                  }}
-                />
-                {/* 医院ページからのクリック */}
-                <div
-                  className="w-full bg-blue-500 transition-all duration-300 group-hover:bg-blue-600"
-                  style={{
-                    height: `${(item.fromClinicPage / maxCount) * 100}%`,
-                    minHeight: item.fromClinicPage > 0 ? "2px" : "0",
-                  }}
-                />
+                  className="w-full flex flex-col-reverse relative"
+                  style={{ height: `calc(100% - 1.5rem)` }}
+                >
+                  {/* 診断結果からのクリック */}
+                  <div
+                    className="w-full bg-green-500 rounded-t transition-all duration-300 group-hover:bg-green-600"
+                    style={{
+                      height: `${(item.fromResult / maxCount) * 100}%`,
+                      minHeight: item.fromResult > 0 ? "2px" : "0",
+                    }}
+                  />
+                  {/* 医院ページからのクリック */}
+                  <div
+                    className="w-full bg-blue-500 transition-all duration-300 group-hover:bg-blue-600"
+                    style={{
+                      height: `${(item.fromClinicPage / maxCount) * 100}%`,
+                      minHeight: item.fromClinicPage > 0 ? "2px" : "0",
+                    }}
+                  />
 
-                {/* ホバー時のツールチップ */}
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10">
-                  <div className="bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap">
-                    <div className="font-medium">{item.date}</div>
-                    <div className="flex justify-between gap-2">
-                      <span>診断結果:</span>
-                      <span>{item.fromResult}</span>
-                    </div>
-                    <div className="flex justify-between gap-2">
-                      <span>医院ページ:</span>
-                      <span>{item.fromClinicPage}</span>
-                    </div>
-                    <div className="flex justify-between gap-2 border-t border-gray-600 pt-1 mt-1">
-                      <span>合計:</span>
-                      <span className="font-medium">{item.count}</span>
+                  {/* ホバー時のツールチップ */}
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10">
+                    <div className="bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap">
+                      <div className="font-medium">{formatTooltipDate(item.date, aggregationMode)}</div>
+                      <div className="flex justify-between gap-2">
+                        <span>診断結果:</span>
+                        <span>{item.fromResult}</span>
+                      </div>
+                      <div className="flex justify-between gap-2">
+                        <span>医院ページ:</span>
+                        <span>{item.fromClinicPage}</span>
+                      </div>
+                      <div className="flex justify-between gap-2 border-t border-gray-600 pt-1 mt-1">
+                        <span>合計:</span>
+                        <span className="font-medium">{item.count}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              {/* 日付ラベル */}
-              <span className="text-xs text-gray-400 truncate w-full text-center">
-                {formatDateLabel(item.date, data.length)}
-              </span>
-            </div>
-          ))}
+                {/* 日付ラベル */}
+                <span className="text-xs text-gray-400 truncate w-full text-center">
+                  {formatDateLabel(item.date, data.length, aggregationMode)}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -204,18 +260,35 @@ export function CTAChart({ period, channelId, customStartDate, customEndDate }: 
   );
 }
 
-// 日付ラベルのフォーマット
-function formatDateLabel(date: string, totalCount: number): string {
+// ツールチップ用の日付フォーマット
+function formatTooltipDate(date: string, mode: "day" | "week" | "month"): string {
   const d = new Date(date);
-  if (totalCount <= 7) {
-    // 1週間以内は曜日と日付
+  if (mode === "month") {
+    return `${d.getFullYear()}年${d.getMonth() + 1}月`;
+  } else if (mode === "week") {
+    const endDate = new Date(d);
+    endDate.setDate(endDate.getDate() + 6);
+    return `${d.getMonth() + 1}/${d.getDate()}〜${endDate.getMonth() + 1}/${endDate.getDate()}`;
+  } else {
+    const days = ["日", "月", "火", "水", "木", "金", "土"];
+    return `${d.getMonth() + 1}/${d.getDate()}(${days[d.getDay()]})`;
+  }
+}
+
+// 日付ラベルのフォーマット
+function formatDateLabel(date: string, totalCount: number, mode: "day" | "week" | "month"): string {
+  const d = new Date(date);
+
+  if (mode === "month") {
+    return `${d.getMonth() + 1}月`;
+  } else if (mode === "week") {
+    return `${d.getMonth() + 1}/${d.getDate()}`;
+  } else if (totalCount <= 7) {
     const days = ["日", "月", "火", "水", "木", "金", "土"];
     return `${d.getMonth() + 1}/${d.getDate()}(${days[d.getDay()]})`;
   } else if (totalCount <= 14) {
-    // 2週間以内は日付のみ
     return `${d.getMonth() + 1}/${d.getDate()}`;
   } else {
-    // それ以上は日付を間引く
     return `${d.getDate()}`;
   }
 }
