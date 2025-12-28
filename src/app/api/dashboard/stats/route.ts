@@ -270,9 +270,12 @@ export async function GET(request: NextRequest) {
     }
 
     // トレンド計算（前期比の変化率）
-    const calcTrend = (current: number, previous: number) => {
-      if (previous === 0) return current > 0 ? 100 : 0;
-      return Math.round(((current - previous) / previous) * 100);
+    // isNew: 前期が0で今期にデータがある場合（新規データ）
+    const calcTrend = (current: number, previous: number): { value: number; isNew: boolean } => {
+      if (previous === 0) {
+        return { value: current > 0 ? 100 : 0, isNew: current > 0 };
+      }
+      return { value: Math.round(((current - previous) / previous) * 100), isNew: false };
     };
 
     const trends = {
