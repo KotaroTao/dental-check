@@ -3,7 +3,7 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import type { Channel } from "@/types/clinic";
 
-// QRコード一覧を取得
+// QRコード一覧を取得（アクティブ・非表示両方）
 export async function GET() {
   try {
     const session = await getSession();
@@ -13,10 +13,13 @@ export async function GET() {
 
     const channels = (await prisma.channel.findMany({
       where: { clinicId: session.clinicId },
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ isActive: "desc" }, { createdAt: "desc" }],
     })) as Channel[];
 
-    return NextResponse.json({ channels });
+    const activeCount = channels.filter((c) => c.isActive).length;
+    const hiddenCount = channels.filter((c) => !c.isActive).length;
+
+    return NextResponse.json({ channels, activeCount, hiddenCount });
   } catch (error) {
     console.error("Get channels error:", error);
     return NextResponse.json(

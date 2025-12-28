@@ -88,7 +88,7 @@ export async function PATCH(
   }
 }
 
-// QRコードを削除
+// QRコードを非表示にする（ソフト削除）
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -115,15 +115,17 @@ export async function DELETE(
       );
     }
 
-    await prisma.channel.delete({
+    // 削除ではなく非表示にする
+    await prisma.channel.update({
       where: { id },
+      data: { isActive: false },
     });
 
-    return NextResponse.json({ message: "QRコードを削除しました" });
+    return NextResponse.json({ message: "QRコードを非表示にしました" });
   } catch (error) {
-    console.error("Delete channel error:", error);
+    console.error("Hide channel error:", error);
     return NextResponse.json(
-      { error: "QRコードの削除に失敗しました" },
+      { error: "QRコードの非表示に失敗しました" },
       { status: 500 }
     );
   }

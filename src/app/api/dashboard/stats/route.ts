@@ -63,6 +63,20 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // アクティブなチャンネルIDを取得（非表示チャンネルを統計から除外するため）
+    const activeChannels = await prisma.channel.findMany({
+      where: { clinicId: session.clinicId, isActive: true },
+      select: { id: true },
+    });
+    const activeChannelIds = activeChannels.map((c: { id: string }) => c.id);
+
+    // チャンネルフィルター（特定チャンネル指定時はそれを使用、なければアクティブチャンネルのみ）
+    const channelFilter = channelId
+      ? { channelId }
+      : activeChannelIds.length > 0
+        ? { channelId: { in: activeChannelIds } }
+        : {};
+
     // 共通のフィルター条件
     const baseFilter = {
       clinicId: session.clinicId,
@@ -70,7 +84,7 @@ export async function GET(request: NextRequest) {
         gte: dateFrom,
         lte: dateTo,
       },
-      ...(channelId && { channelId }),
+      ...channelFilter,
     };
 
     // 前期の共通フィルター条件
@@ -80,7 +94,7 @@ export async function GET(request: NextRequest) {
         gte: prevDateFrom,
         lte: prevDateTo,
       },
-      ...(channelId && { channelId }),
+      ...channelFilter,
     };
 
     // 診断完了者のフィルター条件
@@ -90,7 +104,7 @@ export async function GET(request: NextRequest) {
         gte: dateFrom,
         lte: dateTo,
       },
-      ...(channelId && { channelId }),
+      ...channelFilter,
       isDemo: false,
       completedAt: { not: null },
     };
@@ -102,7 +116,7 @@ export async function GET(request: NextRequest) {
         gte: prevDateFrom,
         lte: prevDateTo,
       },
-      ...(channelId && { channelId }),
+      ...channelFilter,
       isDemo: false,
       completedAt: { not: null },
     };
@@ -143,9 +157,9 @@ export async function GET(request: NextRequest) {
         _count: { id: true },
       }),
 
-      // QRコード一覧（フィルター用）
+      // QRコード一覧（フィルター用、アクティブのみ）
       prisma.channel.findMany({
-        where: { clinicId: session.clinicId },
+        where: { clinicId: session.clinicId, isActive: true },
         select: { id: true, name: true, diagnosisTypeSlug: true },
         orderBy: { createdAt: "desc" },
       }),
