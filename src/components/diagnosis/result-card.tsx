@@ -7,7 +7,7 @@ import { DiagnosisType } from "@/data/diagnosis-types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DemoCTA } from "./demo-cta";
-import { Share2, Calendar, Phone, MessageCircle, Building2 } from "lucide-react";
+import { Share2, Calendar, Phone, MessageCircle, Building2, Printer } from "lucide-react";
 import Link from "next/link";
 import type { CTAConfig } from "@/types/clinic";
 
@@ -92,6 +92,10 @@ export function ResultCard({ diagnosis, isDemo, clinicSlug, ctaConfig, clinicNam
     }
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -166,11 +170,15 @@ export function ResultCard({ diagnosis, isDemo, clinicSlug, ctaConfig, clinicNam
             />
           )}
 
-          {/* シェアボタン */}
-          <div className="flex justify-center gap-4 pt-4 border-t">
+          {/* シェア・印刷ボタン */}
+          <div className="flex justify-center gap-4 pt-4 border-t print:hidden">
             <Button variant="outline" onClick={handleShare} className="gap-2">
               <Share2 className="w-4 h-4" />
               結果をシェア
+            </Button>
+            <Button variant="outline" onClick={handlePrint} className="gap-2">
+              <Printer className="w-4 h-4" />
+              印刷
             </Button>
           </div>
 

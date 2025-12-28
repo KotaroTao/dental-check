@@ -287,3 +287,39 @@
 ::-webkit-scrollbar-thumb:hover {
   @apply bg-gray-400;
 }
+
+/* 印刷用スタイル */
+@media print {
+  body {
+    background: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* 印刷時に非表示にする要素 */
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* カードのシャドウを削除 */
+  .shadow-sm, .shadow, .shadow-md, .shadow-lg, .shadow-xl {
+    box-shadow: none !important;
+    border: 1px solid #e5e7eb !important;
+  }
+
+  /* 背景色を印刷 */
+  .bg-gray-50, .bg-blue-50, .bg-green-50, .bg-yellow-50, .bg-red-50, .bg-orange-50 {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* ページブレーク制御 */
+  .print-break-avoid {
+    page-break-inside: avoid;
+  }
+
+  /* 余白調整 */
+  @page {
+    margin: 1.5cm;
+  }
+}

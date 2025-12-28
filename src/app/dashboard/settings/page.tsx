@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, GripVertical, AlertCircle } from "lucide-react";
+import { Plus, Trash2, GripVertical, AlertCircle, Eye, Phone, Calendar, MapPin, MessageCircle } from "lucide-react";
 import type { CustomCTA } from "@/types/clinic";
 
 // URL検証関数
@@ -73,6 +73,7 @@ export default function SettingsPage() {
   } | null>(null);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [showPreview, setShowPreview] = useState(false);
 
   // 未保存の変更があるかチェック
   const hasUnsavedChanges = useCallback(() => {
@@ -677,6 +678,118 @@ export default function SettingsPage() {
               </div>
             )}
           </div>
+        </div>
+
+        {/* CTAプレビュー */}
+        <div className="bg-white rounded-xl shadow-sm border p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-lg font-bold">CTAボタンプレビュー</h2>
+              <p className="text-sm text-gray-500">
+                診断結果ページに表示されるボタンのプレビュー
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowPreview(!showPreview)}
+              className="gap-2"
+            >
+              <Eye className="w-4 h-4" />
+              {showPreview ? "閉じる" : "プレビューを表示"}
+            </Button>
+          </div>
+
+          {showPreview && (
+            <div className="border rounded-lg p-6 bg-gray-50">
+              <div className="max-w-md mx-auto space-y-4">
+                {/* ロゴプレビュー */}
+                {settings.logoUrl && (
+                  <div className="flex justify-center mb-4">
+                    <img
+                      src={settings.logoUrl}
+                      alt="Logo preview"
+                      className="h-12 object-contain"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                  </div>
+                )}
+
+                {/* 医院名 */}
+                <h3 className="text-xl font-bold text-center" style={{ color: settings.mainColor }}>
+                  {settings.name || "医院名"}
+                </h3>
+
+                {/* CTAボタン */}
+                <div className="space-y-3">
+                  {settings.ctaConfig.phone && (
+                    <button
+                      type="button"
+                      className="w-full py-3 px-4 rounded-lg text-white font-medium flex items-center justify-center gap-2"
+                      style={{ backgroundColor: settings.mainColor }}
+                    >
+                      <Phone className="w-5 h-5" />
+                      電話で予約
+                    </button>
+                  )}
+                  {settings.ctaConfig.bookingUrl && (
+                    <button
+                      type="button"
+                      className="w-full py-3 px-4 rounded-lg text-white font-medium flex items-center justify-center gap-2"
+                      style={{ backgroundColor: settings.mainColor }}
+                    >
+                      <Calendar className="w-5 h-5" />
+                      WEB予約
+                    </button>
+                  )}
+                  {settings.ctaConfig.lineUrl && (
+                    <button
+                      type="button"
+                      className="w-full py-3 px-4 rounded-lg text-white font-medium flex items-center justify-center gap-2 bg-[#06C755]"
+                    >
+                      <MessageCircle className="w-5 h-5" />
+                      LINEで相談
+                    </button>
+                  )}
+                  {settings.ctaConfig.googleMapsUrl && (
+                    <button
+                      type="button"
+                      className="w-full py-3 px-4 rounded-lg border-2 font-medium flex items-center justify-center gap-2"
+                      style={{ borderColor: settings.mainColor, color: settings.mainColor }}
+                    >
+                      <MapPin className="w-5 h-5" />
+                      アクセス
+                    </button>
+                  )}
+
+                  {/* カスタムCTA */}
+                  {settings.ctaConfig.customCTAs?.map((cta, index) => (
+                    cta.label && cta.url && (
+                      <button
+                        key={index}
+                        type="button"
+                        className="w-full py-3 px-4 rounded-lg text-white font-medium"
+                        style={{ backgroundColor: cta.color || settings.mainColor }}
+                      >
+                        {cta.label}
+                      </button>
+                    )
+                  ))}
+                </div>
+
+                {/* 院長メッセージ */}
+                {settings.ctaConfig.directorMessage && (
+                  <div className="mt-4 p-4 bg-white rounded-lg border">
+                    <p className="text-sm text-gray-600 whitespace-pre-wrap">
+                      {settings.ctaConfig.directorMessage}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex justify-end">
