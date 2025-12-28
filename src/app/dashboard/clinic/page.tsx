@@ -449,13 +449,24 @@ export default function ClinicPageEditor() {
             <div className="space-y-4">
               {(clinicPage.photos || []).map((photo, index) => (
                 <div key={index} className="border rounded-lg p-4 bg-gray-50">
-                  <div className="flex gap-3 items-start">
-                    <div className="text-gray-400 cursor-move mt-2">
-                      <GripVertical className="w-5 h-5" />
-                    </div>
-                    <div className="flex-1 space-y-3">
-                      <div className="flex gap-2 items-center">
-                        <label className="flex-1">
+                  <div className="flex gap-4">
+                    {/* サムネイルエリア */}
+                    <div className="relative w-32 h-32 shrink-0">
+                      {photo.url ? (
+                        <>
+                          <img
+                            src={photo.url}
+                            alt={photo.caption || `写真 ${index + 1}`}
+                            className="w-full h-full object-cover rounded-lg border bg-white"
+                          />
+                          {uploadingIndex === index && (
+                            <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                              <Loader2 className="w-8 h-8 text-white animate-spin" />
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <label className="w-full h-full border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors">
                           <input
                             type="file"
                             accept="image/*"
@@ -465,12 +476,37 @@ export default function ClinicPageEditor() {
                               if (file) handlePhotoUpload(index, file);
                             }}
                           />
-                          <div className="flex gap-2">
-                            <Input
-                              placeholder="画像URL（またはアップロード）"
-                              value={photo.url}
-                              onChange={(e) => handlePhotoChange(index, "url", e.target.value)}
-                              className="flex-1"
+                          {uploadingIndex === index ? (
+                            <Loader2 className="w-8 h-8 text-gray-400 animate-spin" />
+                          ) : (
+                            <>
+                              <Upload className="w-8 h-8 text-gray-400 mb-1" />
+                              <span className="text-xs text-gray-500">クリックして選択</span>
+                            </>
+                          )}
+                        </label>
+                      )}
+                    </div>
+
+                    {/* 入力エリア */}
+                    <div className="flex-1 space-y-3">
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="画像URL（直接入力も可）"
+                          value={photo.url}
+                          onChange={(e) => handlePhotoChange(index, "url", e.target.value)}
+                          className="flex-1 text-sm"
+                        />
+                        {photo.url && (
+                          <label>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handlePhotoUpload(index, file);
+                              }}
                             />
                             <Button
                               type="button"
@@ -478,50 +514,52 @@ export default function ClinicPageEditor() {
                               size="sm"
                               disabled={uploadingIndex === index}
                               onClick={(e) => {
-                                const input = (e.currentTarget.parentElement?.parentElement?.querySelector('input[type="file"]') as HTMLInputElement);
+                                const input = e.currentTarget.parentElement?.querySelector('input[type="file"]') as HTMLInputElement;
                                 input?.click();
                               }}
                               className="shrink-0"
                             >
-                              {uploadingIndex === index ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : (
-                                <Upload className="w-4 h-4" />
-                              )}
+                              <Upload className="w-4 h-4" />
                             </Button>
-                          </div>
-                        </label>
+                          </label>
+                        )}
                       </div>
                       <Input
-                        placeholder="キャプション（例：外観、診察室）"
+                        placeholder="キャプション（例：外観、診察室、待合室）"
                         value={photo.caption || ""}
                         onChange={(e) => handlePhotoChange(index, "caption", e.target.value)}
                       />
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2 text-gray-400">
+                          <GripVertical className="w-4 h-4" />
+                          <span className="text-xs">ドラッグで順序変更</span>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removePhoto(index)}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="w-4 h-4 mr-1" />
+                          削除
+                        </Button>
+                      </div>
                     </div>
-                    {photo.url && (
-                      <img
-                        src={photo.url}
-                        alt=""
-                        className="w-20 h-20 object-cover rounded-lg border"
-                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                      />
-                    )}
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removePhoto(index)}
-                      className="text-red-500 mt-1"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
                   </div>
                 </div>
               ))}
-              <Button type="button" variant="outline" onClick={addPhoto}>
-                <Plus className="w-4 h-4 mr-1" />
-                写真を追加
-              </Button>
+
+              {/* 新規追加ボタン */}
+              <button
+                type="button"
+                onClick={addPhoto}
+                className="w-full border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center hover:border-blue-400 hover:bg-blue-50 transition-colors"
+              >
+                <Plus className="w-8 h-8 text-gray-400 mb-2" />
+                <span className="text-gray-600 font-medium">写真を追加</span>
+                <span className="text-xs text-gray-400 mt-1">外観・院内・設備など</span>
+              </button>
             </div>
           </div>
 
