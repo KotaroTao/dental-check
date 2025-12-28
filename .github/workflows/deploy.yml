@@ -1,0 +1,46 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          script: |
+            cd /var/www/dental-check
+
+            # 最新コード取得
+            git fetch origin
+            git reset --hard origin/main || git reset --hard origin/master
+
+            # 依存関係インストール
+            npm install --production
+
+            # Prismaクライアント生成
+            npx prisma generate
+
+            # ビルド
+            npm run build
+
+            # アプリ再起動
+            pm2 restart dental-app || pm2 start npm --name "dental-app" -- start
+
+            # 状態確認
+            pm2 status
+
+            echo "Deploy completed successfully!"

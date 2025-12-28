@@ -1,5 +1,261 @@
 # くるくる診断DX for Dental - 運用手順書
 
+## 本番環境構成（Xserver VPS）
+
+### サーバー情報
+
+| 項目 | 値 |
+|------|-----|
+| ドメイン | qrqr-dental.com |
+| サーバーIP | 210.131.223.161 |
+| サーバー種別 | Xserver VPS |
+| OS | Ubuntu |
+
+### 構成図
+
+```
+[GitHub]
+    ↓ git push (main/masterブランチ)
+[GitHub Actions]
+    ↓ SSH自動デプロイ
+[Xserver VPS]
+├── Nginx ← SSL終端 + リバースプロキシ + 静的ファイル
+├── PM2 + Node.js 20 ← Next.jsアプリ (ポート3000)
+└── PostgreSQL 15 ← データベース (ポート5432)
+```
+
+### デプロイ方法
+
+**自動デプロイ（推奨）:**
+```bash
+git push origin main
+# → GitHub Actionsが自動でデプロイ実行
+```
+
+**手動デプロイ（緊急時のみ）:**
+```bash
+ssh -i ~/Downloads/dental-check-key.pem root@210.131.223.161
+cd /var/www/dental-check
+git pull origin main
+npm install --production
+npm run build
+pm2 restart dental-app
+```
+
+---
+
+## SSH接続
+
+### Windows PowerShell
+```powershell
+ssh -i $env:USERPROFILE\Downloads\dental-check-key.pem root@210.131.223.161
+```
+
+### Mac/Linux
+```bash
+ssh -i ~/Downloads/dental-check-key.pem root@210.131.223.161
+```
+
+---
+
+## プロジェクトパス
+
+```bash
+cd /var/www/dental-check
+```
+
+---
+
+## PM2コマンド
+
+### アプリ状態確認
+```bash
+pm2 status
+```
+
+### ログ確認
+```bash
+# 全ログ
+pm2 logs dental-app
+
+# 直近100行
+pm2 logs dental-app --lines 100
+
+# リアルタイム監視
+pm2 monit
+```
+
+### アプリ再起動
+```bash
+pm2 restart dental-app
+```
+
+### アプリ停止・起動
+```bash
+pm2 stop dental-app
+pm2 start dental-app
+```
+
+---
+
+## Nginxコマンド
+
+### 設定テスト
+```bash
+nginx -t
+```
+
+### 再読み込み
+```bash
+systemctl reload nginx
+```
+
+### 再起動
+```bash
+systemctl restart nginx
+```
+
+### ログ確認
+```bash
+# アクセスログ
+tail -f /var/log/nginx/access.log
+
+# エラーログ
+tail -f /var/log/nginx/error.log
+```
+
+---
+
+## データベース操作
+
+### 接続情報
+
+| 項目 | 値 |
+|------|-----|
+| ホスト | localhost |
+| ポート | 5432 |
+| ユーザー | dental_user |
+| データベース | dental_check |
+| パスワード | .envファイル参照 |
+
+### PostgreSQLに接続
+```bash
+sudo -u postgres psql -d dental_check
+```
+
+### マイグレーション実行
+```bash
+cd /var/www/dental-check
+npx prisma db push
+```
+
+### バックアップ
+```bash
+pg_dump -U dental_user -d dental_check > /var/backups/dental_$(date +%Y%m%d).sql
+```
+
+### リストア
+```bash
+psql -U dental_user -d dental_check < /var/backups/dental_YYYYMMDD.sql
+```
+
+---
+
+## SSL証明書
+
+### 証明書更新（自動更新設定済み）
+```bash
+certbot renew
+```
+
+### 証明書状態確認
+```bash
+certbot certificates
+```
+
+---
+
+## 管理画面
+
+| 項目 | 値 |
+|------|-----|
+| URL | https://qrqr-dental.com/admin/login |
+
+---
+
+## 環境変数
+
+`/var/www/dental-check/.env` に設定:
+
+| 変数名 | 説明 |
+|--------|------|
+| DATABASE_URL | PostgreSQL接続文字列 |
+| JWT_SECRET | JWT署名用シークレット |
+| NEXT_PUBLIC_APP_URL | アプリのURL |
+| PAYJP_SECRET_KEY | Pay.jp シークレットキー |
+| PAYJP_WEBHOOK_SECRET | Pay.jp Webhookシークレット |
+| NEXT_PUBLIC_PAYJP_PUBLIC_KEY | Pay.jp 公開キー |
+
+---
+
+## GitHub Actions
+
+### 設定ファイル
+`.github/workflows/deploy.yml`
+
+### 必要なSecrets（GitHub Settings → Secrets）
+
+| Secret名 | 説明 |
+|----------|------|
+| VPS_HOST | サーバーIP (210.131.223.161) |
+| VPS_USER | SSHユーザー (root) |
+| VPS_SSH_KEY | SSH秘密鍵の内容 |
+| VPS_PORT | SSHポート (22) |
+
+### デプロイ状況確認
+GitHubリポジトリ → Actions タブ
+
+---
+
+## トラブルシューティング
+
+### アプリが起動しない
+```bash
+# PM2ログ確認
+pm2 logs dental-app --lines 200
+
+# プロセス状態確認
+pm2 status
+
+# 手動で起動テスト
+cd /var/www/dental-check
+node .next/standalone/server.js
+```
+
+### 502 Bad Gateway
+```bash
+# アプリが起動しているか確認
+pm2 status
+
+# Nginx設定確認
+nginx -t
+
+# ポート3000が使われているか確認
+lsof -i :3000
+```
+
+### ディスク容量確認
+```bash
+df -h
+```
+
+### メモリ確認
+```bash
+free -h
+```
+
+---
+
 ## Windows PC 開発環境
 
 ### プロジェクトパス
@@ -7,50 +263,15 @@
 C:\Users\hacha\Documents\dental-check
 ```
 
-### 開発を始める前のチェックリスト
-
-1. **Docker Desktopが起動しているか確認**
-2. **ローカルDBコンテナが起動しているか確認**
-```cmd
-docker ps
-```
-3. **コンテナが停止している場合は起動**
-```cmd
-docker start dental-local-db
-```
-
 ### 起動方法（コマンドプロンプト）
 ```cmd
 cd C:\Users\hacha\Documents\dental-check
 npm run dev -- -p 3002
 ```
-※ PowerShellでは実行ポリシーエラーが出るため、コマンドプロンプト(cmd)を使用
-
-### アクセスURL
-
-| 画面 | URL |
-|------|-----|
-| トップページ | http://localhost:3002 |
-| 医院ログイン | http://localhost:3002/login |
-| 医院新規登録 | http://localhost:3002/signup |
-| 医院ダッシュボード | http://localhost:3002/dashboard |
-| 管理者ログイン | http://localhost:3002/admin/login |
-| 管理者ダッシュボード | http://localhost:3002/admin/diagnoses |
-
-### テスト用アカウント
-
-| 種別 | メールアドレス | パスワード |
-|------|--------------|-----------|
-| 管理者 | mail@function-t.com | MUNP1687 |
 
 ### ローカルDB（Docker）
 
-**初回起動（既に実行済み）:**
-```cmd
-docker run -d --name dental-local-db -e POSTGRES_USER=dental_user -e POSTGRES_PASSWORD=localpass -e POSTGRES_DB=dental_check -p 5433:5432 postgres:15
-```
-
-**2回目以降の起動:**
+**起動:**
 ```cmd
 docker start dental-local-db
 ```
@@ -69,59 +290,10 @@ docker stop dental-local-db
 | データベース | dental_check |
 
 ### .env ファイル（Windows）
-`C:\Users\hacha\Documents\dental-check\.env`
 ```
 DATABASE_URL="postgresql://dental_user:localpass@localhost:5433/dental_check"
 JWT_SECRET="qrqr-dental-jwt-secret-key-2025-very-long-random-string-here"
 NEXT_PUBLIC_APP_URL="http://localhost:3002"
-```
-
-### 管理者アカウント作成（Windows）
-```cmd
-cd C:\Users\hacha\Documents\dental-check
-set ADMIN_EMAIL=mail@function-t.com
-set ADMIN_PASSWORD=MUNP1687
-node scripts/create-admin.js
-```
-
-### 本番DBからデータを同期
-
-**1. 本番サーバーでバックアップ作成（SSH接続後）:**
-```bash
-cd /var/www/dental-check
-docker exec dental-check-db pg_dump -U dental_user -d dental_check > backup.sql
-```
-
-**2. Windows PCでダウンロード（コマンドプロンプト）:**
-```cmd
-cd C:\Users\hacha\Downloads
-scp -i dental-check-key.pem root@210.131.223.161:/var/www/dental-check/backup.sql ./backup.sql
-```
-
-**3. ローカルDBにインポート（PowerShell）:**
-```powershell
-cd C:\Users\hacha\Downloads
-Get-Content backup.sql | docker exec -i dental-local-db psql -U dental_user -d dental_check
-```
-
-### Windows PC 開発フロー
-
-```
-① コード修正 → ② ブラウザで確認 → ③ コミット＆プッシュ → ④ 本番デプロイ
-```
-
-**コミット＆プッシュ（コマンドプロンプト）:**
-```cmd
-cd C:\Users\hacha\Documents\dental-check
-git add .
-git commit -m "修正内容"
-git push origin claude/plan-qr-measurements-wb4qE
-```
-
-**最新コードを取得:**
-```cmd
-cd C:\Users\hacha\Documents\dental-check
-git pull origin claude/plan-qr-measurements-wb4qE
 ```
 
 ---
@@ -135,452 +307,31 @@ git pull origin claude/plan-qr-measurements-wb4qE
 
 ### 起動方法
 ```bash
-cd /home/user/dental-check
 npm install
 npm run dev -- -p 3001
 ```
 
-### アクセスURL
-
-| 画面 | URL |
-|------|-----|
-| トップページ | http://localhost:3001 |
-| 医院ログイン | http://localhost:3001/login |
-| 医院ダッシュボード | http://localhost:3001/dashboard |
-| 管理者ログイン | http://localhost:3001/admin/login |
-| 管理者ダッシュボード | http://localhost:3001/admin/diagnoses |
-
 ---
-
-## 本番環境（Xserver VPS）
-
-### サーバー情報
-
-| 項目 | 値 |
-|------|-----|
-| ドメイン | qrqr-dental.com |
-| サーバーIP | 210.131.223.161 |
-| サーバー種別 | Xserver VPS |
-| OS | Ubuntu |
-
-## SSH接続
-
-### Windows PowerShell
-```powershell
-ssh -i $env:USERPROFILE\Downloads\dental-check-key.pem root@210.131.223.161
-```
-
-### Mac/Linux
-```bash
-ssh -i ~/Downloads/dental-check-key.pem root@210.131.223.161
-```
-
-## プロジェクトパス
-
-```bash
-cd /var/www/dental-check
-```
-
-## Docker関連コマンド
-
-### コンテナ状態確認
-```bash
-docker compose -f docker-compose.production.yml --env-file .env.production ps
-```
-
-### ログ確認
-```bash
-# 全コンテナ
-docker compose -f docker-compose.production.yml --env-file .env.production logs -f
-
-# アプリのみ
-docker compose -f docker-compose.production.yml --env-file .env.production logs -f app
-```
-
-### コンテナ再起動
-```bash
-docker compose -f docker-compose.production.yml --env-file .env.production restart
-```
-
-### コンテナ停止・起動
-```bash
-# 停止
-docker compose -f docker-compose.production.yml --env-file .env.production down
-
-# 起動
-docker compose -f docker-compose.production.yml --env-file .env.production up -d
-```
-
-### ビルド＆デプロイ（自動スクリプト推奨）
-
-**推奨: 自動デプロイスクリプトを使用**
-```bash
-cd /var/www/dental-check
-./scripts/deploy.sh
-```
-
-デプロイスクリプトは以下を自動実行：
-1. 最新コードの取得（git pull）
-2. 環境変数チェック
-3. SSL証明書チェック
-4. Dockerイメージビルド（コミットハッシュでタグ付け）
-5. 既存コンテナ停止
-6. データベースマイグレーション
-7. コンテナ起動
-8. ヘルスチェック
-9. デプロイ検証
-
-**手動デプロイ（非推奨）**
-```bash
-cd /var/www/dental-check
-git pull origin claude/plan-qr-measurements-wb4qE
-docker compose -f docker-compose.production.yml --env-file .env.production build --no-cache
-docker compose -f docker-compose.production.yml --env-file .env.production up -d
-```
-※手動デプロイ時は必ず`git pull`を先に実行すること。忘れると古いコードがデプロイされる。
-
-## データベース操作
-
-### ネットワーク名
-```
-dental-check_dental-network
-```
-
-### 接続情報
-- ユーザー: `dental_user`
-- パスワード: `.env.production` の `POSTGRES_PASSWORD` を参照
-- データベース名: `dental_check`
-- ホスト: `db`
-- ポート: `5432`
-
-### マイグレーション実行
-```bash
-docker run --rm --network dental-check_dental-network \
-  -e DATABASE_URL='postgresql://dental_user:PASSWORD@db:5432/dental_check' \
-  -v $(pwd)/prisma:/app/prisma -w /app node:20 \
-  sh -c "npm install prisma@5.22.0 && npx prisma db push"
-```
-※ `PASSWORD` は実際のパスワードに置き換え
-
-### データベースに直接接続
-```bash
-docker exec -it dental-check-db psql -U dental_user -d dental_check
-```
-
-## 管理者操作
-
-### 管理画面
-
-| 項目 | 値 |
-|------|-----|
-| URL | https://qrqr-dental.com/admin/login |
-| メールアドレス | mail@function-t.com |
-| パスワード | MUNP1687 |
-
-### 管理者アカウント作成
-```bash
-docker run --rm --network dental-check_dental-network \
-  -e DATABASE_URL='postgresql://dental_user:PASSWORD@db:5432/dental_check' \
-  -e ADMIN_EMAIL=your@email.com \
-  -e ADMIN_PASSWORD=your-password \
-  -v $(pwd):/app -w /app node:20 \
-  sh -c "npm install prisma@5.22.0 @prisma/client@5.22.0 bcryptjs && node scripts/create-admin.js"
-```
-
-### 診断データシード
-```bash
-docker run --rm --network dental-check_dental-network \
-  -e DATABASE_URL='postgresql://dental_user:PASSWORD@db:5432/dental_check' \
-  -v $(pwd):/app -w /app node:20 \
-  sh -c "npm install prisma@5.22.0 @prisma/client@5.22.0 && node scripts/seed-diagnoses.js"
-```
-
-## SSL証明書
-
-### 証明書更新（自動更新設定済み）
-```bash
-docker exec dental-check-nginx certbot renew
-```
-
-### 証明書状態確認
-```bash
-docker exec dental-check-nginx certbot certificates
-```
-
-## トラブルシューティング
-
-### デプロイしても新しいコードが反映されない
-
-**症状**: デプロイ後もアプリが古いまま、UIの変更が反映されない
-
-**原因**: `git pull`を実行せずに`docker build`を実行した場合、Dockerのビルドキャッシュにより古いコードがイメージに入る
-
-**確認方法**:
-```bash
-# コンテナ内のコードを確認（例: mobileMenuOpenが含まれているか）
-docker exec dental-check-app grep -l "mobileMenuOpen" /app/.next/server/app/dashboard/layout.js
-# → ファイルが見つからない場合は古いコード
-```
-
-**解決策**:
-```bash
-cd /var/www/dental-check
-git pull origin claude/plan-qr-measurements-wb4qE   # ← 必ず先にpull
-docker compose -f docker-compose.production.yml --env-file .env.production build --no-cache
-docker compose -f docker-compose.production.yml --env-file .env.production up -d
-```
-
-**予防策**: 自動デプロイスクリプト `./scripts/deploy.sh` を使用する（git pullが自動実行される）
-
-### コンテナが起動しない
-```bash
-# ログを確認
-docker compose -f docker-compose.production.yml --env-file .env.production logs app
-
-# コンテナを強制削除して再作成
-docker compose -f docker-compose.production.yml --env-file .env.production down -v
-docker compose -f docker-compose.production.yml --env-file .env.production up -d
-```
-
-### ディスク容量確認
-```bash
-df -h
-docker system df
-```
-
-### 不要なDockerリソース削除
-```bash
-docker system prune -a
-```
-
-### Nginxの設定テスト
-```bash
-docker exec dental-check-nginx nginx -t
-```
-
-## 環境変数
-
-`.env.production` に以下が設定されています：
-
-| 変数名 | 説明 |
-|--------|------|
-| POSTGRES_PASSWORD | データベースパスワード |
-| JWT_SECRET | JWT署名用シークレット |
-| NEXT_PUBLIC_APP_URL | アプリのURL |
-| PAYJP_SECRET_KEY | Pay.jp シークレットキー |
-| PAYJP_WEBHOOK_SECRET | Pay.jp Webhookシークレット |
-| NEXT_PUBLIC_PAYJP_PUBLIC_KEY | Pay.jp 公開キー |
 
 ## Git ブランチ
 
-- 開発ブランチ: `claude/plan-qr-measurements-wb4qE`
+- 本番ブランチ: `main`
 - リポジトリ: `https://github.com/KotaroTao/dental-check`
 
-### ローカル→本番 反映手順（クイックリファレンス）
+### 開発→本番 反映手順
 
-1. **ローカルで修正をコミット＆プッシュ**
 ```bash
+# 1. 開発ブランチで作業
+git checkout -b feature/xxx
+
+# 2. コミット＆プッシュ
 git add .
 git commit -m "修正内容"
-git push origin claude/plan-qr-measurements-wb4qE
+git push origin feature/xxx
+
+# 3. PRを作成してmainにマージ
+# → マージ後、自動でデプロイされる
 ```
-
-2. **本番サーバーにSSH接続**
-```bash
-ssh -i ~/Downloads/dental-check-key.pem root@210.131.223.161
-```
-
-3. **本番サーバーでデプロイ**
-```bash
-cd /var/www/dental-check
-./scripts/deploy.sh
-```
-※自動でgit pull、ビルド、マイグレーション、起動、検証まで実行される
-
-### セッション間で引き継ぐ情報
-
-作業を中断・再開する際は、以下を確認：
-- 現在のブランチ: `git branch --show-current`
-- 未コミットの変更: `git status`
-- リモートとの差分: `git fetch origin && git status`
-
----
-
-## 開発状況（2025年12月28日更新）
-
-### 最新の実装（このセッション）
-
-#### ダッシュボードのレスポンシブデザイン対応
-- **ハンバーガーメニュー**: iPad mini・スマートフォンでメニューを折りたたみ表示
-- **経路一覧のカード表示**: モバイルでは横スクロールテーブルではなくカード形式で表示
-- **診断履歴のカード表示**: モバイルでは履歴を見やすいカード形式で表示
-- **統計フィルターの縦並び**: スマートフォンではフィルターを縦に配置
-
-#### デプロイスクリプトの改善（scripts/deploy.sh）
-- **自動git pull**: デプロイ時に最新コードを自動取得（古いコードがデプロイされる問題を防止）
-- **コミットハッシュタグ**: Dockerイメージにコミットハッシュでタグ付け
-- **デプロイ検証**: デプロイ後に新しいコードが反映されたか自動確認
-- **docker compose対応**: 新しいDocker CLIの`docker compose`コマンドを使用
-
-#### 医院紹介ページの大幅強化
-- **写真カルーセル**: 複数写真のスライダー表示
-- **フローティングCTA**: スクロール300px以降で表示される電話・予約ボタン
-- **曜日別診療時間表**: 午前/午後/休診を曜日ごとに設定
-- **診療内容セクション**: プリセットから選択式（一般歯科、矯正歯科など）
-- **設備・特徴セクション**: プリセットから選択式（駐車場、バリアフリーなど）
-- **お知らせ機能**: 日付・重要フラグ付きのお知らせ
-- **リアルタイムプレビュー**: 編集画面で公開イメージを確認
-- **固定保存ボタン**: 画面右下に常時表示
-
-#### 写真アップロード機能
-- **ファイルアップロードAPI**: `/api/upload`
-- **ドラッグ＆ドロップ**: ファイルを直接ドロップでアップロード
-- **クライアント側自動圧縮**: 1200px、JPEG 80%品質
-- **並び替え機能**: ドラッグで写真の順序変更
-- **複数ファイル同時アップロード**: 複数選択・一括ドロップ対応
-- **削除確認**: 削除時にconfirmダイアログ表示
-
-#### Docker本番環境対応
-- **uploads_dataボリューム**: アップロードファイルの永続化
-- **Nginxで直接配信**: `/uploads/`パスをNginxが直接配信（Next.js standalone対応）
-
-### 主要ファイル（今回追加・変更）
-
-| ファイル | 説明 |
-|---------|------|
-| `src/app/dashboard/layout.tsx` | ダッシュボードヘッダー（ハンバーガーメニュー追加） |
-| `src/app/dashboard/page.tsx` | ダッシュボード（モバイルカード表示追加） |
-| `scripts/deploy.sh` | 本番デプロイスクリプト（自動git pull・検証機能追加） |
-| `src/app/api/upload/route.ts` | 画像アップロードAPI |
-| `src/app/dashboard/clinic/page.tsx` | 医院紹介ページ編集（大幅改修） |
-| `src/app/clinic/[slug]/page.tsx` | 公開医院ページ |
-| `src/app/clinic/[slug]/photo-carousel.tsx` | 写真カルーセルコンポーネント |
-| `src/app/clinic/[slug]/floating-cta.tsx` | フローティングCTAコンポーネント |
-| `src/types/clinic.ts` | ClinicPage型定義（拡張） |
-| `docker-compose.production.yml` | uploadsボリューム追加 |
-| `Dockerfile.production` | uploadsディレクトリ作成 |
-| `nginx/nginx.conf` | /uploads/のlocationブロック追加 |
-
-### 型定義（ClinicPage）
-
-```typescript
-interface ClinicPage {
-  photos?: ClinicPhoto[];        // 医院写真
-  director?: DirectorInfo;       // 院長情報
-  hours?: ClinicHours;           // 診療時間（簡易版）
-  weeklySchedule?: WeeklySchedule; // 曜日別診療時間
-  access?: ClinicAccess;         // アクセス情報
-  treatments?: Treatment[];      // 診療内容
-  facilities?: Facility[];       // 設備・特徴
-  announcements?: Announcement[]; // お知らせ
-}
-```
-
-### 注意事項
-
-- **ボリューム変更時はdown必須**: `docker compose down` してから `up` しないとボリュームが反映されない
-- **Nginxキャッシュ**: アップロード画像は30日キャッシュ設定
-
-### PR作成済み
-
-- ブランチ: `claude/plan-qr-measurements-wb4qE`
-- タイトル: `feat: 医院紹介ページの大幅強化と写真アップロード機能`
-
----
-
-### 実装済み機能（以前のセッション）
-
-#### アプリ名
-- **くるくる診断DX for Dental**（「for Dental」は半分のサイズ）
-
-#### QRコード計測機能
-- **経路（Channel）管理**: 1経路 = 1診断タイプ
-- **ダッシュボード統合**: 経路一覧・統計サマリー・診断実施エリア・診断完了履歴を1画面に
-- **統計フィルター**: 期間（今日/今週/今月/カスタム期間）、経路別
-- **履歴表示**: 50件ずつページネーション、診断タイプフィルター
-
-#### 診断完了トラッキング
-- 診断完了時に `DiagnosisSession` をDBに保存
-- `channelId` から `clinicId` を自動取得して記録
-- 結果画面表示時に `/api/track/complete` を呼び出し
-
-#### 診断実施エリア表示（IP地域推定）
-- IPアドレスから都道府県・市区町村を推定（ip-api.com使用）
-- ダッシュボードに地図＋エリア別ランキング表示
-- react-leaflet + OpenStreetMap
-
-#### ダッシュボード構成
-```
-/dashboard
-├── 経路セクション（一覧・作成・編集・削除）
-├── 統計サマリー（アクセス/完了/完了率/CTA）
-├── 診断実施エリア（地図+TOP10リスト）  ← 新規
-└── 診断完了履歴（50件ずつ、もっと見る）
-```
-
-#### API
-| エンドポイント | 説明 |
-|---------------|------|
-| `GET /api/dashboard/stats` | 統計データ（期間・経路フィルター対応） |
-| `GET /api/dashboard/history` | 診断完了履歴（ページネーション対応） |
-| `GET /api/dashboard/locations` | エリア別統計（地図表示用） |
-| `POST /api/track/complete` | 診断完了記録（位置情報含む） |
-| `POST /api/track/access` | アクセス記録（位置情報含む） |
-| `GET /api/channels` | 経路一覧 |
-| `POST /api/channels` | 経路作成（diagnosisTypeSlug必須） |
-| `GET /api/channels/[id]` | 経路詳細 |
-| `PUT /api/channels/[id]` | 経路更新 |
-| `DELETE /api/channels/[id]` | 経路削除 |
-
-#### DBスキーマ（位置情報フィールド）
-```prisma
-model DiagnosisSession {
-  // 位置情報（IPベース）
-  ipAddress  String?  @map("ip_address")
-  country    String?  // 国コード (JP)
-  region     String?  // 都道府県 (兵庫県)
-  city       String?  // 市区町村 (西宮市)
-  latitude   Float?   // 緯度
-  longitude  Float?   // 経度
-}
-
-model AccessLog {
-  ipAddress  String?  @map("ip_address")
-  country    String?
-  region     String?
-  city       String?
-}
-```
-
-### 主要ファイル
-
-| ファイル | 説明 |
-|---------|------|
-| `src/lib/geolocation.ts` | IP地域推定ライブラリ |
-| `src/components/dashboard/location-section.tsx` | エリア表示セクション |
-| `src/components/dashboard/location-map.tsx` | Leaflet地図コンポーネント |
-| `src/components/diagnosis/result-card.tsx` | 結果表示＋完了トラッキング |
-| `docs/SPEC_LOCATION_TRACKING.md` | エリア表示機能の仕様書 |
-
-### ナビゲーション構成
-- ダッシュボード（経路・統計・エリア・履歴を統合）
-- 埋め込みコード
-- 医院紹介
-- 設定
-- 契約・お支払い
-
-### 削除されたページ
-- `/dashboard/channels` → ダッシュボードに統合
-
-### 今後の開発候補
-- 統計データのCSVエクスポート
-- グラフ表示（推移チャート）
-- 経路別の詳細統計ページ
-- プライバシーポリシーへの位置情報記載追加
-
-### 注意事項
-- **DBマイグレーション必須**: 位置情報フィールドを追加したため、本番デプロイ時は `prisma db push` が必要
-- **IP地域推定の制限**: ip-api.com は 45req/分。高トラフィック時は有料サービスへの移行を検討
 
 ---
 
@@ -591,3 +342,242 @@ model AccessLog {
 - 代表: 田尾耕太郎
 - 所在地: 兵庫県西宮市北名次町5-9-301
 - メール: mail@function-t.com
+
+---
+
+---
+
+# 移行手順書（Docker → Dockerなし構成）
+
+以下は、現在のDocker構成から新しいDockerなし構成への移行手順です。
+
+## 事前準備
+
+### 1. 本番DBのバックアップ
+```bash
+ssh -i ~/Downloads/dental-check-key.pem root@210.131.223.161
+cd /var/www/dental-check
+docker exec dental-check-db pg_dump -U dental_user -d dental_check > backup_$(date +%Y%m%d).sql
+```
+
+### 2. 現在の環境変数を控える
+```bash
+cat .env.production
+```
+
+---
+
+## 移行手順
+
+### Step 1: Node.js 20 インストール
+
+```bash
+# NodeSourceリポジトリ追加
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+
+# Node.jsインストール
+sudo apt-get install -y nodejs
+
+# バージョン確認
+node -v  # v20.x.x
+npm -v
+```
+
+### Step 2: PM2 インストール
+
+```bash
+# PM2をグローバルインストール
+sudo npm install -g pm2
+
+# 自動起動設定
+pm2 startup systemd
+```
+
+### Step 3: PostgreSQL インストール・データ移行
+
+```bash
+# PostgreSQL 15 インストール
+sudo apt-get install -y postgresql-15 postgresql-contrib-15
+
+# PostgreSQL起動
+sudo systemctl start postgresql
+sudo systemctl enable postgresql
+
+# ユーザー・データベース作成
+sudo -u postgres psql << EOF
+CREATE USER dental_user WITH PASSWORD 'YOUR_PASSWORD_HERE';
+CREATE DATABASE dental_check OWNER dental_user;
+GRANT ALL PRIVILEGES ON DATABASE dental_check TO dental_user;
+EOF
+
+# データインポート
+sudo -u postgres psql -d dental_check < /var/www/dental-check/backup_YYYYMMDD.sql
+
+# 権限付与
+sudo -u postgres psql -d dental_check << EOF
+GRANT ALL ON ALL TABLES IN SCHEMA public TO dental_user;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO dental_user;
+EOF
+```
+
+### Step 4: Nginx 設定
+
+```bash
+# Nginxインストール（まだの場合）
+sudo apt-get install -y nginx
+
+# Certbotインストール（まだの場合）
+sudo apt-get install -y certbot python3-certbot-nginx
+```
+
+**Nginx設定ファイル作成:**
+```bash
+sudo nano /etc/nginx/sites-available/dental-check
+```
+
+以下を記述:
+```nginx
+server {
+    listen 80;
+    server_name qrqr-dental.com www.qrqr-dental.com;
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name qrqr-dental.com www.qrqr-dental.com;
+
+    ssl_certificate /etc/letsencrypt/live/qrqr-dental.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/qrqr-dental.com/privkey.pem;
+
+    # アップロードファイル
+    location /uploads/ {
+        alias /var/www/dental-check/public/uploads/;
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # 静的ファイル
+    location /_next/static/ {
+        alias /var/www/dental-check/.next/static/;
+        expires 365d;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # Next.jsアプリへプロキシ
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+```
+
+```bash
+# 有効化
+sudo ln -s /etc/nginx/sites-available/dental-check /etc/nginx/sites-enabled/
+sudo rm /etc/nginx/sites-enabled/default  # デフォルト削除
+
+# 設定テスト
+sudo nginx -t
+
+# 再起動
+sudo systemctl restart nginx
+```
+
+### Step 5: 環境変数設定
+
+```bash
+cd /var/www/dental-check
+nano .env
+```
+
+以下を記述:
+```env
+DATABASE_URL="postgresql://dental_user:YOUR_PASSWORD@localhost:5432/dental_check"
+JWT_SECRET="your-jwt-secret"
+NEXT_PUBLIC_APP_URL="https://qrqr-dental.com"
+PAYJP_SECRET_KEY="sk_xxx"
+PAYJP_WEBHOOK_SECRET="whsec_xxx"
+NEXT_PUBLIC_PAYJP_PUBLIC_KEY="pk_xxx"
+```
+
+### Step 6: アプリビルド・起動
+
+```bash
+cd /var/www/dental-check
+
+# 依存関係インストール
+npm install --production
+
+# Prismaクライアント生成
+npx prisma generate
+
+# ビルド
+npm run build
+
+# PM2で起動
+pm2 start npm --name "dental-app" -- start
+
+# 状態確認
+pm2 status
+
+# 自動起動設定を保存
+pm2 save
+```
+
+### Step 7: 動作確認
+
+```bash
+# ヘルスチェック
+curl -I https://qrqr-dental.com
+
+# ログ確認
+pm2 logs dental-app
+```
+
+### Step 8: GitHub Actions 設定
+
+1. GitHubリポジトリ → Settings → Secrets and variables → Actions
+2. 以下のSecretsを追加:
+   - `VPS_HOST`: `210.131.223.161`
+   - `VPS_USER`: `root`
+   - `VPS_SSH_KEY`: SSH秘密鍵の内容（`cat dental-check-key.pem`）
+   - `VPS_PORT`: `22`
+
+### Step 9: Dockerコンテナ停止・削除
+
+```bash
+# Dockerコンテナ停止
+docker compose -f docker-compose.production.yml --env-file .env.production down
+
+# 不要なDockerリソース削除
+docker system prune -a
+```
+
+---
+
+## 移行後の確認チェックリスト
+
+- [ ] https://qrqr-dental.com にアクセスできる
+- [ ] 管理画面にログインできる
+- [ ] 診断が実行できる
+- [ ] 画像アップロードが動作する
+- [ ] `git push origin main` で自動デプロイされる
+- [ ] PM2でアプリが自動起動する（`pm2 status`）
+
+---
+
+## ロールバック手順（問題発生時）
+
+```bash
+# Dockerコンテナを再起動
+cd /var/www/dental-check
+docker compose -f docker-compose.production.yml --env-file .env.production up -d
+```
