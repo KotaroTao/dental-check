@@ -63,6 +63,7 @@ services:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/ssl:/etc/nginx/ssl:ro
       - ./nginx/logs:/var/log/nginx
+      - uploads_data:/app/public/uploads:ro
     networks:
       - dental-network
     depends_on:
