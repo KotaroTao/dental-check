@@ -17,6 +17,8 @@ services:
       - NEXT_PUBLIC_PAYJP_PUBLIC_KEY=${NEXT_PUBLIC_PAYJP_PUBLIC_KEY}
       - JWT_SECRET=${JWT_SECRET}
       - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+    volumes:
+      - uploads_data:/app/public/uploads
     networks:
       - dental-network
     depends_on:
@@ -77,4 +79,6 @@ networks:
 
 volumes:
   postgres_data:
+    driver: local
+  uploads_data:
     driver: local

@@ -49,6 +49,9 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
+# アップロードディレクトリを作成（ボリュームマウント用）
+RUN mkdir -p /app/public/uploads/clinic
+
 # 所有権を変更
 RUN chown -R nextjs:nodejs /app
 
