@@ -125,11 +125,9 @@ export function CTAChart({ period, channelId, customStartDate, customEndDate }: 
     };
   }, [rawData]);
 
-  // 最大値を計算
-  const maxCount = useMemo(() => {
-    if (data.length === 0) return 1;
-    const max = Math.max(...data.map((d) => d.count));
-    return max || 1;
+  // データがある日のみをフィルタ（新しい順）
+  const dataWithClicks = useMemo(() => {
+    return [...data].filter((d) => d.count > 0).reverse();
   }, [data]);
 
   if (isLoading) {
@@ -153,26 +151,14 @@ export function CTAChart({ period, channelId, customStartDate, customEndDate }: 
     <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
       {/* ヘッダー */}
       <div className="px-6 py-4 border-b bg-gray-50">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center gap-2">
-            <MousePointerClick className="w-5 h-5 text-gray-600" />
-            <h3 className="font-semibold text-gray-800">CTAクリック推移</h3>
-            {aggregationLabel && (
-              <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded">
-                {aggregationLabel}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-4 text-sm">
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-full bg-teal-500"></div>
-              <span className="text-gray-600">診断結果</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-full bg-violet-500"></div>
-              <span className="text-gray-600">医院ページ</span>
-            </div>
-          </div>
+        <div className="flex items-center gap-2">
+          <MousePointerClick className="w-5 h-5 text-gray-600" />
+          <h3 className="font-semibold text-gray-800">CTAクリック推移</h3>
+          {aggregationLabel && (
+            <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded">
+              {aggregationLabel}
+            </span>
+          )}
         </div>
       </div>
 
@@ -204,135 +190,73 @@ export function CTAChart({ period, channelId, customStartDate, customEndDate }: 
         </div>
       </div>
 
-      {/* グラフ */}
-      {data.length === 0 ? (
-        <div className="h-48 flex items-center justify-center text-gray-400 p-6">
-          データがありません
+      {/* テーブル */}
+      {dataWithClicks.length === 0 ? (
+        <div className="h-32 flex items-center justify-center text-gray-400">
+          クリックデータがありません
         </div>
       ) : (
-        <div className="p-6">
-          {/* エリアチャート風の表示 */}
-          <div className="relative h-40">
-            {/* グリッド線 */}
-            <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
-              {[0, 1, 2, 3].map((i) => (
-                <div key={i} className="border-t border-gray-100 w-full" />
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-gray-50 text-left text-sm text-gray-600">
+                <th className="px-6 py-3 font-medium">日付</th>
+                <th className="px-6 py-3 font-medium text-center">診断結果</th>
+                <th className="px-6 py-3 font-medium text-center">医院ページ</th>
+                <th className="px-6 py-3 font-medium text-center">合計</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {dataWithClicks.map((item, index) => (
+                <tr key={index} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-6 py-3 text-gray-800">
+                    {formatTableDate(item.date, aggregationMode)}
+                  </td>
+                  <td className="px-6 py-3 text-center">
+                    {item.fromResult > 0 ? (
+                      <span className="inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 bg-teal-100 text-teal-700 rounded-full text-sm font-medium">
+                        {item.fromResult}
+                      </span>
+                    ) : (
+                      <span className="text-gray-300">-</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-3 text-center">
+                    {item.fromClinicPage > 0 ? (
+                      <span className="inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 bg-violet-100 text-violet-700 rounded-full text-sm font-medium">
+                        {item.fromClinicPage}
+                      </span>
+                    ) : (
+                      <span className="text-gray-300">-</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-3 text-center">
+                    <span className="inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 bg-gray-100 text-gray-800 rounded-full text-sm font-bold">
+                      {item.count}
+                    </span>
+                  </td>
+                </tr>
               ))}
-            </div>
-
-            {/* 棒グラフ */}
-            <div className="absolute inset-0 flex items-end gap-px">
-              {data.map((item, index) => {
-                const heightPercent = (item.count / maxCount) * 100;
-                const resultPercent =
-                  item.count > 0 ? (item.fromResult / item.count) * heightPercent : 0;
-                const clinicPercent = heightPercent - resultPercent;
-
-                return (
-                  <div
-                    key={index}
-                    className="flex-1 flex flex-col justify-end group relative"
-                    style={{ minWidth: "4px" }}
-                  >
-                    {/* スタック棒グラフ */}
-                    <div className="w-full flex flex-col justify-end" style={{ height: "100%" }}>
-                      {/* 医院ページ（上） */}
-                      {item.fromClinicPage > 0 && (
-                        <div
-                          className="w-full bg-violet-400 group-hover:bg-violet-500 transition-colors rounded-t-sm"
-                          style={{ height: `${clinicPercent}%`, minHeight: "2px" }}
-                        />
-                      )}
-                      {/* 診断結果（下） */}
-                      {item.fromResult > 0 && (
-                        <div
-                          className={`w-full bg-teal-400 group-hover:bg-teal-500 transition-colors ${
-                            item.fromClinicPage === 0 ? "rounded-t-sm" : ""
-                          }`}
-                          style={{ height: `${resultPercent}%`, minHeight: "2px" }}
-                        />
-                      )}
-                      {/* データなし */}
-                      {item.count === 0 && (
-                        <div className="w-full h-0.5 bg-gray-200 rounded-full" />
-                      )}
-                    </div>
-
-                    {/* ホバー時のツールチップ */}
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none">
-                      <div className="bg-gray-900 text-white text-xs rounded-lg px-3 py-2 shadow-xl whitespace-nowrap">
-                        <div className="font-medium mb-1.5 text-gray-300">
-                          {formatTooltipDate(item.date, aggregationMode)}
-                        </div>
-                        <div className="space-y-1">
-                          <div className="flex items-center justify-between gap-3">
-                            <span className="flex items-center gap-1.5">
-                              <span className="w-2 h-2 rounded-full bg-teal-400"></span>
-                              診断結果
-                            </span>
-                            <span className="font-semibold">{item.fromResult}</span>
-                          </div>
-                          <div className="flex items-center justify-between gap-3">
-                            <span className="flex items-center gap-1.5">
-                              <span className="w-2 h-2 rounded-full bg-violet-400"></span>
-                              医院ページ
-                            </span>
-                            <span className="font-semibold">{item.fromClinicPage}</span>
-                          </div>
-                          <div className="border-t border-gray-700 pt-1 mt-1">
-                            <div className="flex items-center justify-between gap-3">
-                              <span>合計</span>
-                              <span className="font-bold text-white">{item.count}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* 日付ラベル */}
-          <div className="flex justify-between mt-2 text-xs text-gray-400">
-            <span>{formatDateLabel(data[0]?.date || "", aggregationMode)}</span>
-            {data.length > 2 && (
-              <span>{formatDateLabel(data[Math.floor(data.length / 2)]?.date || "", aggregationMode)}</span>
-            )}
-            <span>{formatDateLabel(data[data.length - 1]?.date || "", aggregationMode)}</span>
-          </div>
+            </tbody>
+          </table>
         </div>
       )}
     </div>
   );
 }
 
-// ツールチップ用の日付フォーマット
-function formatTooltipDate(date: string, mode: "day" | "week" | "month"): string {
+// テーブル用の日付フォーマット
+function formatTableDate(date: string, mode: "day" | "week" | "month"): string {
   const d = new Date(date);
+  const days = ["日", "月", "火", "水", "木", "金", "土"];
+
   if (mode === "month") {
     return `${d.getFullYear()}年${d.getMonth() + 1}月`;
   } else if (mode === "week") {
     const endDate = new Date(d);
     endDate.setDate(endDate.getDate() + 6);
-    return `${d.getMonth() + 1}/${d.getDate()}〜${endDate.getMonth() + 1}/${endDate.getDate()}`;
+    return `${d.getMonth() + 1}/${d.getDate()} 〜 ${endDate.getMonth() + 1}/${endDate.getDate()}`;
   } else {
-    const days = ["日", "月", "火", "水", "木", "金", "土"];
     return `${d.getMonth() + 1}/${d.getDate()}(${days[d.getDay()]})`;
-  }
-}
-
-// 日付ラベルのフォーマット
-function formatDateLabel(date: string, mode: "day" | "week" | "month"): string {
-  if (!date) return "";
-  const d = new Date(date);
-
-  if (mode === "month") {
-    return `${d.getFullYear()}/${d.getMonth() + 1}`;
-  } else if (mode === "week") {
-    return `${d.getMonth() + 1}/${d.getDate()}`;
-  } else {
-    return `${d.getMonth() + 1}/${d.getDate()}`;
   }
 }
