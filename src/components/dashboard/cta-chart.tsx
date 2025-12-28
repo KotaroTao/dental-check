@@ -97,13 +97,29 @@ export function CTAChart({ period, channelId, customStartDate, customEndDate }: 
     }
   }, [rawData]);
 
-  // 最大値を計算（最低5を確保してグラフが見やすくなるように）
+  // 最大値を計算（少数データでも見やすくなるように最適化）
   const maxCount = useMemo(() => {
     if (data.length === 0) return 5;
-    const max = Math.max(...data.map(d => d.count));
-    // 最低5、または最大値の1.2倍（余白を持たせる）
-    return Math.max(5, Math.ceil(max * 1.2));
+    // 個別の最大値（横並び表示のため）
+    const maxFromResult = Math.max(...data.map(d => d.fromResult));
+    const maxFromClinicPage = Math.max(...data.map(d => d.fromClinicPage));
+    const max = Math.max(maxFromResult, maxFromClinicPage);
+
+    // 少数データ対応: 最大値に応じてスケールを調整
+    if (max === 0) return 5;
+    if (max <= 3) return 5;
+    if (max <= 5) return 6;
+    if (max <= 10) return 12;
+    return Math.ceil(max * 1.2);
   }, [data]);
+
+  // バーの高さを計算（最小高さを保証）
+  const calcBarHeight = (value: number): number => {
+    if (value === 0) return 0;
+    const percentage = (value / maxCount) * 100;
+    // 最小8%の高さを保証
+    return Math.max(percentage, 8);
+  };
 
   // 合計を計算
   const totals = useMemo(() => {
@@ -163,11 +179,11 @@ export function CTAChart({ period, channelId, customStartDate, customEndDate }: 
         </div>
         <div className="flex items-center gap-4 text-sm">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded bg-green-500"></div>
+            <div className="w-3 h-3 rounded bg-emerald-500"></div>
             <span className="text-gray-600">{SOURCE_NAMES.fromResult}</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded bg-blue-500"></div>
+            <div className="w-3 h-3 rounded bg-indigo-500"></div>
             <span className="text-gray-600">{SOURCE_NAMES.fromClinicPage}</span>
           </div>
         </div>
@@ -196,64 +212,68 @@ export function CTAChart({ period, channelId, customStartDate, customEndDate }: 
             style={{ minWidth: data.length > 14 ? `${data.length * 40}px` : "100%" }}
           >
             {data.map((item, index) => {
-              const barHeight = (item.count / maxCount) * 100;
               const hasData = item.count > 0;
+              const resultHeight = calcBarHeight(item.fromResult);
+              const clinicHeight = calcBarHeight(item.fromClinicPage);
 
               return (
                 <div
                   key={index}
                   className="flex-1 flex flex-col items-center group relative"
-                  style={{ minWidth: data.length > 14 ? "36px" : undefined }}
+                  style={{ minWidth: data.length > 14 ? "44px" : undefined }}
                 >
-                  {/* 件数表示（バーの上） */}
-                  {hasData && (
-                    <div
-                      className="absolute text-xs font-medium text-gray-600 transition-opacity"
-                      style={{
-                        bottom: `calc(${Math.max(barHeight, 8)}% + 2rem + 4px)`,
-                      }}
-                    >
-                      {item.count}
-                    </div>
-                  )}
-
-                  {/* 積み上げ棒グラフ */}
+                  {/* 横並び棒グラフ */}
                   <div
-                    className="w-full max-w-[32px] mx-auto flex flex-col-reverse relative"
+                    className="w-full max-w-[40px] mx-auto flex gap-0.5 items-end relative"
                     style={{ height: `calc(100% - 2rem)` }}
                   >
-                    {/* 診断結果からのクリック */}
-                    <div
-                      className="w-full bg-green-500 rounded-t transition-all duration-300 group-hover:bg-green-600"
-                      style={{
-                        height: `${(item.fromResult / maxCount) * 100}%`,
-                        minHeight: item.fromResult > 0 ? "4px" : "0",
-                      }}
-                    />
-                    {/* 医院ページからのクリック */}
-                    <div
-                      className="w-full bg-blue-500 transition-all duration-300 group-hover:bg-blue-600"
-                      style={{
-                        height: `${(item.fromClinicPage / maxCount) * 100}%`,
-                        minHeight: item.fromClinicPage > 0 ? "4px" : "0",
-                      }}
-                    />
+                    {/* 診断結果からのクリック（緑） */}
+                    <div className="flex-1 flex flex-col items-center justify-end h-full">
+                      {item.fromResult > 0 && (
+                        <span className="text-[10px] font-medium text-emerald-600 mb-0.5">
+                          {item.fromResult}
+                        </span>
+                      )}
+                      <div
+                        className="w-full bg-emerald-500 rounded-t transition-all duration-300 group-hover:bg-emerald-600"
+                        style={{
+                          height: `${resultHeight}%`,
+                          minHeight: item.fromResult > 0 ? "12px" : "0",
+                        }}
+                      />
+                    </div>
+
+                    {/* 医院ページからのクリック（青） */}
+                    <div className="flex-1 flex flex-col items-center justify-end h-full">
+                      {item.fromClinicPage > 0 && (
+                        <span className="text-[10px] font-medium text-indigo-600 mb-0.5">
+                          {item.fromClinicPage}
+                        </span>
+                      )}
+                      <div
+                        className="w-full bg-indigo-500 rounded-t transition-all duration-300 group-hover:bg-indigo-600"
+                        style={{
+                          height: `${clinicHeight}%`,
+                          minHeight: item.fromClinicPage > 0 ? "12px" : "0",
+                        }}
+                      />
+                    </div>
 
                     {/* データなしの場合の表示 */}
                     {!hasData && (
-                      <div className="w-full h-1 bg-gray-200 rounded" />
+                      <div className="w-full h-1 bg-gray-200 rounded absolute bottom-0" />
                     )}
 
                     {/* ホバー時のツールチップ */}
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-8 hidden group-hover:block z-10">
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10">
                       <div className="bg-gray-800 text-white text-xs rounded px-3 py-2 whitespace-nowrap shadow-lg">
                         <div className="font-medium mb-1">{formatTooltipDate(item.date, aggregationMode)}</div>
                         <div className="flex justify-between gap-4">
-                          <span className="text-green-300">診断結果:</span>
+                          <span className="text-emerald-300">診断結果:</span>
                           <span>{item.fromResult}</span>
                         </div>
                         <div className="flex justify-between gap-4">
-                          <span className="text-blue-300">医院ページ:</span>
+                          <span className="text-indigo-300">医院ページ:</span>
                           <span>{item.fromClinicPage}</span>
                         </div>
                         <div className="flex justify-between gap-4 border-t border-gray-600 pt-1 mt-1">
@@ -282,11 +302,11 @@ export function CTAChart({ period, channelId, customStartDate, customEndDate }: 
           <div className="text-xs text-gray-500">合計クリック</div>
         </div>
         <div>
-          <div className="text-2xl font-bold text-green-600">{totals.fromResult}</div>
+          <div className="text-2xl font-bold text-emerald-600">{totals.fromResult}</div>
           <div className="text-xs text-gray-500">診断結果から</div>
         </div>
         <div>
-          <div className="text-2xl font-bold text-blue-600">{totals.fromClinicPage}</div>
+          <div className="text-2xl font-bold text-indigo-600">{totals.fromClinicPage}</div>
           <div className="text-xs text-gray-500">医院ページから</div>
         </div>
       </div>

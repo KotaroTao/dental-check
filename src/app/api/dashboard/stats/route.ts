@@ -143,7 +143,7 @@ export async function GET(request: NextRequest) {
         _count: { id: true },
       }),
 
-      // 経路一覧（フィルター用）
+      // QRコード一覧（フィルター用）
       prisma.channel.findMany({
         where: { clinicId: session.clinicId },
         select: { id: true, name: true, diagnosisTypeSlug: true },

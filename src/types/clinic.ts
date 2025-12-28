@@ -141,6 +141,7 @@ export interface Channel {
   code: string;
   name: string;
   description: string | null;
+  imageUrl: string | null;
   diagnosisTypeSlug: string;
   isActive: boolean;
   createdAt: Date;

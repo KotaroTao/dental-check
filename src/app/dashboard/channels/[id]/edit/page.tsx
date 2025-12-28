@@ -49,7 +49,7 @@ export default function EditChannelPage() {
             isActive: data.channel.isActive,
           });
         } else {
-          setError("経路が見つかりません");
+          setError("QRコードが見つかりません");
         }
       } catch {
         setError("データの取得に失敗しました");
@@ -80,7 +80,7 @@ export default function EditChannelPage() {
     setError("");
 
     if (!formData.name.trim()) {
-      setError("経路名を入力してください");
+      setError("QRコード名を入力してください");
       return;
     }
 
@@ -96,7 +96,7 @@ export default function EditChannelPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || "経路の更新に失敗しました");
+        setError(data.error || "QRコードの更新に失敗しました");
         return;
       }
 
@@ -123,7 +123,7 @@ export default function EditChannelPage() {
           ダッシュボードに戻る
         </Link>
         <div className="bg-white rounded-xl shadow-sm border p-6">
-          <p className="text-red-600">{error || "経路が見つかりません"}</p>
+          <p className="text-red-600">{error || "QRコードが見つかりません"}</p>
         </div>
       </div>
     );
@@ -136,11 +136,11 @@ export default function EditChannelPage() {
         className="inline-flex items-center text-gray-500 hover:text-gray-700 mb-6"
       >
         <ArrowLeft className="w-4 h-4 mr-1" />
-        経路詳細に戻る
+        QRコード詳細に戻る
       </Link>
 
       <div className="bg-white rounded-xl shadow-sm border p-6">
-        <h1 className="text-xl font-bold mb-6">経路を編集</h1>
+        <h1 className="text-xl font-bold mb-6">QRコードを編集</h1>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
@@ -151,7 +151,7 @@ export default function EditChannelPage() {
 
           <div className="space-y-2">
             <Label htmlFor="name">
-              経路名 <span className="text-red-500">*</span>
+              QRコード名 <span className="text-red-500">*</span>
             </Label>
             <Input
               id="name"
@@ -198,7 +198,7 @@ export default function EditChannelPage() {
               className="h-4 w-4 rounded border-gray-300"
             />
             <Label htmlFor="isActive" className="cursor-pointer">
-              この経路を有効にする
+              このQRコードを有効にする
             </Label>
           </div>
 

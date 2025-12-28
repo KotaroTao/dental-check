@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import QRCode from "qrcode";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Download, Copy, ExternalLink } from "lucide-react";
+import { ArrowLeft, Download, Copy, ExternalLink, Edit, Image as ImageIcon, X } from "lucide-react";
 
 // 診断タイプの表示名
 const DIAGNOSIS_TYPE_NAMES: Record<string, string> = {
@@ -18,6 +18,7 @@ interface Channel {
   code: string;
   name: string;
   description: string | null;
+  imageUrl: string | null;
   diagnosisTypeSlug: string;
   isActive: boolean;
 }
@@ -27,6 +28,7 @@ export default function ChannelDetailPage() {
   const [channel, setChannel] = useState<Channel | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [showImageModal, setShowImageModal] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
@@ -67,13 +69,35 @@ export default function ChannelDetailPage() {
     }
   }, [channel, diagnosisUrl]);
 
-  const handleDownload = () => {
+  const handleDownloadPNG = () => {
     if (!canvasRef.current || !channel) return;
 
     const link = document.createElement("a");
     link.download = `qr-${channel.name}.png`;
     link.href = canvasRef.current.toDataURL("image/png");
     link.click();
+  };
+
+  const handleDownloadSVG = async () => {
+    if (!channel) return;
+
+    try {
+      const svgString = await QRCode.toString(diagnosisUrl, {
+        type: "svg",
+        width: 256,
+        margin: 2,
+      });
+
+      const blob = new Blob([svgString], { type: "image/svg+xml" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.download = `qr-${channel.name}.svg`;
+      link.href = url;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("SVG download error:", error);
+    }
   };
 
   const handleCopy = async () => {
@@ -87,7 +111,7 @@ export default function ChannelDetailPage() {
   }
 
   if (!channel) {
-    return <div className="text-gray-500">経路が見つかりません</div>;
+    return <div className="text-gray-500">QRコードが見つかりません</div>;
   }
 
   const diagnosisTypeName =
@@ -105,26 +129,53 @@ export default function ChannelDetailPage() {
 
       <div className="bg-white rounded-xl shadow-sm border p-6 mb-6">
         <div className="flex items-start justify-between mb-4">
-          <div>
-            <h1 className="text-xl font-bold">{channel.name}</h1>
-            {channel.description && (
-              <p className="text-gray-500 mt-1">{channel.description}</p>
+          <div className="flex items-start gap-4">
+            {/* サムネイル画像 */}
+            {channel.imageUrl ? (
+              <button
+                onClick={() => setShowImageModal(true)}
+                className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 hover:opacity-80 transition-opacity"
+              >
+                <img
+                  src={channel.imageUrl}
+                  alt={channel.name}
+                  className="w-full h-full object-cover"
+                />
+              </button>
+            ) : (
+              <div className="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+                <ImageIcon className="w-6 h-6 text-gray-400" />
+              </div>
             )}
+            <div>
+              <h1 className="text-xl font-bold">{channel.name}</h1>
+              {channel.description && (
+                <p className="text-gray-500 mt-1">{channel.description}</p>
+              )}
+            </div>
           </div>
-          <span
-            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-              channel.isActive
-                ? "bg-green-100 text-green-800"
-                : "bg-gray-100 text-gray-800"
-            }`}
-          >
-            {channel.isActive ? "有効" : "無効"}
-          </span>
+          <div className="flex items-center gap-2">
+            <span
+              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                channel.isActive
+                  ? "bg-green-100 text-green-800"
+                  : "bg-gray-100 text-gray-800"
+              }`}
+            >
+              {channel.isActive ? "有効" : "無効"}
+            </span>
+            <Link href={`/dashboard/channels/${channel.id}/edit`}>
+              <Button variant="outline" size="sm" className="gap-1">
+                <Edit className="w-4 h-4" />
+                編集
+              </Button>
+            </Link>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4 border-t pt-4">
           <div>
-            <div className="text-sm text-gray-500 mb-1">経路コード</div>
+            <div className="text-sm text-gray-500 mb-1">QRコード</div>
             <code className="bg-gray-100 px-3 py-1.5 rounded text-sm font-mono">
               {channel.code}
             </code>
@@ -151,10 +202,14 @@ export default function ChannelDetailPage() {
             このQRコードをスキャンすると「{diagnosisTypeName}」が開始されます
           </p>
 
-          <div className="flex gap-3 mb-6">
-            <Button onClick={handleDownload} className="gap-2">
+          <div className="flex flex-wrap gap-3 mb-6 justify-center">
+            <Button onClick={handleDownloadPNG} className="gap-2">
               <Download className="w-4 h-4" />
-              ダウンロード
+              PNG
+            </Button>
+            <Button onClick={handleDownloadSVG} variant="outline" className="gap-2">
+              <Download className="w-4 h-4" />
+              SVG
             </Button>
             <Button variant="outline" onClick={handleCopy} className="gap-2">
               <Copy className="w-4 h-4" />
@@ -177,6 +232,29 @@ export default function ChannelDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* 画像モーダル */}
+      {showImageModal && channel.imageUrl && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowImageModal(false)}
+        >
+          <div className="relative max-w-4xl max-h-[90vh]">
+            <button
+              onClick={() => setShowImageModal(false)}
+              className="absolute -top-3 -right-3 bg-white rounded-full p-2 shadow-lg hover:bg-gray-100"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <img
+              src={channel.imageUrl}
+              alt={channel.name}
+              className="max-w-full max-h-[90vh] rounded-lg"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { BarChart3, Users, MousePointerClick, Percent, ChevronDown, ChevronUp, QrCode, Plus, Settings, Trash2, Building2, TrendingUp, TrendingDown, Download, ArrowUpDown } from "lucide-react";
+import { BarChart3, Users, MousePointerClick, Percent, ChevronDown, ChevronUp, QrCode, Plus, Settings, Trash2, Building2, TrendingUp, TrendingDown, Download, ArrowUpDown, Image as ImageIcon, X } from "lucide-react";
 import { LocationSection } from "@/components/dashboard/location-section";
 import { CTAChart } from "@/components/dashboard/cta-chart";
 
@@ -69,6 +69,7 @@ interface Channel {
   code: string;
   name: string;
   description: string | null;
+  imageUrl: string | null;
   diagnosisTypeSlug: string;
   isActive: boolean;
   createdAt: string;
@@ -253,7 +254,10 @@ export default function DashboardPage() {
     return `${year}/${month}/${day} ${hours}:${minutes}`;
   };
 
-  // 経路一覧取得
+  // 画像モーダル
+  const [selectedImage, setSelectedImage] = useState<{ url: string; name: string } | null>(null);
+
+  // QRコード一覧取得
   const fetchChannels = useCallback(async () => {
     try {
       const response = await fetch("/api/channels");
@@ -334,9 +338,9 @@ export default function DashboardPage() {
     fetchHistory(0, false);
   }, [fetchStats, fetchHistory]);
 
-  // 経路削除
+  // QRコード削除
   const handleDeleteChannel = async (id: string) => {
-    if (!confirm("この経路を削除しますか？関連するアクセスログも削除されます。")) {
+    if (!confirm("このQRコードを削除しますか？関連するアクセスログも削除されます。")) {
       return;
     }
 
@@ -441,7 +445,7 @@ export default function DashboardPage() {
       const data = await response.json();
 
       const rows: string[][] = [
-        ["日時", "年齢", "性別", "診断タイプ", "経路", "結果", "CTAクリック回数"],
+        ["日時", "年齢", "性別", "診断タイプ", "QRコード", "結果", "CTAクリック回数"],
       ];
 
       data.history.forEach((item: HistoryItem) => {
@@ -490,7 +494,7 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between">
           <Skeleton className="h-8 w-48" />
         </div>
-        {/* 経路スケルトン */}
+        {/* QRコードスケルトン */}
         <div className="bg-white rounded-xl shadow-sm border">
           <div className="p-6 border-b flex items-center justify-between">
             <Skeleton className="h-6 w-24" />
@@ -534,17 +538,17 @@ export default function DashboardPage() {
         <h1 className="text-2xl font-bold">ダッシュボード</h1>
       </div>
 
-      {/* 経路セクション */}
+      {/* QRコードセクション */}
       <div className="bg-white rounded-xl shadow-sm border">
         <div className="p-6 border-b flex items-center justify-between">
           <h2 className="text-lg font-bold flex items-center gap-2">
             <QrCode className="w-5 h-5" />
-            経路
+            QRコード
           </h2>
           <Link href="/dashboard/channels/new">
             <Button className="gap-2" size="sm">
               <Plus className="w-4 h-4" />
-              新しい経路を作成
+              新しいQRコードを作成
             </Button>
           </Link>
         </div>
@@ -553,13 +557,13 @@ export default function DashboardPage() {
           <div className="p-12 text-center">
             <QrCode className="w-16 h-16 mx-auto text-gray-300 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">
-              まだ経路がありません
+              まだQRコードがありません
             </h3>
             <p className="text-gray-500 mb-6">
-              経路を作成して計測を始めましょう
+              QRコードを作成して計測を始めましょう
             </p>
             <Link href="/dashboard/channels/new">
-              <Button>最初の経路を作成する</Button>
+              <Button>最初のQRコードを作成する</Button>
             </Link>
           </div>
         ) : (
@@ -570,7 +574,7 @@ export default function DashboardPage() {
                 <thead className="bg-gray-50 border-b">
                   <tr>
                     <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">
-                      経路名
+                      QRコード名
                     </th>
                     <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">
                       診断
@@ -590,12 +594,33 @@ export default function DashboardPage() {
                   {channels.map((channel) => (
                     <tr key={channel.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4">
-                        <div className="font-medium">{channel.name}</div>
-                        {channel.description && (
-                          <div className="text-sm text-gray-500">
-                            {channel.description}
+                        <div className="flex items-center gap-3">
+                          {/* サムネイル */}
+                          {channel.imageUrl ? (
+                            <button
+                              onClick={() => setSelectedImage({ url: channel.imageUrl!, name: channel.name })}
+                              className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 hover:opacity-80 transition-opacity"
+                            >
+                              <img
+                                src={channel.imageUrl}
+                                alt={channel.name}
+                                className="w-full h-full object-cover"
+                              />
+                            </button>
+                          ) : (
+                            <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+                              <ImageIcon className="w-4 h-4 text-gray-400" />
+                            </div>
+                          )}
+                          <div>
+                            <div className="font-medium">{channel.name}</div>
+                            {channel.description && (
+                              <div className="text-sm text-gray-500">
+                                {channel.description}
+                              </div>
+                            )}
                           </div>
-                        )}
+                        </div>
                       </td>
                       <td className="px-6 py-4">
                         <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-50 text-blue-700">
@@ -651,24 +676,45 @@ export default function DashboardPage() {
             <div className="md:hidden divide-y">
               {channels.map((channel) => (
                 <div key={channel.id} className="p-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <div className="font-medium">{channel.name}</div>
-                      {channel.description && (
-                        <div className="text-sm text-gray-500 mt-0.5">
-                          {channel.description}
-                        </div>
-                      )}
-                    </div>
-                    {channel.isActive ? (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        有効
-                      </span>
+                  <div className="flex items-start gap-3 mb-2">
+                    {/* サムネイル */}
+                    {channel.imageUrl ? (
+                      <button
+                        onClick={() => setSelectedImage({ url: channel.imageUrl!, name: channel.name })}
+                        className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 hover:opacity-80 transition-opacity"
+                      >
+                        <img
+                          src={channel.imageUrl}
+                          alt={channel.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </button>
                     ) : (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                        無効
-                      </span>
+                      <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+                        <ImageIcon className="w-5 h-5 text-gray-400" />
+                      </div>
                     )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <div className="font-medium">{channel.name}</div>
+                          {channel.description && (
+                            <div className="text-sm text-gray-500 mt-0.5">
+                              {channel.description}
+                            </div>
+                          )}
+                        </div>
+                        {channel.isActive ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 ml-2">
+                            有効
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 ml-2">
+                            無効
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
                   <div className="flex items-center gap-2 mb-3 text-sm">
                     <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700">
@@ -741,7 +787,7 @@ export default function DashboardPage() {
                 onChange={(e) => setSelectedChannelId(e.target.value)}
                 className="flex-1 sm:flex-none px-3 py-1.5 border rounded-md text-sm bg-white"
               >
-                <option value="">全ての経路</option>
+                <option value="">全てのQRコード</option>
                 {channels.map((ch) => (
                   <option key={ch.id} value={ch.id}>
                     {ch.name}
@@ -1040,7 +1086,7 @@ export default function DashboardPage() {
                       診断
                     </th>
                     <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">
-                      経路
+                      QRコード
                     </th>
                     <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">
                       結果
@@ -1155,7 +1201,7 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* クイックスタートガイド（経路がない場合のみ表示） */}
+      {/* クイックスタートガイド（QRコードがない場合のみ表示） */}
       {channels.length === 0 && (
         <div className="bg-blue-50 rounded-xl p-6 border border-blue-100">
           <h2 className="text-lg font-bold text-blue-900 mb-4">
@@ -1166,9 +1212,9 @@ export default function DashboardPage() {
               <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold mb-2">
                 1
               </div>
-              <h3 className="font-medium mb-1">経路を作成</h3>
+              <h3 className="font-medium mb-1">QRコードを作成</h3>
               <p className="text-sm text-gray-600">
-                「チラシ①」「医院前看板」など、計測したい経路を登録
+                「チラシ①」「医院前看板」など、計測したいQRコードを登録
               </p>
             </div>
             <div className="bg-white rounded-lg p-4">
@@ -1186,9 +1232,32 @@ export default function DashboardPage() {
               </div>
               <h3 className="font-medium mb-1">効果を確認</h3>
               <p className="text-sm text-gray-600">
-                ダッシュボードで経路別の効果を比較
+                ダッシュボードでQRコード別の効果を比較
               </p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 画像モーダル */}
+      {selectedImage && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setSelectedImage(null)}
+        >
+          <div className="relative max-w-4xl max-h-[90vh]">
+            <button
+              onClick={() => setSelectedImage(null)}
+              className="absolute -top-3 -right-3 bg-white rounded-full p-2 shadow-lg hover:bg-gray-100"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <img
+              src={selectedImage.url}
+              alt={selectedImage.name}
+              className="max-w-full max-h-[90vh] rounded-lg"
+              onClick={(e) => e.stopPropagation()}
+            />
           </div>
         </div>
       )}
