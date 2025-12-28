@@ -487,19 +487,17 @@ function ClinicCTA({
 
         {/* 医院紹介ページへのリンク */}
         {clinicSlug && (
-          <Link
+          <a
             href={`/clinic/${clinicSlug}`}
-            className="block"
+            target="_blank"
+            rel="noopener noreferrer"
             onClick={() => trackClick("clinic_page")}
+            className="flex items-center justify-center gap-2 w-full py-3.5 rounded-lg font-medium text-white transition-all duration-200 hover:opacity-90 hover:shadow-lg active:scale-[0.98]"
+            style={{ backgroundColor: mainColor || "#2563eb" }}
           >
-            <Button
-              variant="ghost"
-              className="w-full gap-2 text-gray-600"
-            >
-              <Building2 className="w-4 h-4" />
-              医院について詳しく見る
-            </Button>
-          </Link>
+            <Building2 className="w-5 h-5" />
+            医院について詳しく見る
+          </a>
         )}
       </div>
     </div>
