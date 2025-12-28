@@ -5,6 +5,7 @@ export interface CTAConfig {
   youtubeUrl?: string;
   facebookUrl?: string;
   tiktokUrl?: string;
+  threadsUrl?: string;
   phone?: string;
   directorMessage?: string;
 }

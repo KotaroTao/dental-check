@@ -16,6 +16,7 @@ interface ClinicSettings {
     youtubeUrl?: string;
     facebookUrl?: string;
     tiktokUrl?: string;
+    threadsUrl?: string;
     phone?: string;
     directorMessage?: string;
   };
@@ -244,6 +245,18 @@ export default function SettingsPage() {
                 type="url"
                 placeholder="https://tiktok.com/@xxx"
                 value={settings.ctaConfig.tiktokUrl || ""}
+                onChange={handleChange}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="cta.threadsUrl">ThreadsURL</Label>
+              <Input
+                id="cta.threadsUrl"
+                name="cta.threadsUrl"
+                type="url"
+                placeholder="https://threads.net/@xxx"
+                value={settings.ctaConfig.threadsUrl || ""}
                 onChange={handleChange}
               />
             </div>
