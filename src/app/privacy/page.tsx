@@ -40,6 +40,7 @@ export default function PrivacyPage() {
               <li>サービス利用状況に関するデータ</li>
               <li>診断結果の統計データ（個人を特定しない形式）</li>
               <li>Cookie等を利用したアクセス情報</li>
+              <li>IPアドレスに基づく位置情報（都道府県・市区町村レベル）</li>
             </ul>
           </section>
 
@@ -86,7 +87,23 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-bold text-gray-900 mb-4">7. お問い合わせ</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">7. 位置情報の取得・利用</h2>
+            <p className="text-gray-700 leading-relaxed mb-4">
+              本サービスでは、診断を受けられた方のIPアドレスから、おおよその位置情報（都道府県・市区町村レベル）を推定し、
+              以下の目的で利用しております。
+            </p>
+            <ul className="list-disc list-inside text-gray-700 space-y-2 mb-4">
+              <li>歯科医院様への診断実施エリアの統計情報提供</li>
+              <li>サービス改善のための分析</li>
+            </ul>
+            <p className="text-gray-700 leading-relaxed">
+              なお、位置情報はIPアドレスから推定した概略的な情報であり、正確な住所や個人を特定できる情報ではありません。
+              また、GPSやスマートフォンの位置情報機能を使用した精密な位置情報の取得は行っておりません。
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">8. お問い合わせ</h2>
             <p className="text-gray-700 leading-relaxed">
               個人情報の取り扱いに関するお問い合わせは、以下までご連絡ください。<br /><br />
               株式会社ファンクション・ティ<br />
@@ -95,7 +112,7 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-bold text-gray-900 mb-4">8. 改定</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">9. 改定</h2>
             <p className="text-gray-700 leading-relaxed">
               本ポリシーは、法令の改正やサービス内容の変更に伴い、予告なく改定されることがあります。
               改定後のポリシーは、本ページに掲載した時点から効力を生じるものとします。

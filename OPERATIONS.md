@@ -364,21 +364,35 @@ docker compose -f docker-compose.production.yml --env-file .env.production up -d
 
 ---
 
-## 開発状況（2024年12月更新）
+## 開発状況（2024年12月28日更新）
 
 ### 実装済み機能
 
+#### アプリ名
+- **くるくる診断DX for Dental**（「for Dental」は半分のサイズ）
+
 #### QRコード計測機能
 - **経路（Channel）管理**: 1経路 = 1診断タイプ
-- **ダッシュボード統合**: 経路一覧・統計サマリー・診断完了履歴を1画面に
+- **ダッシュボード統合**: 経路一覧・統計サマリー・診断実施エリア・診断完了履歴を1画面に
 - **統計フィルター**: 期間（今日/今週/今月/カスタム期間）、経路別
 - **履歴表示**: 50件ずつページネーション、診断タイプフィルター
+
+#### 診断完了トラッキング
+- 診断完了時に `DiagnosisSession` をDBに保存
+- `channelId` から `clinicId` を自動取得して記録
+- 結果画面表示時に `/api/track/complete` を呼び出し
+
+#### 診断実施エリア表示（IP地域推定）
+- IPアドレスから都道府県・市区町村を推定（ip-api.com使用）
+- ダッシュボードに地図＋エリア別ランキング表示
+- react-leaflet + OpenStreetMap
 
 #### ダッシュボード構成
 ```
 /dashboard
-├── 経路セクション（一覧・作成・削除）
+├── 経路セクション（一覧・作成・編集・削除）
 ├── 統計サマリー（アクセス/完了/完了率/CTA）
+├── 診断実施エリア（地図+TOP10リスト）  ← 新規
 └── 診断完了履歴（50件ずつ、もっと見る）
 ```
 
@@ -387,19 +401,47 @@ docker compose -f docker-compose.production.yml --env-file .env.production up -d
 |---------------|------|
 | `GET /api/dashboard/stats` | 統計データ（期間・経路フィルター対応） |
 | `GET /api/dashboard/history` | 診断完了履歴（ページネーション対応） |
+| `GET /api/dashboard/locations` | エリア別統計（地図表示用） |
+| `POST /api/track/complete` | 診断完了記録（位置情報含む） |
+| `POST /api/track/access` | アクセス記録（位置情報含む） |
 | `GET /api/channels` | 経路一覧 |
 | `POST /api/channels` | 経路作成（diagnosisTypeSlug必須） |
+| `GET /api/channels/[id]` | 経路詳細 |
+| `PUT /api/channels/[id]` | 経路更新 |
 | `DELETE /api/channels/[id]` | 経路削除 |
 
-#### DBスキーマ変更
+#### DBスキーマ（位置情報フィールド）
 ```prisma
-model Channel {
-  diagnosisTypeSlug String @default("oral-age") @map("diagnosis_type_slug")
+model DiagnosisSession {
+  // 位置情報（IPベース）
+  ipAddress  String?  @map("ip_address")
+  country    String?  // 国コード (JP)
+  region     String?  // 都道府県 (兵庫県)
+  city       String?  // 市区町村 (西宮市)
+  latitude   Float?   // 緯度
+  longitude  Float?   // 経度
+}
+
+model AccessLog {
+  ipAddress  String?  @map("ip_address")
+  country    String?
+  region     String?
+  city       String?
 }
 ```
 
+### 主要ファイル
+
+| ファイル | 説明 |
+|---------|------|
+| `src/lib/geolocation.ts` | IP地域推定ライブラリ |
+| `src/components/dashboard/location-section.tsx` | エリア表示セクション |
+| `src/components/dashboard/location-map.tsx` | Leaflet地図コンポーネント |
+| `src/components/diagnosis/result-card.tsx` | 結果表示＋完了トラッキング |
+| `docs/SPEC_LOCATION_TRACKING.md` | エリア表示機能の仕様書 |
+
 ### ナビゲーション構成
-- ダッシュボード（経路・統計・履歴を統合）
+- ダッシュボード（経路・統計・エリア・履歴を統合）
 - 埋め込みコード
 - 医院紹介
 - 設定
@@ -412,6 +454,11 @@ model Channel {
 - 統計データのCSVエクスポート
 - グラフ表示（推移チャート）
 - 経路別の詳細統計ページ
+- プライバシーポリシーへの位置情報記載追加
+
+### 注意事項
+- **DBマイグレーション必須**: 位置情報フィールドを追加したため、本番デプロイ時は `prisma db push` が必要
+- **IP地域推定の制限**: ip-api.com は 45req/分。高トラフィック時は有料サービスへの移行を検討
 
 ---
 

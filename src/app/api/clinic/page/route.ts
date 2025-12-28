@@ -50,8 +50,12 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const clinicPage: ClinicPage = body.clinicPage;
 
-    // URLの形式を検証するヘルパー関数
+    // URLの形式を検証するヘルパー関数（相対URLも許可）
     const isValidUrl = (url: string): boolean => {
+      // 相対URL（/で始まる）を許可
+      if (url.startsWith("/")) {
+        return true;
+      }
       try {
         const parsed = new URL(url);
         return parsed.protocol === "http:" || parsed.protocol === "https:";

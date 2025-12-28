@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getClientIP, getLocationFromIP } from "@/lib/geolocation";
 
 export async function POST(request: NextRequest) {
   try {
@@ -47,6 +48,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // IPアドレスから位置情報を取得
+    const ip = getClientIP(request);
+    const location = await getLocationFromIP(ip);
+
     // 診断セッションを作成
     const session = await prisma.diagnosisSession.create({
       data: {
@@ -60,6 +65,13 @@ export async function POST(request: NextRequest) {
         totalScore: totalScore || null,
         resultCategory: resultCategory || null,
         completedAt: new Date(),
+        // 位置情報
+        ipAddress: ip !== "unknown" ? ip : null,
+        country: location?.countryCode || null,
+        region: location?.regionName || null,
+        city: location?.city || null,
+        latitude: location?.lat || null,
+        longitude: location?.lon || null,
       },
     });
 

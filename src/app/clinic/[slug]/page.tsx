@@ -1,7 +1,9 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import type { ClinicPage, CTAConfig } from "@/types/clinic";
-import { Phone, Calendar, MessageCircle, Instagram, Clock, MapPin, User } from "lucide-react";
+import type { ClinicPage, CTAConfig, WeeklySchedule } from "@/types/clinic";
+import { Phone, Calendar, MessageCircle, Instagram, Clock, MapPin, User, Stethoscope, CheckCircle, Bell } from "lucide-react";
+import { PhotoCarousel } from "./photo-carousel";
+import { FloatingCTA } from "./floating-cta";
 
 interface ClinicData {
   id: string;
@@ -29,6 +31,17 @@ function extractGoogleMapsUrl(embedCode: string): string | null {
 
   return url;
 }
+
+// 曜日ラベル
+const DAY_LABELS = {
+  mon: "月",
+  tue: "火",
+  wed: "水",
+  thu: "木",
+  fri: "金",
+  sat: "土",
+  sun: "日",
+} as const;
 
 async function getClinic(slug: string): Promise<ClinicData | null> {
   const clinic = await prisma.clinic.findUnique({
@@ -70,8 +83,14 @@ export default async function ClinicPublicPage({
   const hasPhotos = clinicPage.photos && clinicPage.photos.length > 0;
   const hasDirector = clinicPage.director?.name || clinicPage.director?.profile;
   const hasHours = clinicPage.hours?.weekday || clinicPage.hours?.saturday;
+  const hasWeeklySchedule = clinicPage.weeklySchedule && Object.keys(clinicPage.weeklySchedule).some(
+    k => k !== 'note' && clinicPage.weeklySchedule?.[k as keyof WeeklySchedule]
+  );
   const hasAccess = clinicPage.access?.address;
   const hasCTA = ctaConfig.phone || ctaConfig.bookingUrl || ctaConfig.lineUrl;
+  const hasTreatments = clinicPage.treatments && clinicPage.treatments.length > 0;
+  const hasFacilities = clinicPage.facilities && clinicPage.facilities.length > 0;
+  const hasAnnouncements = clinicPage.announcements && clinicPage.announcements.length > 0;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -92,24 +111,88 @@ export default async function ClinicPublicPage({
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 max-w-2xl">
-        {/* 医院写真 */}
+      <main className="container mx-auto px-4 py-8 max-w-2xl pb-24">
+        {/* お知らせ */}
+        {hasAnnouncements && (
+          <section className="mb-6">
+            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+              <h2 className="text-sm font-bold text-yellow-800 mb-3 flex items-center gap-2">
+                <Bell className="w-4 h-4" />
+                お知らせ
+              </h2>
+              <div className="space-y-2">
+                {clinicPage.announcements!.slice(0, 3).map((announcement) => (
+                  <div
+                    key={announcement.id}
+                    className={`${announcement.important ? "bg-red-50 border-red-200" : "bg-white"} rounded-lg p-3 border`}
+                  >
+                    <div className="flex items-start gap-2">
+                      <span className="text-xs text-gray-400 whitespace-nowrap">
+                        {announcement.date}
+                      </span>
+                      <div>
+                        <p className={`text-sm font-medium ${announcement.important ? "text-red-600" : "text-gray-800"}`}>
+                          {announcement.title}
+                        </p>
+                        {announcement.content && (
+                          <p className="text-xs text-gray-600 mt-1">{announcement.content}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* 医院写真（カルーセル） */}
         {hasPhotos && (
           <section className="mb-8">
-            <div className="grid gap-4">
-              {clinicPage.photos!.map((photo, index) => (
-                <div key={index} className="bg-white rounded-xl overflow-hidden shadow-sm">
-                  <img
-                    src={photo.url}
-                    alt={photo.caption || `医院写真 ${index + 1}`}
-                    className="w-full h-48 object-cover"
-                  />
-                  {photo.caption && (
-                    <p className="p-3 text-sm text-gray-600 text-center">
-                      {photo.caption}
-                    </p>
+            <PhotoCarousel photos={clinicPage.photos!} />
+          </section>
+        )}
+
+        {/* 診療内容 */}
+        {hasTreatments && (
+          <section className="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+              <Stethoscope className="w-5 h-5" style={{ color: mainColor }} />
+              診療内容
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {clinicPage.treatments!.map((treatment, index) => (
+                <div
+                  key={index}
+                  className="p-3 bg-gray-50 rounded-lg text-center"
+                >
+                  <p className="font-medium text-sm">{treatment.name}</p>
+                  {treatment.description && (
+                    <p className="text-xs text-gray-500 mt-1">{treatment.description}</p>
                   )}
                 </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* 設備・特徴 */}
+        {hasFacilities && (
+          <section className="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+              <CheckCircle className="w-5 h-5" style={{ color: mainColor }} />
+              設備・特徴
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              {clinicPage.facilities!.map((facility, index) => (
+                <span
+                  key={index}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm"
+                  style={{ backgroundColor: `${mainColor}15`, color: mainColor }}
+                >
+                  <CheckCircle className="w-3.5 h-3.5" />
+                  {facility.name}
+                </span>
               ))}
             </div>
           </section>
@@ -145,42 +228,126 @@ export default async function ClinicPublicPage({
         )}
 
         {/* 診療時間 */}
-        {hasHours && (
+        {(hasHours || hasWeeklySchedule) && (
           <section className="bg-white rounded-xl shadow-sm p-6 mb-6">
             <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
               <Clock className="w-5 h-5" style={{ color: mainColor }} />
               診療時間
             </h2>
-            <table className="w-full text-sm">
-              <tbody>
-                {clinicPage.hours?.weekday && (
-                  <tr className="border-b">
-                    <td className="py-2 text-gray-600">平日</td>
-                    <td className="py-2 text-right">{clinicPage.hours.weekday}</td>
-                  </tr>
+
+            {hasWeeklySchedule ? (
+              /* 曜日別テーブル */
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="py-2 px-1 text-center w-10"></th>
+                      {(Object.keys(DAY_LABELS) as Array<keyof typeof DAY_LABELS>).map((day) => (
+                        <th key={day} className="py-2 px-1 text-center">
+                          {DAY_LABELS[day]}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b">
+                      <td className="py-2 px-1 text-gray-600 text-center text-xs">午前</td>
+                      {(Object.keys(DAY_LABELS) as Array<keyof typeof DAY_LABELS>).map((day) => {
+                        const schedule = clinicPage.weeklySchedule?.[day];
+                        if (schedule?.closed) {
+                          return <td key={day} className="py-2 px-1 text-center text-gray-400">-</td>;
+                        }
+                        return (
+                          <td key={day} className="py-2 px-1 text-center">
+                            {schedule?.morning ? (
+                              <span className="text-green-600">○</span>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                    <tr className="border-b">
+                      <td className="py-2 px-1 text-gray-600 text-center text-xs">午後</td>
+                      {(Object.keys(DAY_LABELS) as Array<keyof typeof DAY_LABELS>).map((day) => {
+                        const schedule = clinicPage.weeklySchedule?.[day];
+                        if (schedule?.closed) {
+                          return <td key={day} className="py-2 px-1 text-center text-gray-400">-</td>;
+                        }
+                        return (
+                          <td key={day} className="py-2 px-1 text-center">
+                            {schedule?.afternoon ? (
+                              <span className="text-green-600">○</span>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
+                            {schedule?.note && (
+                              <span className="text-xs text-gray-400 block">{schedule.note}</span>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  </tbody>
+                </table>
+
+                {/* 時間詳細 */}
+                <div className="mt-4 text-xs text-gray-600 space-y-1">
+                  {(Object.keys(DAY_LABELS) as Array<keyof typeof DAY_LABELS>).map((day) => {
+                    const schedule = clinicPage.weeklySchedule?.[day];
+                    if (!schedule || schedule.closed) return null;
+                    if (!schedule.morning && !schedule.afternoon) return null;
+                    return (
+                      <p key={day}>
+                        <span className="font-medium">{DAY_LABELS[day]}曜:</span>{" "}
+                        {schedule.morning && `午前 ${schedule.morning}`}
+                        {schedule.morning && schedule.afternoon && " / "}
+                        {schedule.afternoon && `午後 ${schedule.afternoon}`}
+                      </p>
+                    );
+                  })}
+                </div>
+
+                {clinicPage.weeklySchedule?.note && (
+                  <p className="text-xs text-gray-500 mt-3">※{clinicPage.weeklySchedule.note}</p>
                 )}
-                {clinicPage.hours?.saturday && (
-                  <tr className="border-b">
-                    <td className="py-2 text-gray-600">土曜日</td>
-                    <td className="py-2 text-right">{clinicPage.hours.saturday}</td>
-                  </tr>
+              </div>
+            ) : (
+              /* 従来形式 */
+              <>
+                <table className="w-full text-sm">
+                  <tbody>
+                    {clinicPage.hours?.weekday && (
+                      <tr className="border-b">
+                        <td className="py-2 text-gray-600">平日</td>
+                        <td className="py-2 text-right">{clinicPage.hours.weekday}</td>
+                      </tr>
+                    )}
+                    {clinicPage.hours?.saturday && (
+                      <tr className="border-b">
+                        <td className="py-2 text-gray-600">土曜日</td>
+                        <td className="py-2 text-right">{clinicPage.hours.saturday}</td>
+                      </tr>
+                    )}
+                    {clinicPage.hours?.sunday && (
+                      <tr className="border-b">
+                        <td className="py-2 text-gray-600">日曜日</td>
+                        <td className="py-2 text-right">{clinicPage.hours.sunday}</td>
+                      </tr>
+                    )}
+                    {clinicPage.hours?.holiday && (
+                      <tr className="border-b">
+                        <td className="py-2 text-gray-600">祝日</td>
+                        <td className="py-2 text-right">{clinicPage.hours.holiday}</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+                {clinicPage.hours?.note && (
+                  <p className="text-xs text-gray-500 mt-3">{clinicPage.hours.note}</p>
                 )}
-                {clinicPage.hours?.sunday && (
-                  <tr className="border-b">
-                    <td className="py-2 text-gray-600">日曜日</td>
-                    <td className="py-2 text-right">{clinicPage.hours.sunday}</td>
-                  </tr>
-                )}
-                {clinicPage.hours?.holiday && (
-                  <tr className="border-b">
-                    <td className="py-2 text-gray-600">祝日</td>
-                    <td className="py-2 text-right">{clinicPage.hours.holiday}</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-            {clinicPage.hours?.note && (
-              <p className="text-xs text-gray-500 mt-3">{clinicPage.hours.note}</p>
+              </>
             )}
           </section>
         )}
@@ -212,7 +379,7 @@ export default async function ClinicPublicPage({
           </section>
         )}
 
-        {/* CTA */}
+        {/* CTA（インライン） */}
         {hasCTA && (
           <section className="bg-white rounded-xl shadow-sm p-6">
             <h2 className="text-lg font-bold mb-4 text-center">ご予約・お問い合わせ</h2>
@@ -276,12 +443,17 @@ export default async function ClinicPublicPage({
         )}
 
         {/* コンテンツがない場合 */}
-        {!hasPhotos && !hasDirector && !hasHours && !hasAccess && !hasCTA && (
+        {!hasPhotos && !hasDirector && !hasHours && !hasWeeklySchedule && !hasAccess && !hasCTA && !hasTreatments && !hasFacilities && !hasAnnouncements && (
           <div className="bg-white rounded-xl shadow-sm p-8 text-center text-gray-500">
             <p>医院情報は現在準備中です</p>
           </div>
         )}
       </main>
+
+      {/* フローティングCTA */}
+      {hasCTA && (
+        <FloatingCTA ctaConfig={ctaConfig} mainColor={mainColor} />
+      )}
 
       {/* フッター */}
       <footer className="bg-gray-100 py-6 mt-8">
