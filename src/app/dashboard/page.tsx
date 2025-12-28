@@ -100,6 +100,7 @@ interface HistoryItem {
   resultCategory: string;
   ctaType: string | null;
   ctaClickCount: number;
+  ctaByType: Record<string, number>;
 }
 
 // ポップオーバーコンポーネント
@@ -153,6 +154,13 @@ export default function DashboardPage() {
   const [isExporting, setIsExporting] = useState(false);
   const [showHiddenChannels, setShowHiddenChannels] = useState(false);
   const [expandedChannelId, setExpandedChannelId] = useState<string | null>(null);
+
+  // QRコードソート
+  type ChannelSortField = "default" | "accessCount" | "completedCount" | "completionRate" | "ctaCount";
+  const [channelSortField, setChannelSortField] = useState<ChannelSortField>("default");
+
+  // ドラッグ＆ドロップ
+  const [draggedChannelId, setDraggedChannelId] = useState<string | null>(null);
 
   // ソート
   type SortField = "createdAt" | "userAge" | "ctaClickCount";
@@ -350,6 +358,85 @@ export default function DashboardPage() {
     fetchHistory(history.length, true);
   };
 
+  // ドラッグ＆ドロップ
+  const handleDragStart = (e: React.DragEvent, channelId: string) => {
+    setDraggedChannelId(channelId);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetChannelId: string) => {
+    e.preventDefault();
+    if (!draggedChannelId || draggedChannelId === targetChannelId) {
+      setDraggedChannelId(null);
+      return;
+    }
+
+    const activeChannelList = channels.filter((c) => c.isActive);
+    const draggedIndex = activeChannelList.findIndex((c) => c.id === draggedChannelId);
+    const targetIndex = activeChannelList.findIndex((c) => c.id === targetChannelId);
+
+    if (draggedIndex === -1 || targetIndex === -1) {
+      setDraggedChannelId(null);
+      return;
+    }
+
+    // 新しい順序を作成
+    const newOrder = [...activeChannelList];
+    const [draggedItem] = newOrder.splice(draggedIndex, 1);
+    newOrder.splice(targetIndex, 0, draggedItem);
+
+    // ローカル状態を更新
+    const hiddenChannels = channels.filter((c) => !c.isActive);
+    setChannels([...newOrder, ...hiddenChannels]);
+    setDraggedChannelId(null);
+
+    // サーバーに保存
+    try {
+      await fetch("/api/channels/reorder", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ channelIds: newOrder.map((c) => c.id) }),
+      });
+    } catch (error) {
+      console.error("Failed to reorder channels:", error);
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDraggedChannelId(null);
+  };
+
+  // QRコードのソート済みリスト
+  const getSortedChannels = (channelList: Channel[]) => {
+    if (channelSortField === "default") {
+      return channelList;
+    }
+
+    return [...channelList].sort((a, b) => {
+      const statsA = channelStats[a.id];
+      const statsB = channelStats[b.id];
+      if (!statsA || !statsB) return 0;
+
+      switch (channelSortField) {
+        case "accessCount":
+          return statsB.accessCount - statsA.accessCount;
+        case "completedCount":
+          return statsB.completedCount - statsA.completedCount;
+        case "completionRate":
+          return statsB.completionRate - statsA.completionRate;
+        case "ctaCount":
+          return statsB.ctaCount - statsA.ctaCount;
+        default:
+          return 0;
+      }
+    });
+  };
+
   // CSVエクスポート
   const exportHistoryToCSV = async () => {
     if (totalCount > 5000) {
@@ -377,10 +464,15 @@ export default function DashboardPage() {
       const data = await response.json();
 
       const rows: string[][] = [
-        ["日時", "年齢", "性別", "診断タイプ", "QRコード", "結果", "CTAクリック回数"],
+        ["日時", "年齢", "性別", "診断タイプ", "QRコード", "結果", "CTAクリック回数", "CTA内訳"],
       ];
 
       data.history.forEach((item: HistoryItem) => {
+        // CTA内訳を文字列に変換
+        const ctaDetails = Object.entries(item.ctaByType || {})
+          .map(([type, count]) => `${CTA_TYPE_NAMES[type] || type}:${count}`)
+          .join(" / ");
+
         rows.push([
           formatDate(item.createdAt),
           item.userAge !== null ? item.userAge.toString() : "",
@@ -389,6 +481,7 @@ export default function DashboardPage() {
           item.channelName,
           item.resultCategory,
           item.ctaClickCount.toString(),
+          ctaDetails,
         ]);
       });
 
@@ -433,7 +526,8 @@ export default function DashboardPage() {
 
   const activeChannels = channels.filter((c) => c.isActive);
   const hiddenChannels = channels.filter((c) => !c.isActive);
-  const displayChannels = showHiddenChannels ? hiddenChannels : activeChannels;
+  const sortedActiveChannels = getSortedChannels(activeChannels);
+  const displayChannels = showHiddenChannels ? hiddenChannels : sortedActiveChannels;
 
   return (
     <div className="space-y-8">
@@ -487,28 +581,43 @@ export default function DashboardPage() {
           </Link>
         </div>
 
-        {/* タブ */}
-        <div className="flex border-b px-6">
-          <button
-            onClick={() => setShowHiddenChannels(false)}
-            className={`px-4 py-3 text-sm font-medium border-b-2 -mb-px ${
-              !showHiddenChannels
-                ? "border-blue-600 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            有効 ({activeChannels.length})
-          </button>
-          <button
-            onClick={() => setShowHiddenChannels(true)}
-            className={`px-4 py-3 text-sm font-medium border-b-2 -mb-px ${
-              showHiddenChannels
-                ? "border-blue-600 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            非表示 ({hiddenChannels.length})
-          </button>
+        {/* タブとソート */}
+        <div className="flex items-center justify-between border-b px-6">
+          <div className="flex">
+            <button
+              onClick={() => setShowHiddenChannels(false)}
+              className={`px-4 py-3 text-sm font-medium border-b-2 -mb-px ${
+                !showHiddenChannels
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              有効 ({activeChannels.length})
+            </button>
+            <button
+              onClick={() => setShowHiddenChannels(true)}
+              className={`px-4 py-3 text-sm font-medium border-b-2 -mb-px ${
+                showHiddenChannels
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              非表示 ({hiddenChannels.length})
+            </button>
+          </div>
+          {!showHiddenChannels && activeChannels.length > 1 && (
+            <select
+              value={channelSortField}
+              onChange={(e) => setChannelSortField(e.target.value as ChannelSortField)}
+              className="px-2 py-1 border rounded text-xs bg-white"
+            >
+              <option value="default">並び順: 手動</option>
+              <option value="accessCount">QR読み込み順</option>
+              <option value="completedCount">診断完了順</option>
+              <option value="completionRate">完了率順</option>
+              <option value="ctaCount">CTA順</option>
+            </select>
+          )}
         </div>
 
         {displayChannels.length === 0 ? (
@@ -529,8 +638,19 @@ export default function DashboardPage() {
               const stats = channelStats[channel.id];
               const isExpanded = expandedChannelId === channel.id;
 
+              const isDragging = draggedChannelId === channel.id;
+              const canDrag = channel.isActive && channelSortField === "default";
+
               return (
-                <div key={channel.id} className="p-4 hover:bg-gray-50">
+                <div
+                  key={channel.id}
+                  className={`p-4 hover:bg-gray-50 ${isDragging ? "opacity-50 bg-blue-50" : ""} ${canDrag ? "cursor-grab" : ""}`}
+                  draggable={canDrag}
+                  onDragStart={(e) => canDrag && handleDragStart(e, channel.id)}
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => canDrag && handleDrop(e, channel.id)}
+                  onDragEnd={handleDragEnd}
+                >
                   {/* カードヘッダー */}
                   <div className="flex items-start gap-3 mb-3">
                     {channel.imageUrl ? (
@@ -566,7 +686,7 @@ export default function DashboardPage() {
                       <Link href={`/dashboard/channels/${channel.id}`}>
                         <Button variant="outline" size="sm" className="gap-1">
                           <QrCode className="w-4 h-4" />
-                          詳細
+                          QRコード表示
                         </Button>
                       </Link>
                       <Link href={`/dashboard/channels/${channel.id}/edit`}>
@@ -605,7 +725,7 @@ export default function DashboardPage() {
                           trigger={
                             <div className="bg-gray-50 rounded-lg py-2 px-3 hover:bg-blue-50 transition-colors">
                               <div className="text-xs text-gray-500 mb-0.5 flex items-center justify-center gap-1">
-                                アクセス <Info className="w-3 h-3" />
+                                QR読み込み <Info className="w-3 h-3" />
                               </div>
                               <div className="text-lg font-bold text-gray-800">{stats.accessCount}</div>
                             </div>
@@ -702,7 +822,7 @@ export default function DashboardPage() {
                       <div className="md:hidden">
                         <div className="grid grid-cols-4 gap-2 text-center">
                           <div className="bg-gray-50 rounded-lg py-2 px-1">
-                            <div className="text-[10px] text-gray-500">アクセス</div>
+                            <div className="text-[10px] text-gray-500">QR読み込み</div>
                             <div className="text-base font-bold text-gray-800">{stats.accessCount}</div>
                           </div>
                           <div className="bg-gray-50 rounded-lg py-2 px-1">
@@ -879,7 +999,32 @@ export default function DashboardPage() {
                       <td className="px-4 py-4 text-sm text-gray-700">{item.resultCategory}</td>
                       <td className="px-4 py-4 text-center">
                         {item.ctaClickCount > 0 ? (
-                          <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-50 text-green-700">{item.ctaClickCount}回</span>
+                          <Popover
+                            trigger={
+                              <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-50 text-green-700 cursor-pointer hover:bg-green-100">
+                                {item.ctaClickCount}回 <Info className="w-3 h-3 ml-1" />
+                              </span>
+                            }
+                            className="right-0 top-full mt-1"
+                          >
+                            <div className="text-sm">
+                              <div className="font-medium text-gray-700 mb-2">CTA内訳</div>
+                              <div className="space-y-1">
+                                {Object.entries(item.ctaByType).length === 0 ? (
+                                  <div className="text-gray-400">データなし</div>
+                                ) : (
+                                  Object.entries(item.ctaByType)
+                                    .sort((a, b) => b[1] - a[1])
+                                    .map(([type, count]) => (
+                                      <div key={type} className="flex justify-between text-gray-600">
+                                        <span>{CTA_TYPE_NAMES[type] || type}</span>
+                                        <span>{count}</span>
+                                      </div>
+                                    ))
+                                )}
+                              </div>
+                            </div>
+                          </Popover>
                         ) : (
                           <span className="text-gray-400">−</span>
                         )}
@@ -897,7 +1042,28 @@ export default function DashboardPage() {
                   <div className="flex items-start justify-between mb-2">
                     <div className="text-sm text-gray-500">{formatDate(item.createdAt)}</div>
                     {item.ctaClickCount > 0 && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-green-700">CTA {item.ctaClickCount}回</span>
+                      <Popover
+                        trigger={
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-green-700 cursor-pointer">
+                            CTA {item.ctaClickCount}回 <Info className="w-3 h-3 ml-1" />
+                          </span>
+                        }
+                        className="right-0 top-full mt-1"
+                      >
+                        <div className="text-sm">
+                          <div className="font-medium text-gray-700 mb-2">CTA内訳</div>
+                          <div className="space-y-1">
+                            {Object.entries(item.ctaByType)
+                              .sort((a, b) => b[1] - a[1])
+                              .map(([type, count]) => (
+                                <div key={type} className="flex justify-between text-gray-600">
+                                  <span>{CTA_TYPE_NAMES[type] || type}</span>
+                                  <span>{count}</span>
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      </Popover>
                     )}
                   </div>
                   <div className="flex items-center gap-2 mb-2">

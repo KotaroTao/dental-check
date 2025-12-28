@@ -147,6 +147,12 @@ export async function GET(request: NextRequest) {
     };
 
     const history = (sessions as SessionWithRelations[]).map((s) => {
+      // CTA内訳を集計
+      const ctaByType: Record<string, number> = {};
+      for (const click of s.ctaClicks) {
+        ctaByType[click.ctaType] = (ctaByType[click.ctaType] || 0) + 1;
+      }
+
       const ctaClick = s.ctaClicks[0];
       return {
         id: s.id,
@@ -160,6 +166,7 @@ export async function GET(request: NextRequest) {
         resultCategory: s.resultCategory || "-",
         ctaType: ctaClick ? CTA_TYPE_NAMES[ctaClick.ctaType] || ctaClick.ctaType : null,
         ctaClickCount: s._count.ctaClicks,
+        ctaByType,
       };
     });
 
