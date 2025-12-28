@@ -24,7 +24,7 @@ interface LocationMapProps {
   channels?: Channel[];
 }
 
-// 地図の表示範囲を自動調整するコンポーネント
+// 地図の表示範囲を自動調整するコンポーネント（都道府県レベルに制限）
 function FitBounds({ locations }: { locations: Location[] }) {
   const map = useMap();
 
@@ -38,17 +38,17 @@ function FitBounds({ locations }: { locations: Location[] }) {
     if (validLocations.length === 0) return;
 
     if (validLocations.length === 1) {
-      // 1件のみの場合はその位置にズーム
+      // 1件のみの場合は都道府県レベルでズーム（zoom 7）
       map.setView(
         [validLocations[0].latitude!, validLocations[0].longitude!],
-        10
+        7
       );
     } else {
-      // 複数の場合は全体が見えるように調整
+      // 複数の場合は全体が見えるように調整（最大ズームを7に制限）
       const bounds = validLocations.map(
         (loc) => [loc.latitude!, loc.longitude!] as [number, number]
       );
-      map.fitBounds(bounds, { padding: [50, 50] });
+      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 7 });
     }
   }, [locations, map]);
 
