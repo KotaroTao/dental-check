@@ -627,7 +627,7 @@ export default function DashboardPage() {
                       診断
                     </th>
                     <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">
-                      コード
+                      作成日
                     </th>
                     <th className="text-center px-6 py-3 text-sm font-medium text-gray-500">
                       ステータス
@@ -674,10 +674,8 @@ export default function DashboardPage() {
                           {DIAGNOSIS_TYPE_NAMES[channel.diagnosisTypeSlug] || channel.diagnosisTypeSlug}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
-                        <code className="bg-gray-100 px-2 py-1 rounded text-sm">
-                          {channel.code}
-                        </code>
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        {new Date(channel.createdAt).toLocaleDateString("ja-JP")}
                       </td>
                       <td className="px-6 py-4 text-center">
                         {channel.isActive ? (
@@ -780,9 +778,9 @@ export default function DashboardPage() {
                     <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700">
                       {DIAGNOSIS_TYPE_NAMES[channel.diagnosisTypeSlug] || channel.diagnosisTypeSlug}
                     </span>
-                    <code className="bg-gray-100 px-2 py-0.5 rounded text-xs">
-                      {channel.code}
-                    </code>
+                    <span className="text-xs text-gray-500">
+                      {new Date(channel.createdAt).toLocaleDateString("ja-JP")}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Link href={`/dashboard/channels/${channel.id}`} className="flex-1">
