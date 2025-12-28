@@ -152,6 +152,10 @@ export default function ClinicPageEditor() {
   };
 
   const handlePhotoUpload = async (index: number, file: File) => {
+    // 即座にプレビュー表示（ローカルURL）
+    const previewUrl = URL.createObjectURL(file);
+    handlePhotoChange(index, "url", previewUrl);
+
     setUploadingIndex(index);
     try {
       const formData = new FormData();
@@ -168,8 +172,13 @@ export default function ClinicPageEditor() {
       }
 
       const { url } = await response.json();
+      // アップロード完了後、サーバーURLに置き換え
+      URL.revokeObjectURL(previewUrl);
       handlePhotoChange(index, "url", url);
     } catch (error) {
+      // エラー時はプレビューを削除
+      URL.revokeObjectURL(previewUrl);
+      handlePhotoChange(index, "url", "");
       setMessage({
         type: "error",
         text: error instanceof Error ? error.message : "アップロードに失敗しました",
@@ -187,6 +196,9 @@ export default function ClinicPageEditor() {
   };
 
   const removePhoto = (index: number) => {
+    if (!confirm("この写真を削除しますか？")) {
+      return;
+    }
     const newPhotos = [...(clinicPage.photos || [])];
     newPhotos.splice(index, 1);
     setClinicPage({ ...clinicPage, photos: newPhotos });
