@@ -13,7 +13,7 @@ export async function GET() {
 
     const channels = (await prisma.channel.findMany({
       where: { clinicId: session.clinicId },
-      orderBy: [{ isActive: "desc" }, { createdAt: "desc" }],
+      orderBy: [{ isActive: "desc" }, { sortOrder: "asc" }, { createdAt: "desc" }],
     })) as Channel[];
 
     const activeCount = channels.filter((c) => c.isActive).length;
