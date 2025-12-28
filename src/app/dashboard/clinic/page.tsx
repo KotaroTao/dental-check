@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Eye, EyeOff, Plus, Trash2, GripVertical, Bell, Upload, Loader2, Save } from "lucide-react";
+import { ExternalLink, Plus, Trash2, GripVertical, Bell, Upload, Loader2, Save } from "lucide-react";
 import type { ClinicPage, ClinicPhoto, Treatment, Facility, Announcement, WeeklySchedule, DaySchedule } from "@/types/clinic";
 
 interface ClinicData {
@@ -75,7 +74,6 @@ export default function ClinicPageEditor() {
     type: "success" | "error";
     text: string;
   } | null>(null);
-  const [showPreview, setShowPreview] = useState(false);
   const [useDetailedHours, setUseDetailedHours] = useState(false);
   const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
   const [uploadingDirectorPhoto, setUploadingDirectorPhoto] = useState(false);
@@ -457,29 +455,20 @@ export default function ClinicPageEditor() {
   return (
     <div className="flex gap-6">
       {/* 編集フォーム */}
-      <div className={`${showPreview ? "w-1/2" : "w-full max-w-2xl"}`}>
+      <div className="w-full max-w-2xl">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">医院紹介ページ</h1>
-          <div className="flex items-center gap-3">
+          {clinic && (
             <Button
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => setShowPreview(!showPreview)}
+              onClick={() => window.open(`/clinic/${clinic.slug}`, '_blank')}
             >
-              {showPreview ? <EyeOff className="w-4 h-4 mr-1" /> : <Eye className="w-4 h-4 mr-1" />}
-              {showPreview ? "プレビューを閉じる" : "プレビュー"}
+              <ExternalLink className="w-4 h-4 mr-1" />
+              プレビュー
             </Button>
-            {clinic && (
-              <Link
-                href={`/clinic/${clinic.slug}`}
-                target="_blank"
-                className="text-blue-600 hover:text-blue-800 text-sm"
-              >
-                公開ページを見る →
-              </Link>
-            )}
-          </div>
+          )}
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
@@ -1196,20 +1185,6 @@ export default function ClinicPageEditor() {
         </form>
       </div>
 
-      {/* プレビュー */}
-      {showPreview && (
-        <div className="w-1/2 sticky top-4 h-[calc(100vh-2rem)] overflow-auto">
-          <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-            <div className="bg-gray-100 px-4 py-2 text-sm text-gray-500 border-b">
-              プレビュー
-            </div>
-            <div className="p-4">
-              <ClinicPreview clinic={clinic} clinicPage={clinicPage} />
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* 固定保存ボタン */}
       <button
         type="button"
@@ -1227,81 +1202,6 @@ export default function ClinicPageEditor() {
         )}
         <span className="font-medium">{isSaving ? "保存中..." : "保存する"}</span>
       </button>
-    </div>
-  );
-}
-
-// プレビューコンポーネント
-function ClinicPreview({ clinic, clinicPage }: { clinic: ClinicData | null; clinicPage: ClinicPage }) {
-  if (!clinic) return null;
-
-  const mainColor = clinic.mainColor || "#3b82f6";
-  const hasAnnouncements = (clinicPage.announcements || []).length > 0;
-  const hasTreatments = (clinicPage.treatments || []).length > 0;
-  const hasFacilities = (clinicPage.facilities || []).length > 0;
-
-  return (
-    <div className="text-sm">
-      {/* ヘッダー */}
-      <div className="text-white p-4 rounded-lg mb-4" style={{ backgroundColor: mainColor }}>
-        <h1 className="text-lg font-bold text-center">{clinic.name}</h1>
-      </div>
-
-      {/* お知らせ */}
-      {hasAnnouncements && (
-        <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <h3 className="font-bold text-yellow-800 mb-2 text-xs">お知らせ</h3>
-          {clinicPage.announcements!.slice(0, 2).map((a) => (
-            <div key={a.id} className={`text-xs ${a.important ? "text-red-600 font-medium" : "text-gray-600"}`}>
-              <span className="text-gray-400 mr-2">{a.date}</span>
-              {a.title}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* 診療内容 */}
-      {hasTreatments && (
-        <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-          <h3 className="font-bold text-gray-800 mb-2 text-xs">診療内容</h3>
-          <div className="flex flex-wrap gap-1">
-            {clinicPage.treatments!.map((t, i) => (
-              <span key={i} className="px-2 py-0.5 bg-white border rounded text-xs">
-                {t.name}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* 設備・特徴 */}
-      {hasFacilities && (
-        <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-          <h3 className="font-bold text-gray-800 mb-2 text-xs">設備・特徴</h3>
-          <div className="flex flex-wrap gap-1">
-            {clinicPage.facilities!.map((f, i) => (
-              <span key={i} className="px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs">
-                {f.name}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* 院長 */}
-      {clinicPage.director?.name && (
-        <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-          <h3 className="font-bold text-gray-800 mb-2 text-xs">院長</h3>
-          <p className="font-medium text-xs">{clinicPage.director.name}</p>
-          {clinicPage.director.profile && (
-            <p className="text-gray-600 text-xs mt-1 line-clamp-2">{clinicPage.director.profile}</p>
-          )}
-        </div>
-      )}
-
-      <p className="text-center text-gray-400 text-xs">
-        ※実際の公開ページとはデザインが異なります
-      </p>
     </div>
   );
 }
