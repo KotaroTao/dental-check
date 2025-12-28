@@ -14,7 +14,7 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "くるくる診断 for Dental | 歯科医院向け集患ツール",
+  title: "くるくる診断DX for Dental | 歯科医院向け集患ツール",
   description: "QRコードを載せるだけで、診断コンテンツが新患を呼び込みます。ポスティング、ホームページ、SNS広告などあらゆる広告媒体で活用できる歯科医院専用の集患ツールです。",
 };
 

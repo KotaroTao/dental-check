@@ -1,4 +1,4 @@
-# くるくる診断 for Dental - 運用手順書
+# くるくる診断DX for Dental - 運用手順書
 
 ## Windows PC 開発環境
 
@@ -361,6 +361,59 @@ docker compose -f docker-compose.production.yml --env-file .env.production up -d
 - 現在のブランチ: `git branch --show-current`
 - 未コミットの変更: `git status`
 - リモートとの差分: `git fetch origin && git status`
+
+---
+
+## 開発状況（2024年12月更新）
+
+### 実装済み機能
+
+#### QRコード計測機能
+- **経路（Channel）管理**: 1経路 = 1診断タイプ
+- **ダッシュボード統合**: 経路一覧・統計サマリー・診断完了履歴を1画面に
+- **統計フィルター**: 期間（今日/今週/今月/カスタム期間）、経路別
+- **履歴表示**: 50件ずつページネーション、診断タイプフィルター
+
+#### ダッシュボード構成
+```
+/dashboard
+├── 経路セクション（一覧・作成・削除）
+├── 統計サマリー（アクセス/完了/完了率/CTA）
+└── 診断完了履歴（50件ずつ、もっと見る）
+```
+
+#### API
+| エンドポイント | 説明 |
+|---------------|------|
+| `GET /api/dashboard/stats` | 統計データ（期間・経路フィルター対応） |
+| `GET /api/dashboard/history` | 診断完了履歴（ページネーション対応） |
+| `GET /api/channels` | 経路一覧 |
+| `POST /api/channels` | 経路作成（diagnosisTypeSlug必須） |
+| `DELETE /api/channels/[id]` | 経路削除 |
+
+#### DBスキーマ変更
+```prisma
+model Channel {
+  diagnosisTypeSlug String @default("oral-age") @map("diagnosis_type_slug")
+}
+```
+
+### ナビゲーション構成
+- ダッシュボード（経路・統計・履歴を統合）
+- 埋め込みコード
+- 医院紹介
+- 設定
+- 契約・お支払い
+
+### 削除されたページ
+- `/dashboard/channels` → ダッシュボードに統合
+
+### 今後の開発候補
+- 統計データのCSVエクスポート
+- グラフ表示（推移チャート）
+- 経路別の詳細統計ページ
+
+---
 
 ## 運営会社情報
 

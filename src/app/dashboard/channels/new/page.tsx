@@ -72,11 +72,11 @@ export default function NewChannelPage() {
   return (
     <div className="max-w-xl mx-auto">
       <Link
-        href="/dashboard/channels"
+        href="/dashboard"
         className="inline-flex items-center text-gray-500 hover:text-gray-700 mb-6"
       >
         <ArrowLeft className="w-4 h-4 mr-1" />
-        経路一覧に戻る
+        ダッシュボードに戻る
       </Link>
 
       <div className="bg-white rounded-xl shadow-sm border p-6">
@@ -148,7 +148,7 @@ export default function NewChannelPage() {
             <Button type="submit" disabled={isLoading} className="flex-1">
               {isLoading ? "作成中..." : "経路を作成"}
             </Button>
-            <Link href="/dashboard/channels">
+            <Link href="/dashboard">
               <Button type="button" variant="outline" disabled={isLoading}>
                 キャンセル
               </Button>

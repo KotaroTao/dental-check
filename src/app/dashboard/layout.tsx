@@ -79,7 +79,7 @@ export default function DashboardLayout({
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-8">
             <Link href="/dashboard" className="font-bold text-xl">
-              くるくる診断 for Dental
+              くるくる診断DX<span className="text-[0.5em]"> for Dental</span>
             </Link>
             <nav className="hidden md:flex items-center gap-6">
               <Link
@@ -87,12 +87,6 @@ export default function DashboardLayout({
                 className="text-gray-600 hover:text-gray-900"
               >
                 ダッシュボード
-              </Link>
-              <Link
-                href="/dashboard/channels"
-                className="text-gray-600 hover:text-gray-900"
-              >
-                経路・QRコード
               </Link>
               <Link
                 href="/dashboard/embed"
