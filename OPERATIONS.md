@@ -410,6 +410,68 @@ cd /var/www/dental-check
 
 ### 最新の実装（このセッション）
 
+#### QRコード機能の改善（用語統一・画像アップロード）
+- **用語統一**: 「経路」→「QRコード」に全面置き換え
+- **ナビゲーション変更**: 「埋め込みコード」→「QRコード作成」
+- **画像アップロード**: QRコード作成時に画像（設置場所の写真など）をアップロード可能
+  - ドラッグ＆ドロップ対応
+  - 最大5MB、JPEG/PNG/WebP対応
+  - Base64エンコードで保存
+- **サムネイル表示**: ダッシュボードのQRコード一覧にサムネイル画像を表示
+- **画像モーダル**: サムネイルクリックでフルサイズ画像を表示
+- **QRコード自動生成**: 詳細ページでQRコードを自動生成・表示
+- **ダウンロード機能**: PNG/SVG形式でQRコードをダウンロード
+
+#### 電話ボタン・CTAグラフの改善
+- **電話ボタン修正**: `<a><Button>` → `<a>` タグに変更（クリック可能に）
+- **CTAグラフ改善**:
+  - 積み上げ→横並び棒グラフに変更
+  - 最小高さ12px保証（少数データでも見える）
+  - 色をemerald/indigoに変更
+  - Y軸スケール最適化
+
+#### レビュー指摘の改善対応
+- **トレンド計算**: isNewフラグ追加（前期0→今期データありの場合「NEW」表示）
+- **CSVエクスポート**: ローディング状態・エラーハンドリング追加
+- **URL検証**: 相対URLも許可
+- **大量データ警告**: 5000件以上のエクスポート時に確認ダイアログ
+
+### 主要ファイル（今回追加・変更）
+
+| ファイル | 説明 |
+|---------|------|
+| `prisma/schema.prisma` | Channelに`imageUrl`フィールド追加 |
+| `src/app/dashboard/page.tsx` | 用語統一・サムネイル・画像モーダル追加 |
+| `src/app/dashboard/layout.tsx` | ナビゲーション「QRコード作成」に変更 |
+| `src/app/dashboard/channels/new/page.tsx` | 画像アップロード機能追加 |
+| `src/app/dashboard/channels/[id]/page.tsx` | QRコード自動生成・SVGダウンロード追加 |
+| `src/app/dashboard/channels/[id]/edit/page.tsx` | 用語統一 |
+| `src/app/api/channels/route.ts` | imageUrl対応 |
+| `src/app/api/channels/[id]/route.ts` | 用語統一 |
+| `src/components/diagnosis/result-card.tsx` | 電話ボタン修正 |
+| `src/components/dashboard/cta-chart.tsx` | 横並び棒グラフに変更 |
+| `src/types/clinic.ts` | Channel型にimageUrl追加 |
+| `docs/SPEC_QRCODE_IMPROVEMENTS.md` | QRコード改善の仕様書 |
+
+### DBスキーマ変更
+
+```prisma
+model Channel {
+  // ... 既存フィールド
+  imageUrl  String?  @map("image_url")  // QRコードに紐付く画像（Base64）
+}
+```
+
+### PR・デプロイ完了
+
+- コミット: `528c137 feat: 経路→QRコードへの用語統一と画像アップロード機能追加`
+- ブランチ: `claude/plan-qr-measurements-wb4qE` → `main` にマージ済み
+- 本番デプロイ: 完了（2025年12月28日）
+
+---
+
+### 以前のセッション
+
 #### ダッシュボードのレスポンシブデザイン対応
 - **ハンバーガーメニュー**: iPad mini・スマートフォンでメニューを折りたたみ表示
 - **経路一覧のカード表示**: モバイルでは横スクロールテーブルではなくカード形式で表示
@@ -494,10 +556,10 @@ interface ClinicPage {
 - **くるくる診断DX for Dental**（「for Dental」は半分のサイズ）
 
 #### QRコード計測機能
-- **経路（Channel）管理**: 1経路 = 1診断タイプ
-- **ダッシュボード統合**: 経路一覧・統計サマリー・診断実施エリア・診断完了履歴を1画面に
-- **統計フィルター**: 期間（今日/今週/今月/カスタム期間）、経路別
-- **履歴表示**: 50件ずつページネーション、診断タイプフィルター
+- **QRコード（Channel）管理**: 1QRコード = 1診断タイプ、画像添付可能
+- **ダッシュボード統合**: QRコード一覧・統計サマリー・診断実施エリア・CTAグラフ・診断完了履歴を1画面に
+- **統計フィルター**: 期間（今日/今週/今月/カスタム期間）、QRコード別
+- **履歴表示**: 50件ずつページネーション、診断タイプフィルター、CSVエクスポート
 
 #### 診断完了トラッキング
 - 診断完了時に `DiagnosisSession` をDBに保存
@@ -512,25 +574,30 @@ interface ClinicPage {
 #### ダッシュボード構成
 ```
 /dashboard
-├── 経路セクション（一覧・作成・編集・削除）
-├── 統計サマリー（アクセス/完了/完了率/CTA）
-├── 診断実施エリア（地図+TOP10リスト）  ← 新規
-└── 診断完了履歴（50件ずつ、もっと見る）
+├── QRコードセクション（一覧・作成・編集・削除・サムネイル表示）
+├── 統計サマリー（アクセス/完了/完了率/CTA/前期比トレンド）
+├── 診断実施エリア（地図+TOP10リスト）
+├── CTAクリック推移グラフ（診断結果/医院ページ別）
+└── 診断完了履歴（50件ずつ、もっと見る、CSVエクスポート）
 ```
 
 #### API
 | エンドポイント | 説明 |
 |---------------|------|
-| `GET /api/dashboard/stats` | 統計データ（期間・経路フィルター対応） |
+| `GET /api/dashboard/stats` | 統計データ（期間・QRコードフィルター対応） |
 | `GET /api/dashboard/history` | 診断完了履歴（ページネーション対応） |
 | `GET /api/dashboard/locations` | エリア別統計（地図表示用） |
+| `GET /api/dashboard/cta-chart` | CTAクリック推移データ |
 | `POST /api/track/complete` | 診断完了記録（位置情報含む） |
 | `POST /api/track/access` | アクセス記録（位置情報含む） |
-| `GET /api/channels` | 経路一覧 |
-| `POST /api/channels` | 経路作成（diagnosisTypeSlug必須） |
-| `GET /api/channels/[id]` | 経路詳細 |
-| `PUT /api/channels/[id]` | 経路更新 |
-| `DELETE /api/channels/[id]` | 経路削除 |
+| `POST /api/track/cta` | CTAクリック記録 |
+| `POST /api/track/clinic-cta` | 医院ページCTAクリック記録 |
+| `POST /api/track/clinic-view` | 医院ページ閲覧記録 |
+| `GET /api/channels` | QRコード一覧 |
+| `POST /api/channels` | QRコード作成（diagnosisTypeSlug, imageUrl対応） |
+| `GET /api/channels/[id]` | QRコード詳細 |
+| `PATCH /api/channels/[id]` | QRコード更新 |
+| `DELETE /api/channels/[id]` | QRコード削除 |
 
 #### DBスキーマ（位置情報フィールド）
 ```prisma
@@ -563,8 +630,8 @@ model AccessLog {
 | `docs/SPEC_LOCATION_TRACKING.md` | エリア表示機能の仕様書 |
 
 ### ナビゲーション構成
-- ダッシュボード（経路・統計・エリア・履歴を統合）
-- 埋め込みコード
+- ダッシュボード（QRコード・統計・エリア・履歴を統合）
+- QRコード作成（旧: 埋め込みコード）
 - 医院紹介
 - 設定
 - 契約・お支払い
@@ -573,10 +640,11 @@ model AccessLog {
 - `/dashboard/channels` → ダッシュボードに統合
 
 ### 今後の開発候補
-- 統計データのCSVエクスポート
-- グラフ表示（推移チャート）
-- 経路別の詳細統計ページ
-- プライバシーポリシーへの位置情報記載追加
+- ~~統計データのCSVエクスポート~~ → 実装済み
+- ~~グラフ表示（推移チャート）~~ → 実装済み（CTAクリック推移グラフ）
+- QRコード別の詳細統計ページ
+- 画像の圧縮・リサイズ最適化（現在はBase64保存）
+- ランディングページの「経路」用語更新
 
 ### 注意事項
 - **DBマイグレーション必須**: 位置情報フィールドを追加したため、本番デプロイ時は `prisma db push` が必要
