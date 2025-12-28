@@ -78,6 +78,7 @@ export default function ClinicPageEditor() {
   const [showPreview, setShowPreview] = useState(false);
   const [useDetailedHours, setUseDetailedHours] = useState(false);
   const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
+  const [uploadingDirectorPhoto, setUploadingDirectorPhoto] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
@@ -174,6 +175,42 @@ export default function ClinicPageEditor() {
       ...clinicPage,
       director: { ...clinicPage.director, [field]: value },
     });
+  };
+
+  // 院長写真アップロード
+  const handleDirectorPhotoUpload = async (file: File) => {
+    const previewUrl = URL.createObjectURL(file);
+    handleDirectorChange("photoUrl", previewUrl);
+
+    setUploadingDirectorPhoto(true);
+    try {
+      const compressedFile = await compressImage(file);
+      const formData = new FormData();
+      formData.append("file", compressedFile);
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "アップロードに失敗しました");
+      }
+
+      const { url } = await response.json();
+      URL.revokeObjectURL(previewUrl);
+      handleDirectorChange("photoUrl", url);
+    } catch (error) {
+      URL.revokeObjectURL(previewUrl);
+      handleDirectorChange("photoUrl", "");
+      setMessage({
+        type: "error",
+        text: error instanceof Error ? error.message : "アップロードに失敗しました",
+      });
+    } finally {
+      setUploadingDirectorPhoto(false);
+    }
   };
 
   const handleHoursChange = (field: string, value: string) => {
@@ -860,14 +897,105 @@ export default function ClinicPageEditor() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="director.photoUrl">院長写真URL</Label>
-                <Input
-                  id="director.photoUrl"
-                  type="url"
-                  placeholder="https://example.com/director.jpg"
-                  value={clinicPage.director?.photoUrl || ""}
-                  onChange={(e) => handleDirectorChange("photoUrl", e.target.value)}
-                />
+                <Label>院長写真</Label>
+                <div className="flex gap-4 items-start">
+                  {/* サムネイル */}
+                  <div className="relative w-24 h-24 shrink-0">
+                    {clinicPage.director?.photoUrl ? (
+                      <div className="w-full h-full relative">
+                        <img
+                          src={clinicPage.director.photoUrl}
+                          alt="院長写真"
+                          className="w-full h-full object-cover rounded-lg border bg-white"
+                        />
+                        {uploadingDirectorPhoto && (
+                          <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                            <Loader2 className="w-6 h-6 text-white animate-spin" />
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <label
+                        className="w-full h-full border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors"
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          const file = e.dataTransfer.files[0];
+                          if (file && file.type.startsWith("image/")) {
+                            handleDirectorPhotoUpload(file);
+                          }
+                        }}
+                        onDragOver={(e) => e.preventDefault()}
+                      >
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleDirectorPhotoUpload(file);
+                          }}
+                        />
+                        {uploadingDirectorPhoto ? (
+                          <Loader2 className="w-6 h-6 text-gray-400 animate-spin" />
+                        ) : (
+                          <>
+                            <Upload className="w-6 h-6 text-gray-400 mb-1" />
+                            <span className="text-xs text-gray-500">アップロード</span>
+                          </>
+                        )}
+                      </label>
+                    )}
+                  </div>
+                  {/* URL入力とアップロードボタン */}
+                  <div className="flex-1 space-y-2">
+                    <div className="flex gap-2">
+                      <Input
+                        id="director.photoUrl"
+                        placeholder="画像URL（またはアップロード）"
+                        value={clinicPage.director?.photoUrl || ""}
+                        onChange={(e) => handleDirectorChange("photoUrl", e.target.value)}
+                        className="flex-1"
+                      />
+                      {clinicPage.director?.photoUrl && (
+                        <label>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleDirectorPhotoUpload(file);
+                            }}
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={uploadingDirectorPhoto}
+                            onClick={(e) => {
+                              const input = e.currentTarget.parentElement?.querySelector('input[type="file"]') as HTMLInputElement;
+                              input?.click();
+                            }}
+                          >
+                            <Upload className="w-4 h-4" />
+                          </Button>
+                        </label>
+                      )}
+                    </div>
+                    {clinicPage.director?.photoUrl && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDirectorChange("photoUrl", "")}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <Trash2 className="w-4 h-4 mr-1" />
+                        写真を削除
+                      </Button>
+                    )}
+                  </div>
+                </div>
               </div>
 
               <div className="space-y-2">

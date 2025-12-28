@@ -233,138 +233,199 @@ export default function DashboardPage() {
             </Link>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b">
-                <tr>
-                  <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">
-                    経路名
-                  </th>
-                  <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">
-                    診断
-                  </th>
-                  <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">
-                    コード
-                  </th>
-                  <th className="text-center px-6 py-3 text-sm font-medium text-gray-500">
-                    ステータス
-                  </th>
-                  <th className="text-right px-6 py-3 text-sm font-medium text-gray-500">
-                    操作
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {channels.map((channel) => (
-                  <tr key={channel.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
+          <>
+            {/* PC用テーブル */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b">
+                  <tr>
+                    <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">
+                      経路名
+                    </th>
+                    <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">
+                      診断
+                    </th>
+                    <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">
+                      コード
+                    </th>
+                    <th className="text-center px-6 py-3 text-sm font-medium text-gray-500">
+                      ステータス
+                    </th>
+                    <th className="text-right px-6 py-3 text-sm font-medium text-gray-500">
+                      操作
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {channels.map((channel) => (
+                    <tr key={channel.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4">
+                        <div className="font-medium">{channel.name}</div>
+                        {channel.description && (
+                          <div className="text-sm text-gray-500">
+                            {channel.description}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-50 text-blue-700">
+                          {DIAGNOSIS_TYPE_NAMES[channel.diagnosisTypeSlug] || channel.diagnosisTypeSlug}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <code className="bg-gray-100 px-2 py-1 rounded text-sm">
+                          {channel.code}
+                        </code>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        {channel.isActive ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            有効
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                            無効
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-end gap-2">
+                          <Link href={`/dashboard/channels/${channel.id}`}>
+                            <Button variant="outline" size="sm" className="gap-1">
+                              <QrCode className="w-4 h-4" />
+                              詳細
+                            </Button>
+                          </Link>
+                          <Link href={`/dashboard/channels/${channel.id}/edit`}>
+                            <Button variant="ghost" size="sm">
+                              <Settings className="w-4 h-4" />
+                            </Button>
+                          </Link>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteChannel(channel.id)}
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* モバイル用カード */}
+            <div className="md:hidden divide-y">
+              {channels.map((channel) => (
+                <div key={channel.id} className="p-4">
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
                       <div className="font-medium">{channel.name}</div>
                       {channel.description && (
-                        <div className="text-sm text-gray-500">
+                        <div className="text-sm text-gray-500 mt-0.5">
                           {channel.description}
                         </div>
                       )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-50 text-blue-700">
-                        {DIAGNOSIS_TYPE_NAMES[channel.diagnosisTypeSlug] || channel.diagnosisTypeSlug}
+                    </div>
+                    {channel.isActive ? (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        有効
                       </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <code className="bg-gray-100 px-2 py-1 rounded text-sm">
-                        {channel.code}
-                      </code>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      {channel.isActive ? (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          有効
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                          無効
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-end gap-2">
-                        <Link href={`/dashboard/channels/${channel.id}`}>
-                          <Button variant="outline" size="sm" className="gap-1">
-                            <QrCode className="w-4 h-4" />
-                            詳細
-                          </Button>
-                        </Link>
-                        <Link href={`/dashboard/channels/${channel.id}/edit`}>
-                          <Button variant="ghost" size="sm">
-                            <Settings className="w-4 h-4" />
-                          </Button>
-                        </Link>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteChannel(channel.id)}
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    ) : (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                        無効
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 mb-3 text-sm">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700">
+                      {DIAGNOSIS_TYPE_NAMES[channel.diagnosisTypeSlug] || channel.diagnosisTypeSlug}
+                    </span>
+                    <code className="bg-gray-100 px-2 py-0.5 rounded text-xs">
+                      {channel.code}
+                    </code>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Link href={`/dashboard/channels/${channel.id}`} className="flex-1">
+                      <Button variant="outline" size="sm" className="w-full gap-1">
+                        <QrCode className="w-4 h-4" />
+                        詳細
+                      </Button>
+                    </Link>
+                    <Link href={`/dashboard/channels/${channel.id}/edit`}>
+                      <Button variant="ghost" size="sm">
+                        <Settings className="w-4 h-4" />
+                      </Button>
+                    </Link>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteChannel(channel.id)}
+                      className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
 
       {/* 統計サマリー */}
       <div className="bg-white rounded-xl shadow-sm border p-6">
-        <div className="flex flex-wrap items-center gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-4 mb-6">
           <h2 className="text-lg font-bold flex items-center gap-2">
             <BarChart3 className="w-5 h-5" />
             統計サマリー
           </h2>
-          <div className="flex flex-wrap gap-2 ml-auto items-center">
-            <select
-              value={period}
-              onChange={(e) => setPeriod(e.target.value)}
-              className="px-3 py-1.5 border rounded-md text-sm bg-white"
-            >
-              {PERIOD_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+          <div className="flex flex-col sm:flex-row gap-2 sm:ml-auto">
+            <div className="flex gap-2">
+              <select
+                value={period}
+                onChange={(e) => setPeriod(e.target.value)}
+                className="flex-1 sm:flex-none px-3 py-1.5 border rounded-md text-sm bg-white"
+              >
+                {PERIOD_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={selectedChannelId}
+                onChange={(e) => setSelectedChannelId(e.target.value)}
+                className="flex-1 sm:flex-none px-3 py-1.5 border rounded-md text-sm bg-white"
+              >
+                <option value="">全ての経路</option>
+                {channels.map((ch) => (
+                  <option key={ch.id} value={ch.id}>
+                    {ch.name}
+                  </option>
+                ))}
+              </select>
+            </div>
             {period === "custom" && (
-              <>
+              <div className="flex items-center gap-2">
                 <input
                   type="date"
                   value={customStartDate}
                   onChange={(e) => setCustomStartDate(e.target.value)}
-                  className="px-3 py-1.5 border rounded-md text-sm bg-white"
+                  className="flex-1 px-3 py-1.5 border rounded-md text-sm bg-white"
                 />
                 <span className="text-gray-500">〜</span>
                 <input
                   type="date"
                   value={customEndDate}
                   onChange={(e) => setCustomEndDate(e.target.value)}
-                  className="px-3 py-1.5 border rounded-md text-sm bg-white"
+                  className="flex-1 px-3 py-1.5 border rounded-md text-sm bg-white"
                 />
-              </>
+              </div>
             )}
-            <select
-              value={selectedChannelId}
-              onChange={(e) => setSelectedChannelId(e.target.value)}
-              className="px-3 py-1.5 border rounded-md text-sm bg-white"
-            >
-              <option value="">全ての経路</option>
-              {channels.map((ch) => (
-                <option key={ch.id} value={ch.id}>
-                  {ch.name}
-                </option>
-              ))}
-            </select>
           </div>
         </div>
 
@@ -449,7 +510,8 @@ export default function DashboardPage() {
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
+            {/* PC用テーブル */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
@@ -502,6 +564,36 @@ export default function DashboardPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            {/* モバイル用カード */}
+            <div className="md:hidden divide-y">
+              {history.map((item) => (
+                <div key={item.id} className="p-4">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="text-sm text-gray-500">
+                      {formatDate(item.createdAt)}
+                    </div>
+                    {item.ctaType && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-green-700">
+                        {item.ctaType}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700">
+                      {item.diagnosisType}
+                    </span>
+                    <span className="text-sm text-gray-600">
+                      {item.channelName}
+                    </span>
+                  </div>
+                  <div className="text-sm">
+                    <span className="text-gray-500">結果: </span>
+                    <span className="text-gray-900">{item.resultCategory}</span>
+                  </div>
+                </div>
+              ))}
             </div>
 
             <div className="p-4 border-t flex items-center justify-between">

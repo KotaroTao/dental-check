@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Menu, X } from "lucide-react";
 
 interface Clinic {
   id: string;
@@ -23,8 +24,15 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [clinic, setClinic] = useState<Clinic | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // ページ遷移時にメニューを閉じる
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     const fetchSession = async () => {
@@ -72,66 +80,100 @@ export default function DashboardLayout({
 
   const trialDaysLeft = getTrialDaysLeft();
 
+  const navLinks = [
+    { href: "/dashboard", label: "ダッシュボード" },
+    { href: "/dashboard/embed", label: "埋め込みコード" },
+    { href: "/dashboard/clinic", label: "医院紹介" },
+    { href: "/dashboard/settings", label: "設定" },
+    { href: "/dashboard/billing", label: "契約・お支払い" },
+  ];
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* ヘッダー */}
-      <header className="bg-white border-b sticky top-0 z-10">
+      <header className="bg-white border-b sticky top-0 z-20">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-8">
             <Link href="/dashboard" className="font-bold text-xl">
-              くるくる診断DX<span className="text-[0.5em]"> for Dental</span>
+              <span className="hidden sm:inline">くるくる診断DX</span>
+              <span className="sm:hidden">くるくる</span>
+              <span className="text-[0.5em]"> for Dental</span>
             </Link>
-            <nav className="hidden md:flex items-center gap-6">
-              <Link
-                href="/dashboard"
-                className="text-gray-600 hover:text-gray-900"
-              >
-                ダッシュボード
-              </Link>
-              <Link
-                href="/dashboard/embed"
-                className="text-gray-600 hover:text-gray-900"
-              >
-                埋め込みコード
-              </Link>
-              <Link
-                href="/dashboard/clinic"
-                className="text-gray-600 hover:text-gray-900"
-              >
-                医院紹介
-              </Link>
-              <Link
-                href="/dashboard/settings"
-                className="text-gray-600 hover:text-gray-900"
-              >
-                設定
-              </Link>
-              <Link
-                href="/dashboard/billing"
-                className="text-gray-600 hover:text-gray-900"
-              >
-                契約・お支払い
-              </Link>
+            {/* PC用ナビゲーション */}
+            <nav className="hidden lg:flex items-center gap-6">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`text-sm ${
+                    pathname === link.href
+                      ? "text-blue-600 font-medium"
+                      : "text-gray-600 hover:text-gray-900"
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              ))}
             </nav>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             {clinic?.subscription?.status === "trial" && trialDaysLeft !== null && (
-              <span className="text-sm text-orange-600 bg-orange-50 px-3 py-1 rounded-full">
-                トライアル残り {trialDaysLeft} 日
+              <span className="text-xs sm:text-sm text-orange-600 bg-orange-50 px-2 sm:px-3 py-1 rounded-full">
+                残り {trialDaysLeft} 日
               </span>
             )}
-            <span className="text-sm text-gray-600 hidden sm:block">
+            <span className="text-sm text-gray-600 hidden md:block">
               {clinic?.name}
             </span>
-            <Button variant="outline" size="sm" onClick={handleLogout}>
+            <Button variant="outline" size="sm" onClick={handleLogout} className="hidden sm:flex">
               ログアウト
             </Button>
+            {/* ハンバーガーメニューボタン */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="lg:hidden p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md"
+              aria-label="メニュー"
+            >
+              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
           </div>
         </div>
+
+        {/* モバイルメニュー */}
+        {mobileMenuOpen && (
+          <div className="lg:hidden border-t bg-white">
+            <nav className="container mx-auto px-4 py-4 space-y-1">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`block px-4 py-3 rounded-lg text-sm ${
+                    pathname === link.href
+                      ? "bg-blue-50 text-blue-600 font-medium"
+                      : "text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              ))}
+              <div className="pt-4 mt-4 border-t">
+                <div className="px-4 py-2 text-sm text-gray-500">
+                  {clinic?.name}
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 rounded-lg"
+                >
+                  ログアウト
+                </button>
+              </div>
+            </nav>
+          </div>
+        )}
       </header>
 
       {/* メインコンテンツ */}
-      <main className="container mx-auto px-4 py-8">{children}</main>
+      <main className="container mx-auto px-4 py-4 sm:py-8">{children}</main>
     </div>
   );
 }
