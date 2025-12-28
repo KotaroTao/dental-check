@@ -140,6 +140,8 @@ export async function GET(request: NextRequest) {
       userAge: number | null;
       userGender: string | null;
       resultCategory: string | null;
+      region: string | null;
+      city: string | null;
       channel: { id: string; name: string } | null;
       diagnosisType: { slug: string; name: string } | null;
       ctaClicks: { ctaType: string }[];
@@ -153,6 +155,16 @@ export async function GET(request: NextRequest) {
         ctaByType[click.ctaType] = (ctaByType[click.ctaType] || 0) + 1;
       }
 
+      // エリア情報を整形（都道府県 + 市区町村）
+      let area = "-";
+      if (s.region && s.city) {
+        area = `${s.region} ${s.city}`;
+      } else if (s.region) {
+        area = s.region;
+      } else if (s.city) {
+        area = s.city;
+      }
+
       const ctaClick = s.ctaClicks[0];
       return {
         id: s.id,
@@ -163,7 +175,7 @@ export async function GET(request: NextRequest) {
         diagnosisTypeSlug: s.diagnosisType?.slug,
         channelName: s.channel?.name || "不明",
         channelId: s.channel?.id,
-        resultCategory: s.resultCategory || "-",
+        area,
         ctaType: ctaClick ? CTA_TYPE_NAMES[ctaClick.ctaType] || ctaClick.ctaType : null,
         ctaClickCount: s._count.ctaClicks,
         ctaByType,

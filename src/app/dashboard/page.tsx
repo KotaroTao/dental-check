@@ -97,7 +97,7 @@ interface HistoryItem {
   diagnosisTypeSlug: string;
   channelName: string;
   channelId: string;
-  resultCategory: string;
+  area: string;
   ctaType: string | null;
   ctaClickCount: number;
   ctaByType: Record<string, number>;
@@ -464,7 +464,7 @@ export default function DashboardPage() {
       const data = await response.json();
 
       const rows: string[][] = [
-        ["日時", "年齢", "性別", "診断タイプ", "QRコード", "結果", "CTAクリック回数", "CTA内訳"],
+        ["日時", "年齢", "性別", "診断タイプ", "QRコード", "エリア", "CTAクリック回数", "CTA内訳"],
       ];
 
       data.history.forEach((item: HistoryItem) => {
@@ -479,7 +479,7 @@ export default function DashboardPage() {
           item.userGender || "",
           item.diagnosisType,
           item.channelName,
-          item.resultCategory,
+          item.area,
           item.ctaClickCount.toString(),
           ctaDetails,
         ]);
@@ -980,7 +980,7 @@ export default function DashboardPage() {
                     <th className="text-center px-2 py-3 text-sm font-medium text-gray-500">性別</th>
                     <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">診断</th>
                     <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">QRコード</th>
-                    <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">結果</th>
+                    <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">エリア</th>
                     <th className="text-center px-4 py-3 text-sm font-medium text-gray-500 cursor-pointer hover:bg-gray-100" onClick={() => handleSort("ctaClickCount")}>
                       <span className="flex items-center justify-center">CTA<SortIcon field="ctaClickCount" /></span>
                     </th>
@@ -996,7 +996,7 @@ export default function DashboardPage() {
                         <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-50 text-blue-700">{item.diagnosisType}</span>
                       </td>
                       <td className="px-4 py-4 text-sm">{item.channelName}</td>
-                      <td className="px-4 py-4 text-sm text-gray-700">{item.resultCategory}</td>
+                      <td className="px-4 py-4 text-sm text-gray-700">{item.area}</td>
                       <td className="px-4 py-4 text-center">
                         {item.ctaClickCount > 0 ? (
                           <Popover
@@ -1074,8 +1074,8 @@ export default function DashboardPage() {
                     <span className="text-sm text-gray-600">{item.channelName}</span>
                   </div>
                   <div className="text-sm">
-                    <span className="text-gray-500">結果: </span>
-                    <span className="text-gray-900">{item.resultCategory}</span>
+                    <span className="text-gray-500">エリア: </span>
+                    <span className="text-gray-900">{item.area}</span>
                   </div>
                 </div>
               ))}
