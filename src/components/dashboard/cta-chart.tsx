@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { MousePointerClick, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { MousePointerClick, CheckCircle } from "lucide-react";
 
 interface CTAChartData {
   date: string;
@@ -49,6 +49,7 @@ function aggregateData(data: CTAChartData[], mode: "day" | "week" | "month"): CT
 
 export function CTAChart({ period, channelId, customStartDate, customEndDate }: CTAChartProps) {
   const [rawData, setRawData] = useState<CTAChartData[]>([]);
+  const [completedCount, setCompletedCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -66,6 +67,7 @@ export function CTAChart({ period, channelId, customStartDate, customEndDate }: 
         if (response.ok) {
           const result = await response.json();
           setRawData(result.data || []);
+          setCompletedCount(result.completedCount || 0);
         }
       } catch (error) {
         console.error("Failed to fetch CTA chart data:", error);
@@ -99,30 +101,6 @@ export function CTAChart({ period, channelId, customStartDate, customEndDate }: 
       }),
       { total: 0, fromResult: 0, fromClinicPage: 0 }
     );
-  }, [rawData]);
-
-  // 日別平均を計算
-  const dailyAverage = useMemo(() => {
-    if (rawData.length === 0) return 0;
-    return Math.round((totals.total / rawData.length) * 10) / 10;
-  }, [rawData, totals]);
-
-  // トレンド計算（前半と後半の比較）
-  const trend = useMemo(() => {
-    if (rawData.length < 2) return { direction: "flat" as const, percent: 0 };
-    const mid = Math.floor(rawData.length / 2);
-    const firstHalf = rawData.slice(0, mid).reduce((sum, d) => sum + d.count, 0);
-    const secondHalf = rawData.slice(mid).reduce((sum, d) => sum + d.count, 0);
-    if (firstHalf === 0) {
-      return secondHalf > 0
-        ? { direction: "up" as const, percent: 100 }
-        : { direction: "flat" as const, percent: 0 };
-    }
-    const change = Math.round(((secondHalf - firstHalf) / firstHalf) * 100);
-    return {
-      direction: change > 5 ? ("up" as const) : change < -5 ? ("down" as const) : ("flat" as const),
-      percent: Math.abs(change),
-    };
   }, [rawData]);
 
   // データがある日のみをフィルタ（新しい順）
@@ -164,6 +142,13 @@ export function CTAChart({ period, channelId, customStartDate, customEndDate }: 
 
       {/* サマリーカード */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-6 border-b">
+        <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4">
+          <div className="text-sm text-blue-700 mb-1 flex items-center gap-1">
+            <CheckCircle className="w-4 h-4" />
+            診断完了
+          </div>
+          <div className="text-2xl font-bold text-blue-600">{completedCount}</div>
+        </div>
         <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-4">
           <div className="text-sm text-gray-500 mb-1">合計クリック</div>
           <div className="text-2xl font-bold text-gray-800">{totals.total}</div>
@@ -175,18 +160,6 @@ export function CTAChart({ period, channelId, customStartDate, customEndDate }: 
         <div className="bg-gradient-to-br from-violet-50 to-violet-100 rounded-lg p-4">
           <div className="text-sm text-violet-700 mb-1">医院ページから</div>
           <div className="text-2xl font-bold text-violet-600">{totals.fromClinicPage}</div>
-        </div>
-        <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-lg p-4">
-          <div className="text-sm text-amber-700 mb-1 flex items-center gap-1">
-            トレンド
-            {trend.direction === "up" && <TrendingUp className="w-4 h-4 text-emerald-600" />}
-            {trend.direction === "down" && <TrendingDown className="w-4 h-4 text-red-500" />}
-            {trend.direction === "flat" && <Minus className="w-4 h-4 text-gray-400" />}
-          </div>
-          <div className="text-2xl font-bold text-amber-700">
-            {dailyAverage}
-            <span className="text-sm font-normal text-amber-600">/日</span>
-          </div>
         </div>
       </div>
 
