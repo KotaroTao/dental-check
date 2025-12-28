@@ -38,8 +38,13 @@ export async function POST(request: NextRequest) {
     const ext = file.name.split(".").pop() || "jpg";
     const fileName = `${timestamp}-${randomStr}.${ext}`;
 
+    // フォルダ指定（デフォルトはclinic）
+    const folder = formData.get("folder") as string || "clinic";
+    const allowedFolders = ["clinic", "channels"];
+    const targetFolder = allowedFolders.includes(folder) ? folder : "clinic";
+
     // 保存先ディレクトリ
-    const uploadDir = path.join(process.cwd(), "public", "uploads", "clinic");
+    const uploadDir = path.join(process.cwd(), "public", "uploads", targetFolder);
 
     // ディレクトリがなければ作成
     await mkdir(uploadDir, { recursive: true });
@@ -51,7 +56,7 @@ export async function POST(request: NextRequest) {
     await writeFile(filePath, buffer);
 
     // 公開URL
-    const url = `/uploads/clinic/${fileName}`;
+    const url = `/uploads/${targetFolder}/${fileName}`;
 
     return NextResponse.json({ url, fileName });
   } catch (error) {

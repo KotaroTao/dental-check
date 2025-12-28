@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Upload, X, Loader2, Image as ImageIcon } from "lucide-react";
 
 // 診断タイプの表示名
 const DIAGNOSIS_TYPE_NAMES: Record<string, string> = {
@@ -18,6 +18,7 @@ interface Channel {
   id: string;
   name: string;
   description: string | null;
+  imageUrl: string | null;
   diagnosisTypeSlug: string;
   isActive: boolean;
 }
@@ -31,10 +32,13 @@ export default function EditChannelPage() {
     name: "",
     description: "",
     isActive: true,
+    imageUrl: "" as string | null,
   });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   useEffect(() => {
     const fetchChannel = async () => {
@@ -47,6 +51,7 @@ export default function EditChannelPage() {
             name: data.channel.name,
             description: data.channel.description || "",
             isActive: data.channel.isActive,
+            imageUrl: data.channel.imageUrl || null,
           });
         } else {
           setError("QRコードが見つかりません");
@@ -73,6 +78,114 @@ export default function EditChannelPage() {
     } else {
       setFormData({ ...formData, [name]: value });
     }
+  };
+
+  // 画像圧縮
+  const compressImage = (file: File, maxWidth = 800, quality = 0.8): Promise<File> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      const img = new Image();
+
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        ctx?.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              resolve(new File([blob], file.name, { type: "image/jpeg" }));
+            } else {
+              resolve(file);
+            }
+          },
+          "image/jpeg",
+          quality
+        );
+      };
+
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  // 画像アップロード
+  const handleImageUpload = useCallback(async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      setError("画像ファイルを選択してください");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError("ファイルサイズは5MB以下にしてください");
+      return;
+    }
+
+    setIsUploading(true);
+    setError("");
+
+    try {
+      const compressedFile = await compressImage(file);
+      const uploadFormData = new FormData();
+      uploadFormData.append("file", compressedFile);
+      uploadFormData.append("folder", "channels");
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: uploadFormData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "アップロードに失敗しました");
+      }
+
+      const { url } = await response.json();
+      setFormData((prev) => ({ ...prev, imageUrl: url }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "アップロードに失敗しました");
+    } finally {
+      setIsUploading(false);
+    }
+  }, []);
+
+  // ドラッグ&ドロップ
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      handleImageUpload(file);
+    }
+  };
+
+  // ファイル選択
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleImageUpload(file);
+    }
+  };
+
+  // 画像削除
+  const handleRemoveImage = () => {
+    setFormData((prev) => ({ ...prev, imageUrl: null }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -142,12 +255,99 @@ export default function EditChannelPage() {
       <div className="bg-white rounded-xl shadow-sm border p-6">
         <h1 className="text-xl font-bold mb-6">QRコードを編集</h1>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
             <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">
               {error}
             </div>
           )}
+
+          {/* 画像アップロード */}
+          <div className="space-y-2">
+            <Label>画像</Label>
+            <div
+              className={`relative border-2 border-dashed rounded-lg transition-colors ${
+                isDragOver
+                  ? "border-blue-500 bg-blue-50"
+                  : "border-gray-200 hover:border-gray-300"
+              }`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              {formData.imageUrl ? (
+                <div className="relative aspect-video">
+                  <img
+                    src={formData.imageUrl}
+                    alt="プレビュー"
+                    className="w-full h-full object-cover rounded-lg"
+                  />
+                  {isUploading && (
+                    <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                      <Loader2 className="w-8 h-8 text-white animate-spin" />
+                    </div>
+                  )}
+                  <div className="absolute top-2 right-2 flex gap-2">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => document.getElementById("image-input")?.click()}
+                      disabled={isUploading}
+                      className="bg-white/90 hover:bg-white"
+                    >
+                      変更
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleRemoveImage}
+                      disabled={isUploading}
+                      className="bg-white/90 hover:bg-white text-red-600 hover:text-red-700"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-8 text-center">
+                  {isUploading ? (
+                    <Loader2 className="w-10 h-10 mx-auto text-gray-400 animate-spin mb-2" />
+                  ) : (
+                    <div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-3">
+                      <ImageIcon className="w-8 h-8 text-gray-400" />
+                    </div>
+                  )}
+                  <p className="text-sm text-gray-600 mb-2">
+                    {isUploading ? "アップロード中..." : "ドラッグ&ドロップ または"}
+                  </p>
+                  {!isUploading && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => document.getElementById("image-input")?.click()}
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      ファイルを選択
+                    </Button>
+                  )}
+                  <p className="text-xs text-gray-400 mt-3">
+                    JPG, PNG, GIF / 最大5MB
+                  </p>
+                </div>
+              )}
+              <input
+                id="image-input"
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                onChange={handleFileSelect}
+                className="hidden"
+                disabled={isUploading}
+              />
+            </div>
+          </div>
 
           <div className="space-y-2">
             <Label htmlFor="name">
@@ -203,7 +403,7 @@ export default function EditChannelPage() {
           </div>
 
           <div className="flex gap-3 pt-4">
-            <Button type="submit" disabled={isSaving} className="flex-1">
+            <Button type="submit" disabled={isSaving || isUploading} className="flex-1">
               {isSaving ? "保存中..." : "変更を保存"}
             </Button>
             <Link href={`/dashboard/channels/${id}`}>
