@@ -123,12 +123,21 @@ model DiagnosisSession {
   completedAt     DateTime? @map("completed_at")
   createdAt       DateTime  @default(now()) @map("created_at")
 
+  // 位置情報（IPベース）
+  ipAddress       String?   @map("ip_address")
+  country         String?   // 国コード (JP)
+  region          String?   // 都道府県 (兵庫県)
+  city            String?   // 市区町村 (西宮市)
+  latitude        Float?    // 緯度（市区町村中心点）
+  longitude       Float?    // 経度（市区町村中心点）
+
   clinic        Clinic?       @relation(fields: [clinicId], references: [id], onDelete: SetNull)
   channel       Channel?      @relation(fields: [channelId], references: [id], onDelete: SetNull)
   diagnosisType DiagnosisType @relation(fields: [diagnosisTypeId], references: [id])
   ctaClicks     CTAClick[]
 
   @@index([channelId])
+  @@index([clinicId, region])
   @@map("diagnosis_sessions")
 }
 
@@ -142,6 +151,12 @@ model AccessLog {
   userAgent         String?  @map("user_agent")
   referer           String?
   createdAt         DateTime @default(now()) @map("created_at")
+
+  // 位置情報（IPベース）
+  ipAddress         String?  @map("ip_address")
+  country           String?
+  region            String?
+  city              String?
 
   clinic  Clinic?  @relation(fields: [clinicId], references: [id], onDelete: SetNull)
   channel Channel? @relation(fields: [channelId], references: [id], onDelete: SetNull)

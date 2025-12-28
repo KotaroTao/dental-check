@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { BarChart3, Users, MousePointerClick, Percent, ChevronDown, QrCode, Plus, Settings, Trash2 } from "lucide-react";
+import { LocationSection } from "@/components/dashboard/location-section";
 
 // 期間の選択肢
 const PERIOD_OPTIONS = [
@@ -406,6 +407,14 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* 診断実施エリア */}
+      <LocationSection
+        period={period}
+        channelId={selectedChannelId}
+        customStartDate={period === "custom" ? customStartDate : undefined}
+        customEndDate={period === "custom" ? customEndDate : undefined}
+      />
 
       {/* 診断完了履歴 */}
       <div className="bg-white rounded-xl shadow-sm border">

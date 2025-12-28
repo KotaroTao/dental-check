@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getClientIP, getLocationFromIP } from "@/lib/geolocation";
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,6 +17,10 @@ export async function POST(request: NextRequest) {
       clinicId = channel?.clinicId || null;
     }
 
+    // IPアドレスから位置情報を取得
+    const ip = getClientIP(request);
+    const location = await getLocationFromIP(ip);
+
     // アクセスログを記録
     await prisma.accessLog.create({
       data: {
@@ -25,6 +30,11 @@ export async function POST(request: NextRequest) {
         eventType: eventType || "page_view",
         userAgent: request.headers.get("user-agent") || null,
         referer: request.headers.get("referer") || null,
+        // 位置情報
+        ipAddress: ip !== "unknown" ? ip : null,
+        country: location?.countryCode || null,
+        region: location?.regionName || null,
+        city: location?.city || null,
       },
     });
 
