@@ -364,9 +364,74 @@ docker compose -f docker-compose.production.yml --env-file .env.production up -d
 
 ---
 
-## 開発状況（2024年12月28日更新）
+## 開発状況（2025年12月28日更新）
 
-### 実装済み機能
+### 最新の実装（このセッション）
+
+#### 医院紹介ページの大幅強化
+- **写真カルーセル**: 複数写真のスライダー表示
+- **フローティングCTA**: スクロール300px以降で表示される電話・予約ボタン
+- **曜日別診療時間表**: 午前/午後/休診を曜日ごとに設定
+- **診療内容セクション**: プリセットから選択式（一般歯科、矯正歯科など）
+- **設備・特徴セクション**: プリセットから選択式（駐車場、バリアフリーなど）
+- **お知らせ機能**: 日付・重要フラグ付きのお知らせ
+- **リアルタイムプレビュー**: 編集画面で公開イメージを確認
+- **固定保存ボタン**: 画面右下に常時表示
+
+#### 写真アップロード機能
+- **ファイルアップロードAPI**: `/api/upload`
+- **ドラッグ＆ドロップ**: ファイルを直接ドロップでアップロード
+- **クライアント側自動圧縮**: 1200px、JPEG 80%品質
+- **並び替え機能**: ドラッグで写真の順序変更
+- **複数ファイル同時アップロード**: 複数選択・一括ドロップ対応
+- **削除確認**: 削除時にconfirmダイアログ表示
+
+#### Docker本番環境対応
+- **uploads_dataボリューム**: アップロードファイルの永続化
+- **Nginxで直接配信**: `/uploads/`パスをNginxが直接配信（Next.js standalone対応）
+
+### 主要ファイル（今回追加・変更）
+
+| ファイル | 説明 |
+|---------|------|
+| `src/app/api/upload/route.ts` | 画像アップロードAPI |
+| `src/app/dashboard/clinic/page.tsx` | 医院紹介ページ編集（大幅改修） |
+| `src/app/clinic/[slug]/page.tsx` | 公開医院ページ |
+| `src/app/clinic/[slug]/photo-carousel.tsx` | 写真カルーセルコンポーネント |
+| `src/app/clinic/[slug]/floating-cta.tsx` | フローティングCTAコンポーネント |
+| `src/types/clinic.ts` | ClinicPage型定義（拡張） |
+| `docker-compose.production.yml` | uploadsボリューム追加 |
+| `Dockerfile.production` | uploadsディレクトリ作成 |
+| `nginx/nginx.conf` | /uploads/のlocationブロック追加 |
+
+### 型定義（ClinicPage）
+
+```typescript
+interface ClinicPage {
+  photos?: ClinicPhoto[];        // 医院写真
+  director?: DirectorInfo;       // 院長情報
+  hours?: ClinicHours;           // 診療時間（簡易版）
+  weeklySchedule?: WeeklySchedule; // 曜日別診療時間
+  access?: ClinicAccess;         // アクセス情報
+  treatments?: Treatment[];      // 診療内容
+  facilities?: Facility[];       // 設備・特徴
+  announcements?: Announcement[]; // お知らせ
+}
+```
+
+### 注意事項
+
+- **ボリューム変更時はdown必須**: `docker compose down` してから `up` しないとボリュームが反映されない
+- **Nginxキャッシュ**: アップロード画像は30日キャッシュ設定
+
+### PR作成済み
+
+- ブランチ: `claude/plan-qr-measurements-wb4qE`
+- タイトル: `feat: 医院紹介ページの大幅強化と写真アップロード機能`
+
+---
+
+### 実装済み機能（以前のセッション）
 
 #### アプリ名
 - **くるくる診断DX for Dental**（「for Dental」は半分のサイズ）
