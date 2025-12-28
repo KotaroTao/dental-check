@@ -7,12 +7,21 @@ import { Label } from "@/components/ui/label";
 import { Plus, Trash2, GripVertical, AlertCircle, Eye, Phone, Calendar, MapPin, MessageCircle } from "lucide-react";
 import type { CustomCTA } from "@/types/clinic";
 
-// URL検証関数
+// URL検証関数（絶対URLと相対URLを許可）
 function isValidUrl(url: string): boolean {
   if (!url) return true; // 空は許可
+
+  // 相対URLを許可（/で始まるパス）
+  if (url.startsWith("/")) {
+    // 不正なパスを除外
+    return !url.includes("..") && /^\/[\w\-\.\/]*$/.test(url);
+  }
+
+  // 絶対URLの検証
   try {
-    new URL(url);
-    return true;
+    const parsed = new URL(url);
+    // http/httpsのみ許可
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
   } catch {
     return false;
   }

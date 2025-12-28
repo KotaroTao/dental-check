@@ -38,9 +38,9 @@ interface Stats {
   ageRanges?: Record<string, number>;
   // 前期比トレンド
   trends?: {
-    accessCount: number;
-    completedCount: number;
-    ctaCount: number;
+    accessCount: { value: number; isNew: boolean };
+    completedCount: { value: number; isNew: boolean };
+    ctaCount: { value: number; isNew: boolean };
   };
   prevPeriod?: {
     accessCount: number;
@@ -106,9 +106,19 @@ const AGE_RANGE_NAMES: Record<string, string> = {
 };
 
 // トレンドインジケーターコンポーネント
-function TrendIndicator({ value, showValue = true }: { value: number; showValue?: boolean }) {
-  if (value === 0) return null;
-  const isPositive = value > 0;
+function TrendIndicator({ trend, showValue = true }: { trend: { value: number; isNew: boolean }; showValue?: boolean }) {
+  if (trend.value === 0 && !trend.isNew) return null;
+
+  // 前期が0で今期にデータがある場合は「NEW」と表示
+  if (trend.isNew) {
+    return (
+      <span className="inline-flex items-center gap-0.5 text-xs font-medium text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
+        NEW
+      </span>
+    );
+  }
+
+  const isPositive = trend.value > 0;
   return (
     <span className={`inline-flex items-center gap-0.5 text-xs font-medium ${
       isPositive ? "text-green-600" : "text-red-600"
@@ -118,7 +128,7 @@ function TrendIndicator({ value, showValue = true }: { value: number; showValue?
       ) : (
         <TrendingDown className="w-3 h-3" />
       )}
-      {showValue && <span>{isPositive ? "+" : ""}{value}%</span>}
+      {showValue && <span>{isPositive ? "+" : ""}{trend.value}%</span>}
     </span>
   );
 }
@@ -167,6 +177,7 @@ export default function DashboardPage() {
   const [hasMore, setHasMore] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   // ソート
   type SortField = "createdAt" | "userAge" | "ctaClickCount";
@@ -399,6 +410,15 @@ export default function DashboardPage() {
 
   // CSVエクスポート：診断履歴
   const exportHistoryToCSV = async () => {
+    // 大量データの警告
+    if (totalCount > 5000) {
+      if (!confirm(`${totalCount.toLocaleString()}件のデータをエクスポートします。\n処理に時間がかかる場合があります。続行しますか？`)) {
+        return;
+      }
+    }
+
+    setIsExporting(true);
+
     // 全履歴を取得
     const params = new URLSearchParams({
       period,
@@ -414,7 +434,10 @@ export default function DashboardPage() {
 
     try {
       const response = await fetch(`/api/dashboard/history?${params}`);
-      if (!response.ok) return;
+      if (!response.ok) {
+        alert("エクスポートに失敗しました");
+        return;
+      }
       const data = await response.json();
 
       const rows: string[][] = [
@@ -436,6 +459,9 @@ export default function DashboardPage() {
       downloadCSV(rows, "診断履歴");
     } catch (error) {
       console.error("Failed to export history:", error);
+      alert("エクスポート中にエラーが発生しました");
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -753,7 +779,7 @@ export default function DashboardPage() {
               <span className="text-2xl font-bold text-gray-900">
                 {stats?.accessCount.toLocaleString() || 0}
               </span>
-              {stats?.trends && <TrendIndicator value={stats.trends.accessCount} />}
+              {stats?.trends && <TrendIndicator trend={stats.trends.accessCount} />}
             </div>
             {stats?.prevPeriod && stats.prevPeriod.accessCount > 0 && (
               <div className="text-xs text-gray-400 mt-1">
@@ -770,7 +796,7 @@ export default function DashboardPage() {
               <span className="text-2xl font-bold text-green-600">
                 {stats?.completedCount.toLocaleString() || 0}
               </span>
-              {stats?.trends && <TrendIndicator value={stats.trends.completedCount} />}
+              {stats?.trends && <TrendIndicator trend={stats.trends.completedCount} />}
             </div>
             {stats?.prevPeriod && stats.prevPeriod.completedCount > 0 && (
               <div className="text-xs text-gray-400 mt-1">
@@ -796,7 +822,7 @@ export default function DashboardPage() {
               <span className="text-2xl font-bold text-purple-600">
                 {stats?.ctaCount.toLocaleString() || 0}
               </span>
-              {stats?.trends && <TrendIndicator value={stats.trends.ctaCount} />}
+              {stats?.trends && <TrendIndicator trend={stats.trends.ctaCount} />}
             </div>
             {stats?.prevPeriod && stats.prevPeriod.ctaCount > 0 && (
               <div className="text-xs text-gray-400 mt-1">
@@ -960,11 +986,11 @@ export default function DashboardPage() {
                 variant="outline"
                 size="sm"
                 onClick={exportHistoryToCSV}
-                disabled={history.length === 0}
+                disabled={history.length === 0 || isExporting}
                 className="gap-2"
               >
                 <Download className="w-4 h-4" />
-                CSV
+                {isExporting ? "エクスポート中..." : "CSV"}
               </Button>
             </div>
           </div>
