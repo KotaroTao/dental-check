@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Eye, EyeOff, Plus, Trash2, GripVertical, Bell, Upload, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Plus, Trash2, GripVertical, Bell, Upload, Loader2, Save } from "lucide-react";
 import type { ClinicPage, ClinicPhoto, Treatment, Facility, Announcement, WeeklySchedule, DaySchedule } from "@/types/clinic";
 
 interface ClinicData {
@@ -868,6 +868,24 @@ export default function ClinicPageEditor() {
           </div>
         </div>
       )}
+
+      {/* 固定保存ボタン */}
+      <button
+        type="button"
+        onClick={() => {
+          const form = document.querySelector('form');
+          if (form) form.requestSubmit();
+        }}
+        disabled={isSaving}
+        className="fixed bottom-6 right-6 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full shadow-lg flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed z-50"
+      >
+        {isSaving ? (
+          <Loader2 className="w-5 h-5 animate-spin" />
+        ) : (
+          <Save className="w-5 h-5" />
+        )}
+        <span className="font-medium">{isSaving ? "保存中..." : "保存する"}</span>
+      </button>
     </div>
   );
 }
