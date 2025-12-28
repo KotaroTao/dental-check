@@ -808,12 +808,6 @@ export default function ClinicPageEditor() {
                     onChange={(e) => updateTreatment(index, "name", e.target.value)}
                     className="flex-1"
                   />
-                  <Input
-                    placeholder="説明（任意）"
-                    value={treatment.description || ""}
-                    onChange={(e) => updateTreatment(index, "description", e.target.value)}
-                    className="flex-1"
-                  />
                   <Button
                     type="button"
                     variant="ghost"

@@ -2,6 +2,9 @@ export interface CTAConfig {
   bookingUrl?: string;
   lineUrl?: string;
   instagramUrl?: string;
+  youtubeUrl?: string;
+  facebookUrl?: string;
+  tiktokUrl?: string;
   phone?: string;
   directorMessage?: string;
 }
@@ -51,7 +54,6 @@ export interface WeeklySchedule {
 // 診療内容
 export interface Treatment {
   name: string;        // 治療名（例: "一般歯科"）
-  description?: string; // 説明
   icon?: string;       // アイコン名
 }
 

@@ -167,9 +167,6 @@ export default async function ClinicPublicPage({
                   className="p-3 bg-gray-50 rounded-lg text-center"
                 >
                   <p className="font-medium text-sm">{treatment.name}</p>
-                  {treatment.description && (
-                    <p className="text-xs text-gray-500 mt-1">{treatment.description}</p>
-                  )}
                 </div>
               ))}
             </div>

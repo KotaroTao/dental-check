@@ -25,7 +25,20 @@ interface Stats {
   completedCount: number;
   completionRate: number;
   ctaCount: number;
+  ctaByType?: Record<string, number>;
 }
+
+// CTAタイプの表示名
+const CTA_TYPE_NAMES: Record<string, string> = {
+  booking: "予約",
+  phone: "電話",
+  line: "LINE",
+  instagram: "Instagram",
+  youtube: "YouTube",
+  facebook: "Facebook",
+  tiktok: "TikTok",
+  clinic_page: "医院ページ",
+};
 
 interface Channel {
   id: string;
@@ -465,6 +478,19 @@ export default function DashboardPage() {
             <div className="text-2xl font-bold text-purple-600">
               {stats?.ctaCount.toLocaleString() || 0}
             </div>
+            {/* CTA内訳 */}
+            {stats?.ctaByType && Object.keys(stats.ctaByType).length > 0 && (
+              <div className="mt-2 pt-2 border-t border-gray-200 space-y-1">
+                {Object.entries(stats.ctaByType)
+                  .sort((a, b) => b[1] - a[1])
+                  .map(([type, count]) => (
+                    <div key={type} className="flex justify-between text-xs text-gray-600">
+                      <span>{CTA_TYPE_NAMES[type] || type}</span>
+                      <span className="font-medium">{count}</span>
+                    </div>
+                  ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

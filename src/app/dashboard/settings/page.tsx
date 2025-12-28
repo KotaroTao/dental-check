@@ -13,6 +13,9 @@ interface ClinicSettings {
     bookingUrl?: string;
     lineUrl?: string;
     instagramUrl?: string;
+    youtubeUrl?: string;
+    facebookUrl?: string;
+    tiktokUrl?: string;
     phone?: string;
     directorMessage?: string;
   };
@@ -205,6 +208,42 @@ export default function SettingsPage() {
                 type="url"
                 placeholder="https://instagram.com/xxx"
                 value={settings.ctaConfig.instagramUrl || ""}
+                onChange={handleChange}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="cta.youtubeUrl">YouTubeチャンネルURL</Label>
+              <Input
+                id="cta.youtubeUrl"
+                name="cta.youtubeUrl"
+                type="url"
+                placeholder="https://youtube.com/@xxx"
+                value={settings.ctaConfig.youtubeUrl || ""}
+                onChange={handleChange}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="cta.facebookUrl">FacebookページURL</Label>
+              <Input
+                id="cta.facebookUrl"
+                name="cta.facebookUrl"
+                type="url"
+                placeholder="https://facebook.com/xxx"
+                value={settings.ctaConfig.facebookUrl || ""}
+                onChange={handleChange}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="cta.tiktokUrl">TikTokURL</Label>
+              <Input
+                id="cta.tiktokUrl"
+                name="cta.tiktokUrl"
+                type="url"
+                placeholder="https://tiktok.com/@xxx"
+                value={settings.ctaConfig.tiktokUrl || ""}
                 onChange={handleChange}
               />
             </div>

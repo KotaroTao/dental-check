@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
     };
 
     // 統計データを並行取得
-    const [accessCount, completedCount, ctaCount, channels] = await Promise.all([
+    const [accessCount, completedCount, ctaClicks, channels] = await Promise.all([
       // アクセス数
       prisma.accessLog.count({
         where: baseFilter,
@@ -74,9 +74,11 @@ export async function GET(request: NextRequest) {
         },
       }),
 
-      // CTAクリック数
-      prisma.cTAClick.count({
+      // CTAクリック（タイプ別に集計）
+      prisma.cTAClick.groupBy({
+        by: ['ctaType'],
         where: baseFilter,
+        _count: { id: true },
       }),
 
       // 経路一覧（フィルター用）
@@ -86,6 +88,14 @@ export async function GET(request: NextRequest) {
         orderBy: { createdAt: "desc" },
       }),
     ]);
+
+    // CTAクリックをタイプ別に整理
+    const ctaByType: Record<string, number> = {};
+    let ctaCount = 0;
+    for (const cta of ctaClicks) {
+      ctaByType[cta.ctaType] = cta._count.id;
+      ctaCount += cta._count.id;
+    }
 
     // 完了率を計算
     const completionRate =
@@ -97,6 +107,7 @@ export async function GET(request: NextRequest) {
         completedCount,
         completionRate,
         ctaCount,
+        ctaByType,
       },
       channels,
       period: {
