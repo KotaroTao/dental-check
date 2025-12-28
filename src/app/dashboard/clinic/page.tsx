@@ -78,6 +78,56 @@ export default function ClinicPageEditor() {
   const [showPreview, setShowPreview] = useState(false);
   const [useDetailedHours, setUseDetailedHours] = useState(false);
   const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+  // 画像圧縮関数
+  const compressImage = (file: File, maxWidth = 1200, quality = 0.8): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      // 既に小さいファイルは圧縮しない
+      if (file.size < 500 * 1024) {
+        resolve(file);
+        return;
+      }
+
+      const img = new Image();
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+
+      img.onload = () => {
+        let { width, height } = img;
+
+        // 最大幅を超える場合はリサイズ
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        ctx?.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              const compressedFile = new File([blob], file.name, {
+                type: "image/jpeg",
+                lastModified: Date.now(),
+              });
+              resolve(compressedFile);
+            } else {
+              resolve(file);
+            }
+          },
+          "image/jpeg",
+          quality
+        );
+      };
+
+      img.onerror = () => reject(new Error("画像の読み込みに失敗しました"));
+      img.src = URL.createObjectURL(file);
+    });
+  };
 
   useEffect(() => {
     const fetchClinicPage = async () => {
@@ -158,8 +208,11 @@ export default function ClinicPageEditor() {
 
     setUploadingIndex(index);
     try {
+      // 画像を圧縮
+      const compressedFile = await compressImage(file);
+
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", compressedFile);
 
       const response = await fetch("/api/upload", {
         method: "POST",
@@ -188,11 +241,22 @@ export default function ClinicPageEditor() {
     }
   };
 
-  const addPhoto = () => {
-    setClinicPage({
-      ...clinicPage,
-      photos: [...(clinicPage.photos || []), { url: "", caption: "" }],
-    });
+  // ドラッグ＆ドロップでファイルアップロード
+  const handleFileDrop = (index: number, e: React.DragEvent) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith("image/")) {
+      handlePhotoUpload(index, file);
+    }
+  };
+
+  // 写真の並び替え
+  const reorderPhotos = (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+    const newPhotos = [...(clinicPage.photos || [])];
+    const [moved] = newPhotos.splice(fromIndex, 1);
+    newPhotos.splice(toIndex, 0, moved);
+    setClinicPage({ ...clinicPage, photos: newPhotos });
   };
 
   const removePhoto = (index: number) => {
@@ -448,12 +512,39 @@ export default function ClinicPageEditor() {
 
             <div className="space-y-4">
               {(clinicPage.photos || []).map((photo, index) => (
-                <div key={index} className="border rounded-lg p-4 bg-gray-50">
+                <div
+                  key={index}
+                  draggable
+                  onDragStart={() => setDraggedIndex(index)}
+                  onDragEnd={() => {
+                    if (draggedIndex !== null && dragOverIndex !== null) {
+                      reorderPhotos(draggedIndex, dragOverIndex);
+                    }
+                    setDraggedIndex(null);
+                    setDragOverIndex(null);
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setDragOverIndex(index);
+                  }}
+                  onDragLeave={() => setDragOverIndex(null)}
+                  className={`border rounded-lg p-4 transition-all ${
+                    draggedIndex === index
+                      ? "opacity-50 bg-blue-50 border-blue-300"
+                      : dragOverIndex === index
+                      ? "bg-blue-50 border-blue-400 border-2"
+                      : "bg-gray-50"
+                  }`}
+                >
                   <div className="flex gap-4">
-                    {/* サムネイルエリア */}
+                    {/* ドラッグハンドル & サムネイルエリア */}
                     <div className="relative w-32 h-32 shrink-0">
                       {photo.url ? (
-                        <>
+                        <div
+                          className="w-full h-full relative group"
+                          onDrop={(e) => handleFileDrop(index, e)}
+                          onDragOver={(e) => e.preventDefault()}
+                        >
                           <img
                             src={photo.url}
                             alt={photo.caption || `写真 ${index + 1}`}
@@ -464,9 +555,23 @@ export default function ClinicPageEditor() {
                               <Loader2 className="w-8 h-8 text-white animate-spin" />
                             </div>
                           )}
-                        </>
+                          {/* ドラッグハンドルオーバーレイ */}
+                          <div className="absolute top-1 left-1 bg-white/90 rounded p-1 cursor-grab active:cursor-grabbing shadow-sm">
+                            <GripVertical className="w-4 h-4 text-gray-500" />
+                          </div>
+                        </div>
                       ) : (
-                        <label className="w-full h-full border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors">
+                        <label
+                          className="w-full h-full border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors"
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            const file = e.dataTransfer.files[0];
+                            if (file && file.type.startsWith("image/")) {
+                              handlePhotoUpload(index, file);
+                            }
+                          }}
+                          onDragOver={(e) => e.preventDefault()}
+                        >
                           <input
                             type="file"
                             accept="image/*"
@@ -481,7 +586,9 @@ export default function ClinicPageEditor() {
                           ) : (
                             <>
                               <Upload className="w-8 h-8 text-gray-400 mb-1" />
-                              <span className="text-xs text-gray-500">クリックして選択</span>
+                              <span className="text-xs text-gray-500 text-center px-2">
+                                クリックまたは<br />ドロップ
+                              </span>
                             </>
                           )}
                         </label>
@@ -530,10 +637,9 @@ export default function ClinicPageEditor() {
                         onChange={(e) => handlePhotoChange(index, "caption", e.target.value)}
                       />
                       <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2 text-gray-400">
-                          <GripVertical className="w-4 h-4" />
-                          <span className="text-xs">ドラッグで順序変更</span>
-                        </div>
+                        <span className="text-xs text-gray-400">
+                          #{index + 1} • ドラッグで順序変更
+                        </span>
                         <Button
                           type="button"
                           variant="ghost"
@@ -550,16 +656,44 @@ export default function ClinicPageEditor() {
                 </div>
               ))}
 
-              {/* 新規追加ボタン */}
-              <button
-                type="button"
-                onClick={addPhoto}
-                className="w-full border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center hover:border-blue-400 hover:bg-blue-50 transition-colors"
+              {/* 新規追加ボタン（ドラッグ＆ドロップ対応） */}
+              <label
+                className="w-full border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center hover:border-blue-400 hover:bg-blue-50 transition-colors cursor-pointer"
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith("image/"));
+                  files.forEach((file, i) => {
+                    const newIndex = (clinicPage.photos || []).length + i;
+                    setClinicPage(prev => ({
+                      ...prev,
+                      photos: [...(prev.photos || []), { url: "", caption: "" }],
+                    }));
+                    setTimeout(() => handlePhotoUpload(newIndex, file), 100 * i);
+                  });
+                }}
+                onDragOver={(e) => e.preventDefault()}
               >
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files || []);
+                    files.forEach((file, i) => {
+                      const newIndex = (clinicPage.photos || []).length + i;
+                      setClinicPage(prev => ({
+                        ...prev,
+                        photos: [...(prev.photos || []), { url: "", caption: "" }],
+                      }));
+                      setTimeout(() => handlePhotoUpload(newIndex, file), 100 * i);
+                    });
+                  }}
+                />
                 <Plus className="w-8 h-8 text-gray-400 mb-2" />
                 <span className="text-gray-600 font-medium">写真を追加</span>
-                <span className="text-xs text-gray-400 mt-1">外観・院内・設備など</span>
-              </button>
+                <span className="text-xs text-gray-400 mt-1">クリックまたはドラッグ＆ドロップ（複数可）</span>
+              </label>
             </div>
           </div>
 
