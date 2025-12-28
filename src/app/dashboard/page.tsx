@@ -581,7 +581,7 @@ export default function DashboardPage() {
                       <td className="px-6 py-4">
                         {item.ctaType ? (
                           <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-50 text-green-700">
-                            {item.ctaType}
+                            {CTA_TYPE_NAMES[item.ctaType] || item.ctaType}
                           </span>
                         ) : (
                           <span className="text-gray-400">−</span>
@@ -603,7 +603,7 @@ export default function DashboardPage() {
                     </div>
                     {item.ctaType && (
                       <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-green-700">
-                        {item.ctaType}
+                        {CTA_TYPE_NAMES[item.ctaType] || item.ctaType}
                       </span>
                     )}
                   </div>
