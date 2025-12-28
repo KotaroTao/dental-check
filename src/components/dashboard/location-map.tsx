@@ -10,10 +10,18 @@ interface Location {
   count: number;
   latitude: number | null;
   longitude: number | null;
+  channelId: string | null;
+}
+
+interface Channel {
+  id: string;
+  name: string;
 }
 
 interface LocationMapProps {
   locations: Location[];
+  channelColorMap?: Record<string, string>;
+  channels?: Channel[];
 }
 
 // 地図の表示範囲を自動調整するコンポーネント
@@ -47,7 +55,7 @@ function FitBounds({ locations }: { locations: Location[] }) {
   return null;
 }
 
-export default function LocationMap({ locations }: LocationMapProps) {
+export default function LocationMap({ locations, channelColorMap, channels }: LocationMapProps) {
   // 日本の中心付近（大阪あたり）
   const defaultCenter: [number, number] = [34.6937, 135.5023];
 
@@ -58,6 +66,27 @@ export default function LocationMap({ locations }: LocationMapProps) {
 
   // 最大件数（円のサイズ計算用）
   const maxCount = Math.max(...validLocations.map((loc) => loc.count), 1);
+
+  // チャンネル名を取得するヘルパー
+  const getChannelName = (channelId: string | null) => {
+    if (!channelId || !channels) return null;
+    return channels.find((c) => c.id === channelId)?.name;
+  };
+
+  // チャンネルの色を取得するヘルパー
+  const getChannelColor = (channelId: string | null) => {
+    if (!channelId || !channelColorMap) return "#3b82f6";
+    return channelColorMap[channelId] || "#3b82f6";
+  };
+
+  // 色を暗くするヘルパー（ボーダー用）
+  const darkenColor = (hex: string): string => {
+    const num = parseInt(hex.replace("#", ""), 16);
+    const r = Math.max(0, (num >> 16) - 40);
+    const g = Math.max(0, ((num >> 8) & 0x00ff) - 40);
+    const b = Math.max(0, (num & 0x0000ff) - 40);
+    return `#${(r << 16 | g << 8 | b).toString(16).padStart(6, "0")}`;
+  };
 
   return (
     <MapContainer
@@ -77,20 +106,27 @@ export default function LocationMap({ locations }: LocationMapProps) {
         // 件数に応じて透明度を調整
         const opacity = Math.max(0.4, Math.min(0.8, 0.4 + (loc.count / maxCount) * 0.4));
 
+        const fillColor = getChannelColor(loc.channelId);
+        const borderColor = darkenColor(fillColor);
+        const channelName = getChannelName(loc.channelId);
+
         return (
           <CircleMarker
-            key={`${loc.city}-${index}`}
+            key={`${loc.city}-${loc.channelId}-${index}`}
             center={[loc.latitude!, loc.longitude!]}
             radius={radius}
-            fillColor="#3b82f6"
+            fillColor={fillColor}
             fillOpacity={opacity}
-            color="#2563eb"
+            color={borderColor}
             weight={2}
           >
             <Tooltip direction="top" offset={[0, -10]}>
               <div className="text-center">
                 <div className="font-medium">{loc.city || loc.region}</div>
-                <div className="text-blue-600 font-bold">{loc.count}件</div>
+                {channelName && (
+                  <div className="text-xs" style={{ color: fillColor }}>{channelName}</div>
+                )}
+                <div className="font-bold" style={{ color: fillColor }}>{loc.count}件</div>
               </div>
             </Tooltip>
           </CircleMarker>
