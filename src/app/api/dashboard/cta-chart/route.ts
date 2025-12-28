@@ -43,6 +43,25 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // アクティブなチャンネルIDを取得（非表示チャンネルを除外）
+    const activeChannels = await prisma.channel.findMany({
+      where: { clinicId: session.clinicId, isActive: true },
+      select: { id: true },
+    });
+    const activeChannelIds = activeChannels.map((c: { id: string }) => c.id);
+
+    // チャンネルフィルター条件
+    // channelId指定時: そのチャンネルのみ
+    // 指定なし: アクティブチャンネル + 医院ページ(channelId=null)
+    const channelFilter = channelId
+      ? { channelId }
+      : {
+          OR: [
+            { channelId: { in: activeChannelIds } },
+            { channelId: null }, // 医院ページからのクリック
+          ],
+        };
+
     // CTAクリックを日別に取得
     const ctaClicks = await prisma.cTAClick.findMany({
       where: {
@@ -51,7 +70,7 @@ export async function GET(request: NextRequest) {
           gte: dateFrom,
           lte: dateTo,
         },
-        ...(channelId && { channelId }),
+        ...channelFilter,
       },
       select: {
         createdAt: true,
