@@ -93,8 +93,12 @@ export default function ClinicPageEditor() {
       const img = new Image();
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
+      const blobUrl = URL.createObjectURL(file);
 
       img.onload = () => {
+        // BlobURLをクリーンアップ
+        URL.revokeObjectURL(blobUrl);
+
         let { width, height } = img;
 
         // 最大幅を超える場合はリサイズ
@@ -124,8 +128,11 @@ export default function ClinicPageEditor() {
         );
       };
 
-      img.onerror = () => reject(new Error("画像の読み込みに失敗しました"));
-      img.src = URL.createObjectURL(file);
+      img.onerror = () => {
+        URL.revokeObjectURL(blobUrl);
+        reject(new Error("画像の読み込みに失敗しました"));
+      };
+      img.src = blobUrl;
     });
   };
 
@@ -196,15 +203,30 @@ export default function ClinicPageEditor() {
   };
 
   const handlePhotoChange = (index: number, field: keyof ClinicPhoto, value: string) => {
-    const newPhotos = [...(clinicPage.photos || [])];
-    newPhotos[index] = { ...newPhotos[index], [field]: value };
-    setClinicPage({ ...clinicPage, photos: newPhotos });
+    setClinicPage(prev => {
+      const newPhotos = [...(prev.photos || [])];
+      // indexが範囲外の場合は空のオブジェクトを作成
+      if (!newPhotos[index]) {
+        newPhotos[index] = { url: "", caption: "" };
+      }
+      newPhotos[index] = { ...newPhotos[index], [field]: value };
+      return { ...prev, photos: newPhotos };
+    });
   };
 
   const handlePhotoUpload = async (index: number, file: File) => {
     // 即座にプレビュー表示（ローカルURL）
     const previewUrl = URL.createObjectURL(file);
-    handlePhotoChange(index, "url", previewUrl);
+
+    // プレビューを即座に設定
+    setClinicPage(prev => {
+      const newPhotos = [...(prev.photos || [])];
+      if (!newPhotos[index]) {
+        newPhotos[index] = { url: "", caption: "" };
+      }
+      newPhotos[index] = { ...newPhotos[index], url: previewUrl };
+      return { ...prev, photos: newPhotos };
+    });
 
     setUploadingIndex(index);
     try {
@@ -662,13 +684,18 @@ export default function ClinicPageEditor() {
                 onDrop={(e) => {
                   e.preventDefault();
                   const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith("image/"));
+                  const startIndex = (clinicPage.photos || []).length;
+                  // 先に全てのスロットを追加
+                  setClinicPage(prev => ({
+                    ...prev,
+                    photos: [
+                      ...(prev.photos || []),
+                      ...files.map(() => ({ url: "", caption: "" })),
+                    ],
+                  }));
+                  // 各ファイルをアップロード
                   files.forEach((file, i) => {
-                    const newIndex = (clinicPage.photos || []).length + i;
-                    setClinicPage(prev => ({
-                      ...prev,
-                      photos: [...(prev.photos || []), { url: "", caption: "" }],
-                    }));
-                    setTimeout(() => handlePhotoUpload(newIndex, file), 100 * i);
+                    setTimeout(() => handlePhotoUpload(startIndex + i, file), 50);
                   });
                 }}
                 onDragOver={(e) => e.preventDefault()}
@@ -680,14 +707,22 @@ export default function ClinicPageEditor() {
                   className="hidden"
                   onChange={(e) => {
                     const files = Array.from(e.target.files || []);
+                    if (files.length === 0) return;
+                    const startIndex = (clinicPage.photos || []).length;
+                    // 先に全てのスロットを追加
+                    setClinicPage(prev => ({
+                      ...prev,
+                      photos: [
+                        ...(prev.photos || []),
+                        ...files.map(() => ({ url: "", caption: "" })),
+                      ],
+                    }));
+                    // 各ファイルをアップロード
                     files.forEach((file, i) => {
-                      const newIndex = (clinicPage.photos || []).length + i;
-                      setClinicPage(prev => ({
-                        ...prev,
-                        photos: [...(prev.photos || []), { url: "", caption: "" }],
-                      }));
-                      setTimeout(() => handlePhotoUpload(newIndex, file), 100 * i);
+                      setTimeout(() => handlePhotoUpload(startIndex + i, file), 50);
                     });
+                    // inputをリセット
+                    e.target.value = "";
                   }}
                 />
                 <Plus className="w-8 h-8 text-gray-400 mb-2" />
