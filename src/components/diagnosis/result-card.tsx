@@ -234,7 +234,10 @@ function ClinicCTA({
     ctaConfig?.facebookUrl ||
     ctaConfig?.tiktokUrl ||
     ctaConfig?.threadsUrl ||
-    ctaConfig?.phone;
+    ctaConfig?.xUrl ||
+    ctaConfig?.googleMapsUrl ||
+    ctaConfig?.phone ||
+    (ctaConfig?.customCTAs && ctaConfig.customCTAs.length > 0);
 
   if (!hasAnyCTA) {
     return (
@@ -417,7 +420,68 @@ function ClinicCTA({
               </Button>
             </a>
           )}
+          {ctaConfig?.xUrl && (
+            <a
+              href={ctaConfig.xUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => trackClick("x")}
+            >
+              <Button
+                variant="outline"
+                className="w-full gap-2"
+                style={{ borderColor: "#000000", color: "#000000" }}
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                </svg>
+                X
+              </Button>
+            </a>
+          )}
+          {ctaConfig?.googleMapsUrl && (
+            <a
+              href={ctaConfig.googleMapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => trackClick("google_maps")}
+            >
+              <Button
+                variant="outline"
+                className="w-full gap-2"
+                style={{ borderColor: "#4285F4", color: "#4285F4" }}
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                </svg>
+                マップ
+              </Button>
+            </a>
+          )}
         </div>
+
+        {/* カスタムCTAボタン */}
+        {ctaConfig?.customCTAs && ctaConfig.customCTAs.length > 0 && (
+          <div className="space-y-2">
+            {ctaConfig.customCTAs.map((cta) => (
+              <a
+                key={cta.id}
+                href={cta.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => trackClick(`custom_${cta.id}`)}
+              >
+                <Button
+                  variant="outline"
+                  className="w-full gap-2"
+                  style={{ borderColor: cta.color || mainColor, color: cta.color || mainColor }}
+                >
+                  {cta.label}
+                </Button>
+              </a>
+            ))}
+          </div>
+        )}
 
         {/* 医院紹介ページへのリンク */}
         {clinicSlug && (

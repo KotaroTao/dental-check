@@ -1,3 +1,11 @@
+// カスタムCTAボタン
+export interface CustomCTA {
+  id: string;
+  label: string;
+  url: string;
+  color?: string;
+}
+
 export interface CTAConfig {
   bookingUrl?: string;
   lineUrl?: string;
@@ -6,8 +14,12 @@ export interface CTAConfig {
   facebookUrl?: string;
   tiktokUrl?: string;
   threadsUrl?: string;
+  xUrl?: string;           // X (Twitter)
+  googleMapsUrl?: string;  // Googleマップ
   phone?: string;
   directorMessage?: string;
+  customCTAs?: CustomCTA[];  // カスタムCTAボタン
+  ctaOrder?: string[];       // ボタンの表示順序
 }
 
 // 医院紹介ページの写真

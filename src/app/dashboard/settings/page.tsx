@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Plus, Trash2, GripVertical } from "lucide-react";
+import type { CustomCTA } from "@/types/clinic";
 
 interface ClinicSettings {
   name: string;
@@ -17,10 +19,26 @@ interface ClinicSettings {
     facebookUrl?: string;
     tiktokUrl?: string;
     threadsUrl?: string;
+    xUrl?: string;
+    googleMapsUrl?: string;
     phone?: string;
     directorMessage?: string;
+    customCTAs?: CustomCTA[];
+    ctaOrder?: string[];
   };
 }
+
+// デフォルトのボタン順序
+const DEFAULT_CTA_ORDER = ["phone", "booking", "line", "googleMaps", "instagram"];
+
+// ボタンの表示名
+const CTA_BUTTON_NAMES: Record<string, string> = {
+  phone: "電話予約",
+  booking: "WEB予約",
+  line: "LINE",
+  googleMaps: "Googleマップ",
+  instagram: "Instagram",
+};
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<ClinicSettings>({
@@ -35,6 +53,7 @@ export default function SettingsPage() {
     type: "success" | "error";
     text: string;
   } | null>(null);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -74,6 +93,68 @@ export default function SettingsPage() {
     }
   };
 
+  // カスタムCTAの追加
+  const addCustomCTA = () => {
+    const newCTA: CustomCTA = {
+      id: `custom_${Date.now()}`,
+      label: "",
+      url: "",
+      color: settings.mainColor,
+    };
+    setSettings({
+      ...settings,
+      ctaConfig: {
+        ...settings.ctaConfig,
+        customCTAs: [...(settings.ctaConfig.customCTAs || []), newCTA],
+      },
+    });
+  };
+
+  // カスタムCTAの更新
+  const updateCustomCTA = (index: number, field: keyof CustomCTA, value: string) => {
+    const customCTAs = [...(settings.ctaConfig.customCTAs || [])];
+    customCTAs[index] = { ...customCTAs[index], [field]: value };
+    setSettings({
+      ...settings,
+      ctaConfig: { ...settings.ctaConfig, customCTAs },
+    });
+  };
+
+  // カスタムCTAの削除
+  const removeCustomCTA = (index: number) => {
+    const customCTAs = [...(settings.ctaConfig.customCTAs || [])];
+    customCTAs.splice(index, 1);
+    setSettings({
+      ...settings,
+      ctaConfig: { ...settings.ctaConfig, customCTAs },
+    });
+  };
+
+  // ドラッグ&ドロップハンドラー
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === index) return;
+
+    const order = settings.ctaConfig.ctaOrder || DEFAULT_CTA_ORDER;
+    const newOrder = [...order];
+    const [removed] = newOrder.splice(draggedIndex, 1);
+    newOrder.splice(index, 0, removed);
+
+    setSettings({
+      ...settings,
+      ctaConfig: { ...settings.ctaConfig, ctaOrder: newOrder },
+    });
+    setDraggedIndex(index);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
@@ -102,6 +183,8 @@ export default function SettingsPage() {
   if (isLoading) {
     return <div className="text-gray-500">読み込み中...</div>;
   }
+
+  const ctaOrder = settings.ctaConfig.ctaOrder || DEFAULT_CTA_ORDER;
 
   return (
     <div className="max-w-2xl">
@@ -202,6 +285,19 @@ export default function SettingsPage() {
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="cta.googleMapsUrl">GoogleマップURL</Label>
+              <Input
+                id="cta.googleMapsUrl"
+                name="cta.googleMapsUrl"
+                type="url"
+                placeholder="https://maps.google.com/..."
+                value={settings.ctaConfig.googleMapsUrl || ""}
+                onChange={handleChange}
+              />
+              <p className="text-xs text-gray-500">医院の場所をGoogleマップで開くリンク</p>
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="cta.instagramUrl">InstagramURL</Label>
               <Input
                 id="cta.instagramUrl"
@@ -262,6 +358,18 @@ export default function SettingsPage() {
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="cta.xUrl">X（Twitter）URL</Label>
+              <Input
+                id="cta.xUrl"
+                name="cta.xUrl"
+                type="url"
+                placeholder="https://x.com/xxx"
+                value={settings.ctaConfig.xUrl || ""}
+                onChange={handleChange}
+              />
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="cta.phone">電話番号</Label>
               <Input
                 id="cta.phone"
@@ -284,6 +392,114 @@ export default function SettingsPage() {
                 onChange={handleChange}
               />
             </div>
+          </div>
+        </div>
+
+        {/* ボタン並び順設定 */}
+        <div className="bg-white rounded-xl shadow-sm border p-6">
+          <h2 className="text-lg font-bold mb-4">ボタンの並び順</h2>
+          <p className="text-sm text-gray-500 mb-4">
+            ドラッグ&ドロップでボタンの表示順序を変更できます
+          </p>
+
+          <div className="space-y-2">
+            {ctaOrder.map((key, index) => (
+              <div
+                key={key}
+                draggable
+                onDragStart={() => handleDragStart(index)}
+                onDragOver={(e) => handleDragOver(e, index)}
+                onDragEnd={handleDragEnd}
+                className={`flex items-center gap-3 p-3 bg-gray-50 rounded-lg cursor-move transition-colors ${
+                  draggedIndex === index ? "bg-blue-100" : "hover:bg-gray-100"
+                }`}
+              >
+                <GripVertical className="w-4 h-4 text-gray-400" />
+                <span className="text-sm font-medium">
+                  {CTA_BUTTON_NAMES[key] || key}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* カスタムCTA設定 */}
+        <div className="bg-white rounded-xl shadow-sm border p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-lg font-bold">カスタムCTAボタン</h2>
+              <p className="text-sm text-gray-500">
+                オリジナルのリンクボタンを追加できます
+              </p>
+            </div>
+            <Button type="button" variant="outline" onClick={addCustomCTA} className="gap-2">
+              <Plus className="w-4 h-4" />
+              追加
+            </Button>
+          </div>
+
+          <div className="space-y-4">
+            {settings.ctaConfig.customCTAs?.map((cta, index) => (
+              <div key={cta.id} className="p-4 border rounded-lg bg-gray-50 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-600">
+                    カスタムボタン {index + 1}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removeCustomCTA(index)}
+                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>ボタンラベル</Label>
+                  <Input
+                    placeholder="例: 公式サイト"
+                    value={cta.label}
+                    onChange={(e) => updateCustomCTA(index, "label", e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>リンクURL</Label>
+                  <Input
+                    type="url"
+                    placeholder="https://example.com"
+                    value={cta.url}
+                    onChange={(e) => updateCustomCTA(index, "url", e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>ボタン色</Label>
+                  <div className="flex gap-2">
+                    <input
+                      type="color"
+                      value={cta.color || settings.mainColor}
+                      onChange={(e) => updateCustomCTA(index, "color", e.target.value)}
+                      className="w-12 h-10 rounded border cursor-pointer"
+                    />
+                    <Input
+                      value={cta.color || settings.mainColor}
+                      onChange={(e) => updateCustomCTA(index, "color", e.target.value)}
+                      className="flex-1"
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {(!settings.ctaConfig.customCTAs || settings.ctaConfig.customCTAs.length === 0) && (
+              <div className="text-center py-8 text-gray-400">
+                <p>カスタムボタンはまだありません</p>
+                <p className="text-sm">「追加」ボタンをクリックして作成してください</p>
+              </div>
+            )}
           </div>
         </div>
 

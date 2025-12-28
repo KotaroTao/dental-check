@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { BarChart3, Users, MousePointerClick, Percent, ChevronDown, QrCode, Plus, Settings, Trash2, Building2, TrendingUp } from "lucide-react";
 import { LocationSection } from "@/components/dashboard/location-section";
+import { CTAChart } from "@/components/dashboard/cta-chart";
 
 // 期間の選択肢
 const PERIOD_OPTIONS = [
@@ -44,6 +45,8 @@ const CTA_TYPE_NAMES: Record<string, string> = {
   facebook: "Facebook",
   tiktok: "TikTok",
   threads: "Threads",
+  x: "X",
+  google_maps: "マップ",
   clinic_page: "医院ページ",
 };
 
@@ -546,6 +549,14 @@ export default function DashboardPage() {
 
       {/* 診断実施エリア */}
       <LocationSection
+        period={period}
+        channelId={selectedChannelId}
+        customStartDate={period === "custom" ? customStartDate : undefined}
+        customEndDate={period === "custom" ? customEndDate : undefined}
+      />
+
+      {/* CTAクリック推移グラフ */}
+      <CTAChart
         period={period}
         channelId={selectedChannelId}
         customStartDate={period === "custom" ? customStartDate : undefined}
