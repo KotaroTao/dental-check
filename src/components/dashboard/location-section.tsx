@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { MapPin, TrendingUp, Check, SquareCheck, Square } from "lucide-react";
+import { MapPin, Check, SquareCheck, Square, HelpCircle } from "lucide-react";
 
 // Leafletはクライアントサイドのみで読み込む
 const LocationMap = dynamic(() => import("./location-map"), {
@@ -101,6 +101,9 @@ export function LocationSection({
   };
 
   const isAllSelected = selectedChannelIds.length === activeChannels.length;
+
+  // ヘルプポップオーバーの表示状態
+  const [showHelp, setShowHelp] = useState(false);
 
   useEffect(() => {
     const fetchLocations = async () => {
@@ -248,13 +251,34 @@ export function LocationSection({
 
   return (
     <div className="bg-white rounded-xl shadow-sm border p-6">
-      <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-        <MapPin className="w-5 h-5" />
-        診断実施エリア
-        <span className="text-sm font-normal text-gray-500">
-          （{total}件中 位置特定 {validLocations.length}件）
-        </span>
-      </h2>
+      <div className="flex items-center gap-2 mb-4">
+        <h2 className="text-lg font-bold flex items-center gap-2">
+          <MapPin className="w-5 h-5" />
+          診断実施エリア
+          <span className="text-sm font-normal text-gray-500">
+            （{total}件中 位置特定 {validLocations.length}件）
+          </span>
+        </h2>
+        <div className="relative">
+          <button
+            onClick={() => setShowHelp(!showHelp)}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <HelpCircle className="w-4 h-4" />
+          </button>
+          {showHelp && (
+            <div className="absolute left-0 top-6 z-50 w-64 p-3 bg-white rounded-lg shadow-xl border text-sm text-gray-600">
+              <p>個人情報保護の観点から、詳細な位置情報ではなく大まかな地域（市区町村レベル）のみを表示しています。</p>
+              <button
+                onClick={() => setShowHelp(false)}
+                className="mt-2 text-xs text-blue-600 hover:underline"
+              >
+                閉じる
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
 
       <ChannelSelector />
 
@@ -275,13 +299,9 @@ export function LocationSection({
         </div>
 
         {/* リスト */}
-        <div>
-          <h3 className="text-sm font-medium text-gray-500 mb-3 flex items-center gap-1">
-            <TrendingUp className="w-4 h-4" />
-            エリア別 TOP10
-          </h3>
+        <div className="max-h-64 overflow-y-auto">
           <div className="space-y-2">
-            {aggregatedLocations.slice(0, 10).map((loc, index) => {
+            {aggregatedLocations.map((loc, index) => {
               const maxCount = aggregatedLocations[0]?.count || 1;
               const percentage = (loc.count / maxCount) * 100;
 
