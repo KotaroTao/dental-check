@@ -19,7 +19,6 @@ import {
   Info,
 } from "lucide-react";
 import { LocationSection } from "@/components/dashboard/location-section";
-import { CTAChart } from "@/components/dashboard/cta-chart";
 
 // 期間の選択肢
 const PERIOD_OPTIONS = [
@@ -86,6 +85,7 @@ interface ChannelStats {
   ctaByType: Record<string, number>;
   genderByType: Record<string, number>;
   ageRanges: Record<string, number>;
+  accessByDate: { date: string; count: number }[];
 }
 
 interface HistoryItem {
@@ -601,10 +601,33 @@ export default function DashboardPage() {
                     <>
                       {/* PC版: ホバーでポップオーバー */}
                       <div className="hidden md:grid grid-cols-4 gap-2 text-center">
-                        <div className="bg-gray-50 rounded-lg py-2 px-3">
-                          <div className="text-xs text-gray-500 mb-0.5">アクセス</div>
-                          <div className="text-lg font-bold text-gray-800">{stats.accessCount}</div>
-                        </div>
+                        <Popover
+                          trigger={
+                            <div className="bg-gray-50 rounded-lg py-2 px-3 hover:bg-blue-50 transition-colors">
+                              <div className="text-xs text-gray-500 mb-0.5 flex items-center justify-center gap-1">
+                                アクセス <Info className="w-3 h-3" />
+                              </div>
+                              <div className="text-lg font-bold text-gray-800">{stats.accessCount}</div>
+                            </div>
+                          }
+                          className="left-0 top-full mt-2"
+                        >
+                          <div className="text-sm">
+                            <div className="font-medium text-gray-700 mb-2">日別アクセス</div>
+                            {stats.accessByDate.length === 0 ? (
+                              <div className="text-gray-400">データなし</div>
+                            ) : (
+                              <div className="space-y-1 max-h-48 overflow-y-auto">
+                                {stats.accessByDate.map((item) => (
+                                  <div key={item.date} className="flex justify-between text-gray-600">
+                                    <span>{new Date(item.date).toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" })}</span>
+                                    <span>{item.count}回</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </Popover>
                         <Popover
                           trigger={
                             <div className="bg-gray-50 rounded-lg py-2 px-3 hover:bg-blue-50 transition-colors">
@@ -741,6 +764,20 @@ export default function DashboardPage() {
                                 )}
                               </div>
                             </div>
+                            <div className="border-t pt-2">
+                              <div className="font-medium text-gray-700 mb-1">日別アクセス</div>
+                              <div className="flex flex-wrap gap-2">
+                                {stats.accessByDate.length === 0 ? (
+                                  <span className="text-gray-400">データなし</span>
+                                ) : (
+                                  stats.accessByDate.map((item) => (
+                                    <span key={item.date} className="text-gray-600">
+                                      {new Date(item.date).toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" })}: {item.count}回
+                                    </span>
+                                  ))
+                                )}
+                              </div>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -755,14 +792,6 @@ export default function DashboardPage() {
 
       {/* 診断実施エリア */}
       <LocationSection
-        period={period}
-        channelId={selectedChannelId}
-        customStartDate={period === "custom" ? customStartDate : undefined}
-        customEndDate={period === "custom" ? customEndDate : undefined}
-      />
-
-      {/* CTAクリック推移 */}
-      <CTAChart
         period={period}
         channelId={selectedChannelId}
         customStartDate={period === "custom" ? customStartDate : undefined}

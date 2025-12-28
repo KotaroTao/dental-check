@@ -62,6 +62,7 @@ export async function GET(request: NextRequest) {
       ctaByChannel,
       genderByChannel,
       ageByChannel,
+      accessLogs,
     ] = await Promise.all([
       // アクセス数（チャンネル別）
       prisma.accessLog.groupBy({
@@ -134,6 +135,18 @@ export async function GET(request: NextRequest) {
         },
         select: { channelId: true, userAge: true },
       }),
+
+      // アクセスログ（日付別集計用）
+      prisma.accessLog.findMany({
+        where: {
+          clinicId: session.clinicId,
+          channelId: { in: channelIds },
+          createdAt: { gte: dateFrom, lte: dateTo },
+          eventType: { not: "clinic_page_view" },
+        },
+        select: { channelId: true, createdAt: true },
+        orderBy: { createdAt: "desc" },
+      }),
     ]);
 
     // 統計データを整理
@@ -145,6 +158,7 @@ export async function GET(request: NextRequest) {
       ctaByType: Record<string, number>;
       genderByType: Record<string, number>;
       ageRanges: Record<string, number>;
+      accessByDate: { date: string; count: number }[];
     }> = {};
 
     // 初期化
@@ -157,6 +171,7 @@ export async function GET(request: NextRequest) {
         ctaByType: {},
         genderByType: { male: 0, female: 0, other: 0 },
         ageRanges: { "~19": 0, "20-29": 0, "30-39": 0, "40-49": 0, "50-59": 0, "60~": 0 },
+        accessByDate: [],
       };
     }
 
@@ -214,6 +229,26 @@ export async function GET(request: NextRequest) {
       s.completionRate = s.accessCount > 0
         ? Math.round((s.completedCount / s.accessCount) * 100 * 10) / 10
         : 0;
+    }
+
+    // 日付別アクセス数を集計（直近10日分のみ）
+    const accessByDateMap: Record<string, Record<string, number>> = {};
+    for (const channelId of channelIds) {
+      accessByDateMap[channelId] = {};
+    }
+    for (const log of accessLogs) {
+      if (log.channelId && accessByDateMap[log.channelId]) {
+        const dateKey = log.createdAt.toISOString().split("T")[0];
+        accessByDateMap[log.channelId][dateKey] = (accessByDateMap[log.channelId][dateKey] || 0) + 1;
+      }
+    }
+    for (const channelId of channelIds) {
+      const dateMap = accessByDateMap[channelId];
+      const sortedDates = Object.keys(dateMap).sort((a, b) => b.localeCompare(a));
+      stats[channelId].accessByDate = sortedDates.slice(0, 10).map((date) => ({
+        date,
+        count: dateMap[date],
+      }));
     }
 
     return NextResponse.json({ stats });
