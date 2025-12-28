@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, GripVertical, AlertCircle, Eye, Phone, Calendar, MapPin, MessageCircle } from "lucide-react";
+import { Plus, Trash2, GripVertical, AlertCircle, Eye, Phone, Calendar, MapPin, MessageCircle, Loader2, Save } from "lucide-react";
 import type { CustomCTA } from "@/types/clinic";
 
 // URL検証関数（絶対URLと相対URLを許可）
@@ -807,6 +807,24 @@ export default function SettingsPage() {
           </Button>
         </div>
       </form>
+
+      {/* 固定保存ボタン */}
+      <button
+        type="button"
+        onClick={() => {
+          const form = document.querySelector('form');
+          if (form) form.requestSubmit();
+        }}
+        disabled={isSaving}
+        className="fixed bottom-6 right-6 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full shadow-lg flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed z-50"
+      >
+        {isSaving ? (
+          <Loader2 className="w-5 h-5 animate-spin" />
+        ) : (
+          <Save className="w-5 h-5" />
+        )}
+        <span className="font-medium">{isSaving ? "保存中..." : "設定を保存"}</span>
+      </button>
     </div>
   );
 }
