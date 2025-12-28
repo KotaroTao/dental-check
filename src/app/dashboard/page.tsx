@@ -566,7 +566,7 @@ export default function DashboardPage() {
                       <Link href={`/dashboard/channels/${channel.id}`}>
                         <Button variant="outline" size="sm" className="gap-1">
                           <QrCode className="w-4 h-4" />
-                          詳細
+                          QRコード表示
                         </Button>
                       </Link>
                       <Link href={`/dashboard/channels/${channel.id}/edit`}>
@@ -605,7 +605,7 @@ export default function DashboardPage() {
                           trigger={
                             <div className="bg-gray-50 rounded-lg py-2 px-3 hover:bg-blue-50 transition-colors">
                               <div className="text-xs text-gray-500 mb-0.5 flex items-center justify-center gap-1">
-                                アクセス <Info className="w-3 h-3" />
+                                QR読み込み <Info className="w-3 h-3" />
                               </div>
                               <div className="text-lg font-bold text-gray-800">{stats.accessCount}</div>
                             </div>
@@ -702,7 +702,7 @@ export default function DashboardPage() {
                       <div className="md:hidden">
                         <div className="grid grid-cols-4 gap-2 text-center">
                           <div className="bg-gray-50 rounded-lg py-2 px-1">
-                            <div className="text-[10px] text-gray-500">アクセス</div>
+                            <div className="text-[10px] text-gray-500">QR読み込み</div>
                             <div className="text-base font-bold text-gray-800">{stats.accessCount}</div>
                           </div>
                           <div className="bg-gray-50 rounded-lg py-2 px-1">
