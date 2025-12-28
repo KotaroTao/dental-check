@@ -1,9 +1,11 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import type { ClinicPage, CTAConfig, WeeklySchedule } from "@/types/clinic";
-import { Phone, Calendar, MessageCircle, Instagram, Clock, MapPin, User, Stethoscope, CheckCircle, Bell } from "lucide-react";
+import { Clock, MapPin, User, Stethoscope, CheckCircle, Bell } from "lucide-react";
 import { PhotoCarousel } from "./photo-carousel";
 import { FloatingCTA } from "./floating-cta";
+import { ClinicCTA } from "./clinic-cta";
+import { PageViewTracker } from "./page-view-tracker";
 
 interface ClinicData {
   id: string;
@@ -87,13 +89,16 @@ export default async function ClinicPublicPage({
     k => k !== 'note' && clinicPage.weeklySchedule?.[k as keyof WeeklySchedule]
   );
   const hasAccess = clinicPage.access?.address;
-  const hasCTA = ctaConfig.phone || ctaConfig.bookingUrl || ctaConfig.lineUrl;
+  const hasCTA = ctaConfig.phone || ctaConfig.bookingUrl || ctaConfig.lineUrl || ctaConfig.instagramUrl || ctaConfig.youtubeUrl || ctaConfig.facebookUrl || ctaConfig.tiktokUrl || ctaConfig.threadsUrl;
   const hasTreatments = clinicPage.treatments && clinicPage.treatments.length > 0;
   const hasFacilities = clinicPage.facilities && clinicPage.facilities.length > 0;
   const hasAnnouncements = clinicPage.announcements && clinicPage.announcements.length > 0;
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* ページビュー追跡 */}
+      <PageViewTracker clinicId={clinic.id} />
+
       {/* ヘッダー */}
       <header
         className="text-white py-8"
@@ -378,65 +383,7 @@ export default async function ClinicPublicPage({
 
         {/* CTA（インライン） */}
         {hasCTA && (
-          <section className="bg-white rounded-xl shadow-sm p-6">
-            <h2 className="text-lg font-bold mb-4 text-center">ご予約・お問い合わせ</h2>
-
-            {ctaConfig.directorMessage && (
-              <p className="text-gray-600 text-sm mb-4 text-center">
-                {ctaConfig.directorMessage}
-              </p>
-            )}
-
-            <div className="space-y-3">
-              {ctaConfig.phone && (
-                <a
-                  href={`tel:${ctaConfig.phone}`}
-                  className="flex items-center justify-center gap-2 w-full py-3 rounded-lg text-white font-medium"
-                  style={{ backgroundColor: mainColor }}
-                >
-                  <Phone className="w-5 h-5" />
-                  電話予約 {ctaConfig.phone}
-                </a>
-              )}
-
-              {ctaConfig.bookingUrl && (
-                <a
-                  href={ctaConfig.bookingUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 w-full py-3 rounded-lg border-2 font-medium"
-                  style={{ borderColor: mainColor, color: mainColor }}
-                >
-                  <Calendar className="w-5 h-5" />
-                  WEB予約
-                </a>
-              )}
-
-              {ctaConfig.lineUrl && (
-                <a
-                  href={ctaConfig.lineUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 w-full py-3 rounded-lg bg-[#06C755] text-white font-medium"
-                >
-                  <MessageCircle className="w-5 h-5" />
-                  LINEで予約
-                </a>
-              )}
-
-              {ctaConfig.instagramUrl && (
-                <a
-                  href={ctaConfig.instagramUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 w-full py-3 rounded-lg bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 text-white font-medium"
-                >
-                  <Instagram className="w-5 h-5" />
-                  Instagram
-                </a>
-              )}
-            </div>
-          </section>
+          <ClinicCTA ctaConfig={ctaConfig} mainColor={mainColor} clinicId={clinic.id} />
         )}
 
         {/* コンテンツがない場合 */}
@@ -449,7 +396,7 @@ export default async function ClinicPublicPage({
 
       {/* フローティングCTA */}
       {hasCTA && (
-        <FloatingCTA ctaConfig={ctaConfig} mainColor={mainColor} />
+        <FloatingCTA ctaConfig={ctaConfig} mainColor={mainColor} clinicId={clinic.id} />
       )}
 
       {/* フッター */}

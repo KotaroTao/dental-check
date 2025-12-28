@@ -18,27 +18,47 @@ export async function GET(request: NextRequest) {
     // 期間の計算
     let dateFrom: Date;
     const dateTo = new Date();
+    let prevDateFrom: Date;
+    let prevDateTo: Date;
 
     if (period === "custom" && startDate && endDate) {
       dateFrom = new Date(startDate);
       dateTo.setTime(new Date(endDate).getTime());
       dateTo.setHours(23, 59, 59, 999);
+      // カスタム期間の場合、同じ日数だけ前の期間を計算
+      const durationMs = dateTo.getTime() - dateFrom.getTime();
+      prevDateTo = new Date(dateFrom.getTime() - 1);
+      prevDateFrom = new Date(prevDateTo.getTime() - durationMs);
     } else {
       switch (period) {
         case "today":
           dateFrom = new Date();
           dateFrom.setHours(0, 0, 0, 0);
+          // 前日
+          prevDateTo = new Date(dateFrom.getTime() - 1);
+          prevDateFrom = new Date(prevDateTo);
+          prevDateFrom.setHours(0, 0, 0, 0);
           break;
         case "week":
           dateFrom = new Date();
           dateFrom.setDate(dateFrom.getDate() - 7);
           dateFrom.setHours(0, 0, 0, 0);
+          // 前週
+          prevDateTo = new Date(dateFrom.getTime() - 1);
+          prevDateFrom = new Date(prevDateTo);
+          prevDateFrom.setDate(prevDateFrom.getDate() - 7);
+          prevDateFrom.setHours(0, 0, 0, 0);
           break;
         case "month":
         default:
           dateFrom = new Date();
           dateFrom.setMonth(dateFrom.getMonth() - 1);
           dateFrom.setHours(0, 0, 0, 0);
+          // 前月
+          prevDateTo = new Date(dateFrom.getTime() - 1);
+          prevDateFrom = new Date(prevDateTo);
+          prevDateFrom.setMonth(prevDateFrom.getMonth() - 1);
+          prevDateFrom.setHours(0, 0, 0, 0);
           break;
       }
     }
@@ -53,25 +73,67 @@ export async function GET(request: NextRequest) {
       ...(channelId && { channelId }),
     };
 
-    // 統計データを並行取得
-    const [accessCount, completedCount, ctaClicks, channels] = await Promise.all([
-      // アクセス数
+    // 前期の共通フィルター条件
+    const prevBaseFilter = {
+      clinicId: session.clinicId,
+      createdAt: {
+        gte: prevDateFrom,
+        lte: prevDateTo,
+      },
+      ...(channelId && { channelId }),
+    };
+
+    // 診断完了者のフィルター条件
+    const completedFilter = {
+      clinicId: session.clinicId,
+      createdAt: {
+        gte: dateFrom,
+        lte: dateTo,
+      },
+      ...(channelId && { channelId }),
+      isDemo: false,
+      completedAt: { not: null },
+    };
+
+    // 前期の診断完了者のフィルター条件
+    const prevCompletedFilter = {
+      clinicId: session.clinicId,
+      createdAt: {
+        gte: prevDateFrom,
+        lte: prevDateTo,
+      },
+      ...(channelId && { channelId }),
+      isDemo: false,
+      completedAt: { not: null },
+    };
+
+    // 統計データを並行取得（現期間 + 前期間）
+    const [
+      accessCount,
+      completedCount,
+      ctaClicks,
+      channels,
+      clinicPageViews,
+      ctaFromResult,
+      ctaFromClinicPage,
+      genderStats,
+      completedSessions,
+      // 前期データ
+      prevAccessCount,
+      prevCompletedCount,
+      prevCtaCount,
+    ] = await Promise.all([
+      // アクセス数（診断ページ）
       prisma.accessLog.count({
-        where: baseFilter,
+        where: {
+          ...baseFilter,
+          eventType: { not: "clinic_page_view" },
+        },
       }),
 
       // 診断完了数
       prisma.diagnosisSession.count({
-        where: {
-          clinicId: session.clinicId,
-          createdAt: {
-            gte: dateFrom,
-            lte: dateTo,
-          },
-          ...(channelId && { channelId }),
-          isDemo: false,
-          completedAt: { not: null },
-        },
+        where: completedFilter,
       }),
 
       // CTAクリック（タイプ別に集計）
@@ -87,6 +149,70 @@ export async function GET(request: NextRequest) {
         select: { id: true, name: true, diagnosisTypeSlug: true },
         orderBy: { createdAt: "desc" },
       }),
+
+      // 医院紹介ページの閲覧数
+      prisma.accessLog.count({
+        where: {
+          clinicId: session.clinicId,
+          eventType: "clinic_page_view",
+          createdAt: {
+            gte: dateFrom,
+            lte: dateTo,
+          },
+        },
+      }),
+
+      // 診断結果からのCTAクリック（channelIdがある）
+      prisma.cTAClick.count({
+        where: {
+          ...baseFilter,
+          channelId: { not: null },
+        },
+      }),
+
+      // 医院紹介ページからのCTAクリック（channelIdがない）
+      prisma.cTAClick.count({
+        where: {
+          clinicId: session.clinicId,
+          channelId: null,
+          createdAt: {
+            gte: dateFrom,
+            lte: dateTo,
+          },
+        },
+      }),
+
+      // 性別統計
+      prisma.diagnosisSession.groupBy({
+        by: ['userGender'],
+        where: completedFilter,
+        _count: { id: true },
+      }),
+
+      // 年齢データを取得（年齢層統計用）
+      prisma.diagnosisSession.findMany({
+        where: completedFilter,
+        select: { userAge: true },
+      }),
+
+      // --- 前期データ ---
+      // 前期アクセス数
+      prisma.accessLog.count({
+        where: {
+          ...prevBaseFilter,
+          eventType: { not: "clinic_page_view" },
+        },
+      }),
+
+      // 前期診断完了数
+      prisma.diagnosisSession.count({
+        where: prevCompletedFilter,
+      }),
+
+      // 前期CTAクリック数
+      prisma.cTAClick.count({
+        where: prevBaseFilter,
+      }),
     ]);
 
     // CTAクリックをタイプ別に整理
@@ -101,6 +227,60 @@ export async function GET(request: NextRequest) {
     const completionRate =
       accessCount > 0 ? Math.round((completedCount / accessCount) * 100 * 10) / 10 : 0;
 
+    // コンバージョン率を計算
+    // 診断結果→CTAのコンバージョン率
+    const resultConversionRate =
+      completedCount > 0 ? Math.round((ctaFromResult / completedCount) * 100 * 10) / 10 : 0;
+
+    // 医院紹介ページ→CTAのコンバージョン率
+    const clinicPageConversionRate =
+      clinicPageViews > 0 ? Math.round((ctaFromClinicPage / clinicPageViews) * 100 * 10) / 10 : 0;
+
+    // 性別統計を整理
+    const genderByType: Record<string, number> = {
+      male: 0,
+      female: 0,
+      other: 0,
+    };
+    for (const stat of genderStats) {
+      if (stat.userGender && genderByType.hasOwnProperty(stat.userGender)) {
+        genderByType[stat.userGender] = stat._count.id;
+      }
+    }
+
+    // 年齢層統計を計算
+    const ageRanges: Record<string, number> = {
+      "~19": 0,
+      "20-29": 0,
+      "30-39": 0,
+      "40-49": 0,
+      "50-59": 0,
+      "60~": 0,
+    };
+    for (const session of completedSessions) {
+      const age = session.userAge;
+      if (age !== null) {
+        if (age < 20) ageRanges["~19"]++;
+        else if (age < 30) ageRanges["20-29"]++;
+        else if (age < 40) ageRanges["30-39"]++;
+        else if (age < 50) ageRanges["40-49"]++;
+        else if (age < 60) ageRanges["50-59"]++;
+        else ageRanges["60~"]++;
+      }
+    }
+
+    // トレンド計算（前期比の変化率）
+    const calcTrend = (current: number, previous: number) => {
+      if (previous === 0) return current > 0 ? 100 : 0;
+      return Math.round(((current - previous) / previous) * 100);
+    };
+
+    const trends = {
+      accessCount: calcTrend(accessCount, prevAccessCount),
+      completedCount: calcTrend(completedCount, prevCompletedCount),
+      ctaCount: calcTrend(ctaCount, prevCtaCount),
+    };
+
     return NextResponse.json({
       stats: {
         accessCount,
@@ -108,6 +288,22 @@ export async function GET(request: NextRequest) {
         completionRate,
         ctaCount,
         ctaByType,
+        // コンバージョン関連
+        clinicPageViews,
+        ctaFromResult,
+        ctaFromClinicPage,
+        resultConversionRate,
+        clinicPageConversionRate,
+        // 年齢・性別統計
+        genderByType,
+        ageRanges,
+        // 前期比トレンド
+        trends,
+        prevPeriod: {
+          accessCount: prevAccessCount,
+          completedCount: prevCompletedCount,
+          ctaCount: prevCtaCount,
+        },
       },
       channels,
       period: {

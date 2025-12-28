@@ -94,7 +94,9 @@ export async function GET(request: NextRequest) {
           },
           ctaClicks: {
             select: { ctaType: true },
-            take: 1,
+          },
+          _count: {
+            select: { ctaClicks: true },
           },
         },
         orderBy: { createdAt: "desc" },
@@ -112,14 +114,24 @@ export async function GET(request: NextRequest) {
       clinic_page: "医院ページクリック",
     };
 
+    // 性別の表示名
+    const GENDER_NAMES: Record<string, string> = {
+      male: "男性",
+      female: "女性",
+      other: "-",
+    };
+
     // 履歴データを整形
     type SessionWithRelations = {
       id: string;
       createdAt: Date;
+      userAge: number | null;
+      userGender: string | null;
       resultCategory: string | null;
       channel: { id: string; name: string } | null;
       diagnosisType: { slug: string; name: string } | null;
       ctaClicks: { ctaType: string }[];
+      _count: { ctaClicks: number };
     };
 
     const history = (sessions as SessionWithRelations[]).map((s) => {
@@ -127,12 +139,15 @@ export async function GET(request: NextRequest) {
       return {
         id: s.id,
         createdAt: s.createdAt,
+        userAge: s.userAge,
+        userGender: s.userGender ? GENDER_NAMES[s.userGender] || s.userGender : null,
         diagnosisType: s.diagnosisType?.name || DIAGNOSIS_TYPE_NAMES[s.diagnosisType?.slug || ""] || "不明",
         diagnosisTypeSlug: s.diagnosisType?.slug,
         channelName: s.channel?.name || "不明",
         channelId: s.channel?.id,
         resultCategory: s.resultCategory || "-",
         ctaType: ctaClick ? CTA_TYPE_NAMES[ctaClick.ctaType] || ctaClick.ctaType : null,
+        ctaClickCount: s._count.ctaClicks,
       };
     });
 
