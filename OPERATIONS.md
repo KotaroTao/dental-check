@@ -9,19 +9,19 @@
 | ドメイン | qrqr-dental.com |
 | サーバーIP | 210.131.223.161 |
 | サーバー種別 | Xserver VPS |
-| OS | Ubuntu |
+| OS | Ubuntu 25.04 |
 
 ### 構成図
 
 ```
 [GitHub]
-    ↓ git push (main/masterブランチ)
+    ↓ git push (mainブランチ)
 [GitHub Actions]
     ↓ SSH自動デプロイ
 [Xserver VPS]
 ├── Nginx ← SSL終端 + リバースプロキシ + 静的ファイル
 ├── PM2 + Node.js 20 ← Next.jsアプリ (ポート3000)
-└── PostgreSQL 15 ← データベース (ポート5432)
+└── PostgreSQL 17 ← データベース (ポート5432)
 ```
 
 ### デプロイ方法
@@ -37,7 +37,7 @@ git push origin main
 ssh -i ~/Downloads/dental-check-key.pem root@210.131.223.161
 cd /var/www/dental-check
 git pull origin main
-npm install --production
+npm install
 npm run build
 pm2 restart dental-app
 ```
@@ -124,6 +124,11 @@ tail -f /var/log/nginx/access.log
 tail -f /var/log/nginx/error.log
 ```
 
+### 設定ファイル
+```
+/etc/nginx/sites-available/dental-check
+```
+
 ---
 
 ## データベース操作
@@ -149,14 +154,47 @@ cd /var/www/dental-check
 npx prisma db push
 ```
 
-### バックアップ
+### 手動バックアップ
 ```bash
-pg_dump -U dental_user -d dental_check > /var/backups/dental_$(date +%Y%m%d).sql
+sudo -u postgres pg_dump dental_check > /var/backups/dental-check/dental_$(date +%Y%m%d_%H%M%S).sql
 ```
 
 ### リストア
 ```bash
-psql -U dental_user -d dental_check < /var/backups/dental_YYYYMMDD.sql
+sudo -u postgres psql -d dental_check < /var/backups/dental-check/dental_YYYYMMDD_HHMMSS.sql
+```
+
+---
+
+## 自動バックアップ
+
+### 設定内容
+
+| 項目 | 値 |
+|------|-----|
+| 実行時刻 | 毎日 午前3時 |
+| 保存場所 | `/var/backups/dental-check/` |
+| 保持期間 | 30日間（古いものは自動削除） |
+| ログ | `/var/log/dental-backup.log` |
+
+### バックアップ確認
+```bash
+ls -la /var/backups/dental-check/
+```
+
+### バックアップログ確認
+```bash
+tail -f /var/log/dental-backup.log
+```
+
+### バックアップスクリプト
+```
+/var/www/dental-check/scripts/backup-db.sh
+```
+
+### 手動実行
+```bash
+/var/www/dental-check/scripts/backup-db.sh
 ```
 
 ---
@@ -229,7 +267,7 @@ pm2 status
 
 # 手動で起動テスト
 cd /var/www/dental-check
-node .next/standalone/server.js
+npm start
 ```
 
 ### 502 Bad Gateway
@@ -252,6 +290,12 @@ df -h
 ### メモリ確認
 ```bash
 free -h
+```
+
+### サーバー再起動
+```bash
+reboot
+# → PM2は自動起動設定済み
 ```
 
 ---
@@ -342,242 +386,3 @@ git push origin feature/xxx
 - 代表: 田尾耕太郎
 - 所在地: 兵庫県西宮市北名次町5-9-301
 - メール: mail@function-t.com
-
----
-
----
-
-# 移行手順書（Docker → Dockerなし構成）
-
-以下は、現在のDocker構成から新しいDockerなし構成への移行手順です。
-
-## 事前準備
-
-### 1. 本番DBのバックアップ
-```bash
-ssh -i ~/Downloads/dental-check-key.pem root@210.131.223.161
-cd /var/www/dental-check
-docker exec dental-check-db pg_dump -U dental_user -d dental_check > backup_$(date +%Y%m%d).sql
-```
-
-### 2. 現在の環境変数を控える
-```bash
-cat .env.production
-```
-
----
-
-## 移行手順
-
-### Step 1: Node.js 20 インストール
-
-```bash
-# NodeSourceリポジトリ追加
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-
-# Node.jsインストール
-sudo apt-get install -y nodejs
-
-# バージョン確認
-node -v  # v20.x.x
-npm -v
-```
-
-### Step 2: PM2 インストール
-
-```bash
-# PM2をグローバルインストール
-sudo npm install -g pm2
-
-# 自動起動設定
-pm2 startup systemd
-```
-
-### Step 3: PostgreSQL インストール・データ移行
-
-```bash
-# PostgreSQL 15 インストール
-sudo apt-get install -y postgresql-15 postgresql-contrib-15
-
-# PostgreSQL起動
-sudo systemctl start postgresql
-sudo systemctl enable postgresql
-
-# ユーザー・データベース作成
-sudo -u postgres psql << EOF
-CREATE USER dental_user WITH PASSWORD 'YOUR_PASSWORD_HERE';
-CREATE DATABASE dental_check OWNER dental_user;
-GRANT ALL PRIVILEGES ON DATABASE dental_check TO dental_user;
-EOF
-
-# データインポート
-sudo -u postgres psql -d dental_check < /var/www/dental-check/backup_YYYYMMDD.sql
-
-# 権限付与
-sudo -u postgres psql -d dental_check << EOF
-GRANT ALL ON ALL TABLES IN SCHEMA public TO dental_user;
-GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO dental_user;
-EOF
-```
-
-### Step 4: Nginx 設定
-
-```bash
-# Nginxインストール（まだの場合）
-sudo apt-get install -y nginx
-
-# Certbotインストール（まだの場合）
-sudo apt-get install -y certbot python3-certbot-nginx
-```
-
-**Nginx設定ファイル作成:**
-```bash
-sudo nano /etc/nginx/sites-available/dental-check
-```
-
-以下を記述:
-```nginx
-server {
-    listen 80;
-    server_name qrqr-dental.com www.qrqr-dental.com;
-    return 301 https://$server_name$request_uri;
-}
-
-server {
-    listen 443 ssl http2;
-    server_name qrqr-dental.com www.qrqr-dental.com;
-
-    ssl_certificate /etc/letsencrypt/live/qrqr-dental.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/qrqr-dental.com/privkey.pem;
-
-    # アップロードファイル
-    location /uploads/ {
-        alias /var/www/dental-check/public/uploads/;
-        expires 30d;
-        add_header Cache-Control "public, immutable";
-    }
-
-    # 静的ファイル
-    location /_next/static/ {
-        alias /var/www/dental-check/.next/static/;
-        expires 365d;
-        add_header Cache-Control "public, immutable";
-    }
-
-    # Next.jsアプリへプロキシ
-    location / {
-        proxy_pass http://127.0.0.1:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
-    }
-}
-```
-
-```bash
-# 有効化
-sudo ln -s /etc/nginx/sites-available/dental-check /etc/nginx/sites-enabled/
-sudo rm /etc/nginx/sites-enabled/default  # デフォルト削除
-
-# 設定テスト
-sudo nginx -t
-
-# 再起動
-sudo systemctl restart nginx
-```
-
-### Step 5: 環境変数設定
-
-```bash
-cd /var/www/dental-check
-nano .env
-```
-
-以下を記述:
-```env
-DATABASE_URL="postgresql://dental_user:YOUR_PASSWORD@localhost:5432/dental_check"
-JWT_SECRET="your-jwt-secret"
-NEXT_PUBLIC_APP_URL="https://qrqr-dental.com"
-PAYJP_SECRET_KEY="sk_xxx"
-PAYJP_WEBHOOK_SECRET="whsec_xxx"
-NEXT_PUBLIC_PAYJP_PUBLIC_KEY="pk_xxx"
-```
-
-### Step 6: アプリビルド・起動
-
-```bash
-cd /var/www/dental-check
-
-# 依存関係インストール
-npm install --production
-
-# Prismaクライアント生成
-npx prisma generate
-
-# ビルド
-npm run build
-
-# PM2で起動
-pm2 start npm --name "dental-app" -- start
-
-# 状態確認
-pm2 status
-
-# 自動起動設定を保存
-pm2 save
-```
-
-### Step 7: 動作確認
-
-```bash
-# ヘルスチェック
-curl -I https://qrqr-dental.com
-
-# ログ確認
-pm2 logs dental-app
-```
-
-### Step 8: GitHub Actions 設定
-
-1. GitHubリポジトリ → Settings → Secrets and variables → Actions
-2. 以下のSecretsを追加:
-   - `VPS_HOST`: `210.131.223.161`
-   - `VPS_USER`: `root`
-   - `VPS_SSH_KEY`: SSH秘密鍵の内容（`cat dental-check-key.pem`）
-   - `VPS_PORT`: `22`
-
-### Step 9: Dockerコンテナ停止・削除
-
-```bash
-# Dockerコンテナ停止
-docker compose -f docker-compose.production.yml --env-file .env.production down
-
-# 不要なDockerリソース削除
-docker system prune -a
-```
-
----
-
-## 移行後の確認チェックリスト
-
-- [ ] https://qrqr-dental.com にアクセスできる
-- [ ] 管理画面にログインできる
-- [ ] 診断が実行できる
-- [ ] 画像アップロードが動作する
-- [ ] `git push origin main` で自動デプロイされる
-- [ ] PM2でアプリが自動起動する（`pm2 status`）
-
----
-
-## ロールバック手順（問題発生時）
-
-```bash
-# Dockerコンテナを再起動
-cd /var/www/dental-check
-docker compose -f docker-compose.production.yml --env-file .env.production up -d
-```
