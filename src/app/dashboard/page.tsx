@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { BarChart3, Users, MousePointerClick, Percent, ChevronDown, ChevronUp, QrCode, Plus, Settings, Trash2, Building2, TrendingUp, TrendingDown, Download, ArrowUpDown, Image as ImageIcon, X } from "lucide-react";
+import { BarChart3, Users, MousePointerClick, Percent, ChevronDown, ChevronUp, QrCode, Plus, Settings, Trash2, Building2, TrendingUp, TrendingDown, Download, ArrowUpDown, Image as ImageIcon, X, RotateCcw } from "lucide-react";
 import { LocationSection } from "@/components/dashboard/location-section";
 import { CTAChart } from "@/components/dashboard/cta-chart";
 
@@ -229,6 +229,7 @@ export default function DashboardPage() {
   const [period, setPeriod] = useState("month");
   const [selectedChannelId, setSelectedChannelId] = useState("");
   const [selectedDiagnosisType, setSelectedDiagnosisType] = useState("");
+  const [showHiddenChannels, setShowHiddenChannels] = useState(false);
 
   // カスタム期間
   const getDefaultDates = () => {
@@ -338,9 +339,9 @@ export default function DashboardPage() {
     fetchHistory(0, false);
   }, [fetchStats, fetchHistory]);
 
-  // QRコード削除
-  const handleDeleteChannel = async (id: string) => {
-    if (!confirm("このQRコードを削除しますか？関連するアクセスログも削除されます。")) {
+  // QRコード非表示
+  const handleHideChannel = async (id: string) => {
+    if (!confirm("このQRコードを非表示にしますか？統計からも除外されます。後から復元できます。")) {
       return;
     }
 
@@ -350,13 +351,33 @@ export default function DashboardPage() {
       });
 
       if (response.ok) {
-        setChannels(channels.filter((c) => c.id !== id));
+        setChannels(channels.map((c) => c.id === id ? { ...c, isActive: false } : c));
         // 統計も再取得
         fetchStats();
         fetchHistory(0, false);
       }
     } catch (error) {
-      console.error("Failed to delete channel:", error);
+      console.error("Failed to hide channel:", error);
+    }
+  };
+
+  // QRコード復元
+  const handleRestoreChannel = async (id: string) => {
+    try {
+      const response = await fetch(`/api/channels/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: true }),
+      });
+
+      if (response.ok) {
+        setChannels(channels.map((c) => c.id === id ? { ...c, isActive: true } : c));
+        // 統計も再取得
+        fetchStats();
+        fetchHistory(0, false);
+      }
+    } catch (error) {
+      console.error("Failed to restore channel:", error);
     }
   };
 
@@ -553,18 +574,44 @@ export default function DashboardPage() {
           </Link>
         </div>
 
-        {channels.length === 0 ? (
+        {/* タブ */}
+        <div className="flex border-b px-6">
+          <button
+            onClick={() => setShowHiddenChannels(false)}
+            className={`px-4 py-3 text-sm font-medium border-b-2 -mb-px ${
+              !showHiddenChannels
+                ? "border-blue-600 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            有効 ({channels.filter(c => c.isActive).length})
+          </button>
+          <button
+            onClick={() => setShowHiddenChannels(true)}
+            className={`px-4 py-3 text-sm font-medium border-b-2 -mb-px ${
+              showHiddenChannels
+                ? "border-blue-600 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            非表示 ({channels.filter(c => !c.isActive).length})
+          </button>
+        </div>
+
+        {channels.filter(c => showHiddenChannels ? !c.isActive : c.isActive).length === 0 ? (
           <div className="p-12 text-center">
             <QrCode className="w-16 h-16 mx-auto text-gray-300 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">
-              まだQRコードがありません
+              {showHiddenChannels ? "非表示のQRコードはありません" : "まだQRコードがありません"}
             </h3>
             <p className="text-gray-500 mb-6">
-              QRコードを作成して計測を始めましょう
+              {showHiddenChannels ? "非表示にしたQRコードがここに表示されます" : "QRコードを作成して計測を始めましょう"}
             </p>
-            <Link href="/dashboard/channels/new">
-              <Button>最初のQRコードを作成する</Button>
-            </Link>
+            {!showHiddenChannels && (
+              <Link href="/dashboard/channels/new">
+                <Button>最初のQRコードを作成する</Button>
+              </Link>
+            )}
           </div>
         ) : (
           <>
@@ -591,7 +638,7 @@ export default function DashboardPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {channels.map((channel) => (
+                  {channels.filter(c => showHiddenChannels ? !c.isActive : c.isActive).map((channel) => (
                     <tr key={channel.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
@@ -656,14 +703,27 @@ export default function DashboardPage() {
                               <Settings className="w-4 h-4" />
                             </Button>
                           </Link>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteChannel(channel.id)}
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                          {channel.isActive ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleHideChannel(channel.id)}
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                              title="非表示にする"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRestoreChannel(channel.id)}
+                              className="text-green-500 hover:text-green-700 hover:bg-green-50"
+                              title="復元する"
+                            >
+                              <RotateCcw className="w-4 h-4" />
+                            </Button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -674,7 +734,7 @@ export default function DashboardPage() {
 
             {/* モバイル用カード */}
             <div className="md:hidden divide-y">
-              {channels.map((channel) => (
+              {channels.filter(c => showHiddenChannels ? !c.isActive : c.isActive).map((channel) => (
                 <div key={channel.id} className="p-4">
                   <div className="flex items-start gap-3 mb-2">
                     {/* サムネイル */}
@@ -736,14 +796,25 @@ export default function DashboardPage() {
                         <Settings className="w-4 h-4" />
                       </Button>
                     </Link>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteChannel(channel.id)}
-                      className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    {channel.isActive ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleHideChannel(channel.id)}
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRestoreChannel(channel.id)}
+                        className="text-green-500 hover:text-green-700 hover:bg-green-50"
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}
