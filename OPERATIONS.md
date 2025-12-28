@@ -211,13 +211,33 @@ docker compose -f docker-compose.production.yml --env-file .env.production down
 docker compose -f docker-compose.production.yml --env-file .env.production up -d
 ```
 
-### ビルド＆デプロイ
+### ビルド＆デプロイ（自動スクリプト推奨）
+
+**推奨: 自動デプロイスクリプトを使用**
+```bash
+cd /var/www/dental-check
+./scripts/deploy.sh
+```
+
+デプロイスクリプトは以下を自動実行：
+1. 最新コードの取得（git pull）
+2. 環境変数チェック
+3. SSL証明書チェック
+4. Dockerイメージビルド（コミットハッシュでタグ付け）
+5. 既存コンテナ停止
+6. データベースマイグレーション
+7. コンテナ起動
+8. ヘルスチェック
+9. デプロイ検証
+
+**手動デプロイ（非推奨）**
 ```bash
 cd /var/www/dental-check
 git pull origin claude/plan-qr-measurements-wb4qE
 docker compose -f docker-compose.production.yml --env-file .env.production build --no-cache
 docker compose -f docker-compose.production.yml --env-file .env.production up -d
 ```
+※手動デプロイ時は必ず`git pull`を先に実行すること。忘れると古いコードがデプロイされる。
 
 ## データベース操作
 
@@ -289,6 +309,29 @@ docker exec dental-check-nginx certbot certificates
 
 ## トラブルシューティング
 
+### デプロイしても新しいコードが反映されない
+
+**症状**: デプロイ後もアプリが古いまま、UIの変更が反映されない
+
+**原因**: `git pull`を実行せずに`docker build`を実行した場合、Dockerのビルドキャッシュにより古いコードがイメージに入る
+
+**確認方法**:
+```bash
+# コンテナ内のコードを確認（例: mobileMenuOpenが含まれているか）
+docker exec dental-check-app grep -l "mobileMenuOpen" /app/.next/server/app/dashboard/layout.js
+# → ファイルが見つからない場合は古いコード
+```
+
+**解決策**:
+```bash
+cd /var/www/dental-check
+git pull origin claude/plan-qr-measurements-wb4qE   # ← 必ず先にpull
+docker compose -f docker-compose.production.yml --env-file .env.production build --no-cache
+docker compose -f docker-compose.production.yml --env-file .env.production up -d
+```
+
+**予防策**: 自動デプロイスクリプト `./scripts/deploy.sh` を使用する（git pullが自動実行される）
+
 ### コンテナが起動しない
 ```bash
 # ログを確認
@@ -350,10 +393,9 @@ ssh -i ~/Downloads/dental-check-key.pem root@210.131.223.161
 3. **本番サーバーでデプロイ**
 ```bash
 cd /var/www/dental-check
-git pull origin claude/plan-qr-measurements-wb4qE
-docker compose -f docker-compose.production.yml --env-file .env.production build --no-cache
-docker compose -f docker-compose.production.yml --env-file .env.production up -d
+./scripts/deploy.sh
 ```
+※自動でgit pull、ビルド、マイグレーション、起動、検証まで実行される
 
 ### セッション間で引き継ぐ情報
 
@@ -367,6 +409,18 @@ docker compose -f docker-compose.production.yml --env-file .env.production up -d
 ## 開発状況（2025年12月28日更新）
 
 ### 最新の実装（このセッション）
+
+#### ダッシュボードのレスポンシブデザイン対応
+- **ハンバーガーメニュー**: iPad mini・スマートフォンでメニューを折りたたみ表示
+- **経路一覧のカード表示**: モバイルでは横スクロールテーブルではなくカード形式で表示
+- **診断履歴のカード表示**: モバイルでは履歴を見やすいカード形式で表示
+- **統計フィルターの縦並び**: スマートフォンではフィルターを縦に配置
+
+#### デプロイスクリプトの改善（scripts/deploy.sh）
+- **自動git pull**: デプロイ時に最新コードを自動取得（古いコードがデプロイされる問題を防止）
+- **コミットハッシュタグ**: Dockerイメージにコミットハッシュでタグ付け
+- **デプロイ検証**: デプロイ後に新しいコードが反映されたか自動確認
+- **docker compose対応**: 新しいDocker CLIの`docker compose`コマンドを使用
 
 #### 医院紹介ページの大幅強化
 - **写真カルーセル**: 複数写真のスライダー表示
@@ -394,6 +448,9 @@ docker compose -f docker-compose.production.yml --env-file .env.production up -d
 
 | ファイル | 説明 |
 |---------|------|
+| `src/app/dashboard/layout.tsx` | ダッシュボードヘッダー（ハンバーガーメニュー追加） |
+| `src/app/dashboard/page.tsx` | ダッシュボード（モバイルカード表示追加） |
+| `scripts/deploy.sh` | 本番デプロイスクリプト（自動git pull・検証機能追加） |
 | `src/app/api/upload/route.ts` | 画像アップロードAPI |
 | `src/app/dashboard/clinic/page.tsx` | 医院紹介ページ編集（大幅改修） |
 | `src/app/clinic/[slug]/page.tsx` | 公開医院ページ |
