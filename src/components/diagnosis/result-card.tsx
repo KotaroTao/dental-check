@@ -299,18 +299,12 @@ function ClinicCTA({
         {ctaConfig?.phone && (
           <a
             href={`tel:${ctaConfig.phone.replace(/-/g, "")}`}
-            className="block"
             onClick={() => trackClick("phone")}
+            className="flex items-center justify-center gap-2 w-full py-3 rounded-lg font-medium border-2 transition-all duration-200 hover:scale-[1.02] hover:shadow-md active:scale-[0.98]"
+            style={mainColor ? { borderColor: mainColor, color: mainColor } : { borderColor: "#2563eb", color: "#2563eb" }}
           >
-            <Button
-              variant="outline"
-              className="w-full gap-2"
-              size="lg"
-              style={mainColor ? { borderColor: mainColor, color: mainColor } : {}}
-            >
-              <Phone className="w-5 h-5" />
-              電話で相談 ({ctaConfig.phone})
-            </Button>
+            <Phone className="w-5 h-5" />
+            電話で相談 ({ctaConfig.phone})
           </a>
         )}
 
