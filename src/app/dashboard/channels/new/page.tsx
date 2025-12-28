@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, X, Image as ImageIcon } from "lucide-react";
 
 // 利用可能な診断タイプ
 const DIAGNOSIS_TYPES = [
@@ -16,11 +16,15 @@ const DIAGNOSIS_TYPES = [
 
 export default function NewChannelPage() {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     diagnosisTypeSlug: "",
   });
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -30,12 +34,93 @@ export default function NewChannelPage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // 画像選択処理
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // ファイルサイズチェック（5MB）
+    if (file.size > 5 * 1024 * 1024) {
+      setError("画像サイズは5MB以下にしてください");
+      return;
+    }
+
+    // 形式チェック
+    if (!file.type.startsWith("image/")) {
+      setError("画像ファイルを選択してください");
+      return;
+    }
+
+    setImageFile(file);
+    setError("");
+
+    // プレビュー生成
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setImagePreview(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // 画像削除
+  const handleImageRemove = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  // ドラッグ＆ドロップ
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith("image/")) {
+      const fakeEvent = {
+        target: { files: [file] },
+      } as unknown as React.ChangeEvent<HTMLInputElement>;
+      handleImageSelect(fakeEvent);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  // 画像アップロード
+  const uploadImage = async (): Promise<string | null> => {
+    if (!imageFile) return null;
+
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", imageFile);
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("画像のアップロードに失敗しました");
+      }
+
+      const data = await response.json();
+      return data.url;
+    } catch (error) {
+      console.error("Upload error:", error);
+      throw error;
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
     if (!formData.name.trim()) {
-      setError("経路名を入力してください");
+      setError("QRコード名を入力してください");
       return;
     }
 
@@ -47,20 +132,29 @@ export default function NewChannelPage() {
     setIsLoading(true);
 
     try {
+      // 画像があればアップロード
+      let imageUrl: string | null = null;
+      if (imageFile) {
+        imageUrl = await uploadImage();
+      }
+
       const response = await fetch("/api/channels", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          imageUrl,
+        }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || "経路の作成に失敗しました");
+        setError(data.error || "QRコードの作成に失敗しました");
         return;
       }
 
-      // 作成した経路の詳細ページへ
+      // 作成したQRコードの詳細ページへ
       router.push(`/dashboard/channels/${data.channel.id}`);
     } catch {
       setError("通信エラーが発生しました");
@@ -80,7 +174,7 @@ export default function NewChannelPage() {
       </Link>
 
       <div className="bg-white rounded-xl shadow-sm border p-6">
-        <h1 className="text-xl font-bold mb-6">新しい経路を作成</h1>
+        <h1 className="text-xl font-bold mb-6">新しいQRコードを作成</h1>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
@@ -91,7 +185,7 @@ export default function NewChannelPage() {
 
           <div className="space-y-2">
             <Label htmlFor="name">
-              経路名 <span className="text-red-500">*</span>
+              QRコード名 <span className="text-red-500">*</span>
             </Label>
             <Input
               id="name"
@@ -127,7 +221,7 @@ export default function NewChannelPage() {
               ))}
             </select>
             <p className="text-xs text-gray-500">
-              この経路で使用する診断を選択してください
+              このQRコードで使用する診断を選択してください
             </p>
           </div>
 
@@ -144,9 +238,65 @@ export default function NewChannelPage() {
             />
           </div>
 
+          {/* 画像アップロード */}
+          <div className="space-y-2">
+            <Label>設置場所の写真（任意）</Label>
+            <div
+              className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                imagePreview ? "border-blue-300 bg-blue-50" : "border-gray-300 hover:border-gray-400"
+              }`}
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+            >
+              {imagePreview ? (
+                <div className="relative inline-block">
+                  <img
+                    src={imagePreview}
+                    alt="プレビュー"
+                    className="max-h-48 rounded-lg mx-auto"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleImageRemove}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <ImageIcon className="w-12 h-12 mx-auto text-gray-400" />
+                  <div className="text-sm text-gray-600">
+                    ドラッグ＆ドロップまたは
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="text-blue-600 hover:underline mx-1"
+                    >
+                      ファイルを選択
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-400">
+                    JPEG, PNG, WebP（最大5MB）
+                  </p>
+                </div>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageSelect}
+                className="hidden"
+              />
+            </div>
+            <p className="text-xs text-gray-500">
+              チラシやポスターの設置場所を撮影しておくと、後から確認できます
+            </p>
+          </div>
+
           <div className="flex gap-3 pt-4">
-            <Button type="submit" disabled={isLoading} className="flex-1">
-              {isLoading ? "作成中..." : "経路を作成"}
+            <Button type="submit" disabled={isLoading || isUploading} className="flex-1">
+              {isLoading || isUploading ? "作成中..." : "QRコードを作成"}
             </Button>
             <Link href="/dashboard">
               <Button type="button" variant="outline" disabled={isLoading}>

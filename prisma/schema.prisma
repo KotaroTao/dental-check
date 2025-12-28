@@ -36,13 +36,14 @@ model Clinic {
   @@map("clinics")
 }
 
-// 経路（QRコード別）
+// QRコード（経路別計測用）
 model Channel {
   id                String   @id @default(uuid())
   clinicId          String   @map("clinic_id")
   code              String   @unique // QRコード用の短いコード
   name              String   // 例: "ポスティング用", "駅看板", "Instagram広告"
   description       String?
+  imageUrl          String?  @map("image_url") // QRコードに紐付く画像
   diagnosisTypeSlug String   @default("oral-age") @map("diagnosis_type_slug") // 紐付ける診断タイプ
   isActive          Boolean  @default(true) @map("is_active")
   createdAt         DateTime @default(now()) @map("created_at")

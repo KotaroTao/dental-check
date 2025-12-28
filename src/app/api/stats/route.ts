@@ -10,7 +10,7 @@ export async function GET() {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
     }
 
-    // 経路一覧を取得
+    // QRコード一覧を取得
     const channels = (await prisma.channel.findMany({
       where: { clinicId: session.clinicId },
     })) as Channel[];
@@ -30,7 +30,7 @@ export async function GET() {
       }),
     ]);
 
-    // 経路別の統計を集計
+    // QRコード別の統計を集計
     const channelStats = await Promise.all(
       channels.map(async (channel) => {
         const [accessCount, diagnosisCount, ctaClickCount] = await Promise.all([

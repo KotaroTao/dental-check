@@ -3,7 +3,7 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import type { Channel } from "@/types/clinic";
 
-// 経路詳細を取得
+// QRコード詳細を取得
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -25,7 +25,7 @@ export async function GET(
 
     if (!channel) {
       return NextResponse.json(
-        { error: "経路が見つかりません" },
+        { error: "QRコードが見つかりません" },
         { status: 404 }
       );
     }
@@ -34,13 +34,13 @@ export async function GET(
   } catch (error) {
     console.error("Get channel error:", error);
     return NextResponse.json(
-      { error: "経路の取得に失敗しました" },
+      { error: "QRコードの取得に失敗しました" },
       { status: 500 }
     );
   }
 }
 
-// 経路を更新
+// QRコードを更新
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -64,7 +64,7 @@ export async function PATCH(
 
     if (!existingChannel) {
       return NextResponse.json(
-        { error: "経路が見つかりません" },
+        { error: "QRコードが見つかりません" },
         { status: 404 }
       );
     }
@@ -82,13 +82,13 @@ export async function PATCH(
   } catch (error) {
     console.error("Update channel error:", error);
     return NextResponse.json(
-      { error: "経路の更新に失敗しました" },
+      { error: "QRコードの更新に失敗しました" },
       { status: 500 }
     );
   }
 }
 
-// 経路を削除
+// QRコードを削除
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -110,7 +110,7 @@ export async function DELETE(
 
     if (!existingChannel) {
       return NextResponse.json(
-        { error: "経路が見つかりません" },
+        { error: "QRコードが見つかりません" },
         { status: 404 }
       );
     }
@@ -119,11 +119,11 @@ export async function DELETE(
       where: { id },
     });
 
-    return NextResponse.json({ message: "経路を削除しました" });
+    return NextResponse.json({ message: "QRコードを削除しました" });
   } catch (error) {
     console.error("Delete channel error:", error);
     return NextResponse.json(
-      { error: "経路の削除に失敗しました" },
+      { error: "QRコードの削除に失敗しました" },
       { status: 500 }
     );
   }

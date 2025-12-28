@@ -3,7 +3,7 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import type { Channel } from "@/types/clinic";
 
-// 経路一覧を取得
+// QRコード一覧を取得
 export async function GET() {
   try {
     const session = await getSession();
@@ -20,13 +20,13 @@ export async function GET() {
   } catch (error) {
     console.error("Get channels error:", error);
     return NextResponse.json(
-      { error: "経路の取得に失敗しました" },
+      { error: "QRコードの取得に失敗しました" },
       { status: 500 }
     );
   }
 }
 
-// 新しい経路を作成
+// 新しいQRコードを作成
 export async function POST(request: NextRequest) {
   try {
     const session = await getSession();
@@ -35,11 +35,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, description, diagnosisTypeSlug } = body;
+    const { name, description, diagnosisTypeSlug, imageUrl } = body;
 
     if (!name || name.trim() === "") {
       return NextResponse.json(
-        { error: "経路名を入力してください" },
+        { error: "QRコード名を入力してください" },
         { status: 400 }
       );
     }
@@ -59,6 +59,7 @@ export async function POST(request: NextRequest) {
         clinicId: session.clinicId,
         name: name.trim(),
         description: description?.trim() || null,
+        imageUrl: imageUrl || null,
         diagnosisTypeSlug: diagnosisTypeSlug.trim(),
         code,
       },
@@ -68,7 +69,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Create channel error:", error);
     return NextResponse.json(
-      { error: "経路の作成に失敗しました" },
+      { error: "QRコードの作成に失敗しました" },
       { status: 500 }
     );
   }
