@@ -18,27 +18,47 @@ export async function GET(request: NextRequest) {
     // 期間の計算
     let dateFrom: Date;
     const dateTo = new Date();
+    let prevDateFrom: Date;
+    let prevDateTo: Date;
 
     if (period === "custom" && startDate && endDate) {
       dateFrom = new Date(startDate);
       dateTo.setTime(new Date(endDate).getTime());
       dateTo.setHours(23, 59, 59, 999);
+      // カスタム期間の場合、同じ日数だけ前の期間を計算
+      const durationMs = dateTo.getTime() - dateFrom.getTime();
+      prevDateTo = new Date(dateFrom.getTime() - 1);
+      prevDateFrom = new Date(prevDateTo.getTime() - durationMs);
     } else {
       switch (period) {
         case "today":
           dateFrom = new Date();
           dateFrom.setHours(0, 0, 0, 0);
+          // 前日
+          prevDateTo = new Date(dateFrom.getTime() - 1);
+          prevDateFrom = new Date(prevDateTo);
+          prevDateFrom.setHours(0, 0, 0, 0);
           break;
         case "week":
           dateFrom = new Date();
           dateFrom.setDate(dateFrom.getDate() - 7);
           dateFrom.setHours(0, 0, 0, 0);
+          // 前週
+          prevDateTo = new Date(dateFrom.getTime() - 1);
+          prevDateFrom = new Date(prevDateTo);
+          prevDateFrom.setDate(prevDateFrom.getDate() - 7);
+          prevDateFrom.setHours(0, 0, 0, 0);
           break;
         case "month":
         default:
           dateFrom = new Date();
           dateFrom.setMonth(dateFrom.getMonth() - 1);
           dateFrom.setHours(0, 0, 0, 0);
+          // 前月
+          prevDateTo = new Date(dateFrom.getTime() - 1);
+          prevDateFrom = new Date(prevDateTo);
+          prevDateFrom.setMonth(prevDateFrom.getMonth() - 1);
+          prevDateFrom.setHours(0, 0, 0, 0);
           break;
       }
     }
@@ -49,6 +69,16 @@ export async function GET(request: NextRequest) {
       createdAt: {
         gte: dateFrom,
         lte: dateTo,
+      },
+      ...(channelId && { channelId }),
+    };
+
+    // 前期の共通フィルター条件
+    const prevBaseFilter = {
+      clinicId: session.clinicId,
+      createdAt: {
+        gte: prevDateFrom,
+        lte: prevDateTo,
       },
       ...(channelId && { channelId }),
     };
@@ -65,7 +95,19 @@ export async function GET(request: NextRequest) {
       completedAt: { not: null },
     };
 
-    // 統計データを並行取得
+    // 前期の診断完了者のフィルター条件
+    const prevCompletedFilter = {
+      clinicId: session.clinicId,
+      createdAt: {
+        gte: prevDateFrom,
+        lte: prevDateTo,
+      },
+      ...(channelId && { channelId }),
+      isDemo: false,
+      completedAt: { not: null },
+    };
+
+    // 統計データを並行取得（現期間 + 前期間）
     const [
       accessCount,
       completedCount,
@@ -76,6 +118,10 @@ export async function GET(request: NextRequest) {
       ctaFromClinicPage,
       genderStats,
       completedSessions,
+      // 前期データ
+      prevAccessCount,
+      prevCompletedCount,
+      prevCtaCount,
     ] = await Promise.all([
       // アクセス数（診断ページ）
       prisma.accessLog.count({
@@ -87,16 +133,7 @@ export async function GET(request: NextRequest) {
 
       // 診断完了数
       prisma.diagnosisSession.count({
-        where: {
-          clinicId: session.clinicId,
-          createdAt: {
-            gte: dateFrom,
-            lte: dateTo,
-          },
-          ...(channelId && { channelId }),
-          isDemo: false,
-          completedAt: { not: null },
-        },
+        where: completedFilter,
       }),
 
       // CTAクリック（タイプ別に集計）
@@ -157,6 +194,25 @@ export async function GET(request: NextRequest) {
         where: completedFilter,
         select: { userAge: true },
       }),
+
+      // --- 前期データ ---
+      // 前期アクセス数
+      prisma.accessLog.count({
+        where: {
+          ...prevBaseFilter,
+          eventType: { not: "clinic_page_view" },
+        },
+      }),
+
+      // 前期診断完了数
+      prisma.diagnosisSession.count({
+        where: prevCompletedFilter,
+      }),
+
+      // 前期CTAクリック数
+      prisma.cTAClick.count({
+        where: prevBaseFilter,
+      }),
     ]);
 
     // CTAクリックをタイプ別に整理
@@ -213,6 +269,18 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // トレンド計算（前期比の変化率）
+    const calcTrend = (current: number, previous: number) => {
+      if (previous === 0) return current > 0 ? 100 : 0;
+      return Math.round(((current - previous) / previous) * 100);
+    };
+
+    const trends = {
+      accessCount: calcTrend(accessCount, prevAccessCount),
+      completedCount: calcTrend(completedCount, prevCompletedCount),
+      ctaCount: calcTrend(ctaCount, prevCtaCount),
+    };
+
     return NextResponse.json({
       stats: {
         accessCount,
@@ -229,6 +297,13 @@ export async function GET(request: NextRequest) {
         // 年齢・性別統計
         genderByType,
         ageRanges,
+        // 前期比トレンド
+        trends,
+        prevPeriod: {
+          accessCount: prevAccessCount,
+          completedCount: prevCompletedCount,
+          ctaCount: prevCtaCount,
+        },
       },
       channels,
       period: {

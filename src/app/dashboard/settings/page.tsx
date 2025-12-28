@@ -1,11 +1,28 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, GripVertical } from "lucide-react";
+import { Plus, Trash2, GripVertical, AlertCircle } from "lucide-react";
 import type { CustomCTA } from "@/types/clinic";
+
+// URL検証関数
+function isValidUrl(url: string): boolean {
+  if (!url) return true; // 空は許可
+  try {
+    new URL(url);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// 電話番号検証関数
+function isValidPhone(phone: string): boolean {
+  if (!phone) return true;
+  return /^[\d\-\+\(\)\s]+$/.test(phone);
+}
 
 interface ClinicSettings {
   name: string;
@@ -47,6 +64,7 @@ export default function SettingsPage() {
     mainColor: "#2563eb",
     ctaConfig: {},
   });
+  const [originalSettings, setOriginalSettings] = useState<ClinicSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{
@@ -54,6 +72,62 @@ export default function SettingsPage() {
     text: string;
   } | null>(null);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+
+  // 未保存の変更があるかチェック
+  const hasUnsavedChanges = useCallback(() => {
+    if (!originalSettings) return false;
+    return JSON.stringify(settings) !== JSON.stringify(originalSettings);
+  }, [settings, originalSettings]);
+
+  // ページ離脱時の警告
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges()) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  // バリデーション実行
+  const validateSettings = useCallback(() => {
+    const errors: Record<string, string> = {};
+    const urlFields = [
+      "bookingUrl", "lineUrl", "googleMapsUrl", "instagramUrl",
+      "youtubeUrl", "facebookUrl", "tiktokUrl", "threadsUrl", "xUrl"
+    ];
+
+    for (const field of urlFields) {
+      const value = settings.ctaConfig[field as keyof typeof settings.ctaConfig] as string | undefined;
+      if (value && !isValidUrl(value)) {
+        errors[field] = "有効なURLを入力してください";
+      }
+    }
+
+    if (settings.ctaConfig.phone && !isValidPhone(settings.ctaConfig.phone)) {
+      errors.phone = "有効な電話番号を入力してください";
+    }
+
+    if (settings.logoUrl && !isValidUrl(settings.logoUrl)) {
+      errors.logoUrl = "有効なURLを入力してください";
+    }
+
+    // カスタムCTAのバリデーション
+    settings.ctaConfig.customCTAs?.forEach((cta, index) => {
+      if (cta.url && !isValidUrl(cta.url)) {
+        errors[`customCTA_${index}_url`] = "有効なURLを入力してください";
+      }
+      if (cta.label && cta.label.length > 20) {
+        errors[`customCTA_${index}_label`] = "ラベルは20文字以内にしてください";
+      }
+    });
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  }, [settings]);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -61,12 +135,14 @@ export default function SettingsPage() {
         const response = await fetch("/api/auth/me");
         if (response.ok) {
           const data = await response.json();
-          setSettings({
+          const loadedSettings = {
             name: data.clinic.name || "",
             logoUrl: data.clinic.logoUrl || "",
             mainColor: data.clinic.mainColor || "#2563eb",
             ctaConfig: data.clinic.ctaConfig || {},
-          });
+          };
+          setSettings(loadedSettings);
+          setOriginalSettings(loadedSettings);
         }
       } catch (error) {
         console.error("Failed to fetch settings:", error);
@@ -157,8 +233,15 @@ export default function SettingsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSaving(true);
     setMessage(null);
+
+    // バリデーション実行
+    if (!validateSettings()) {
+      setMessage({ type: "error", text: "入力内容にエラーがあります。各フィールドを確認してください。" });
+      return;
+    }
+
+    setIsSaving(true);
 
     try {
       const response = await fetch("/api/clinic/settings", {
@@ -169,6 +252,7 @@ export default function SettingsPage() {
 
       if (response.ok) {
         setMessage({ type: "success", text: "設定を保存しました" });
+        setOriginalSettings(settings); // 保存成功後、原本を更新
       } else {
         const data = await response.json();
         setMessage({ type: "error", text: data.error || "保存に失敗しました" });
@@ -227,7 +311,14 @@ export default function SettingsPage() {
                 placeholder="https://example.com/logo.png"
                 value={settings.logoUrl}
                 onChange={handleChange}
+                className={validationErrors.logoUrl ? "border-red-500" : ""}
               />
+              {validationErrors.logoUrl && (
+                <p className="text-xs text-red-500 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {validationErrors.logoUrl}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -269,7 +360,14 @@ export default function SettingsPage() {
                 placeholder="https://example.com/booking"
                 value={settings.ctaConfig.bookingUrl || ""}
                 onChange={handleChange}
+                className={validationErrors.bookingUrl ? "border-red-500" : ""}
               />
+              {validationErrors.bookingUrl && (
+                <p className="text-xs text-red-500 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {validationErrors.bookingUrl}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -281,7 +379,14 @@ export default function SettingsPage() {
                 placeholder="https://line.me/R/ti/p/@xxx"
                 value={settings.ctaConfig.lineUrl || ""}
                 onChange={handleChange}
+                className={validationErrors.lineUrl ? "border-red-500" : ""}
               />
+              {validationErrors.lineUrl && (
+                <p className="text-xs text-red-500 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {validationErrors.lineUrl}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -293,8 +398,16 @@ export default function SettingsPage() {
                 placeholder="https://maps.google.com/..."
                 value={settings.ctaConfig.googleMapsUrl || ""}
                 onChange={handleChange}
+                className={validationErrors.googleMapsUrl ? "border-red-500" : ""}
               />
-              <p className="text-xs text-gray-500">医院の場所をGoogleマップで開くリンク</p>
+              {validationErrors.googleMapsUrl ? (
+                <p className="text-xs text-red-500 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {validationErrors.googleMapsUrl}
+                </p>
+              ) : (
+                <p className="text-xs text-gray-500">医院の場所をGoogleマップで開くリンク</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -306,7 +419,14 @@ export default function SettingsPage() {
                 placeholder="https://instagram.com/xxx"
                 value={settings.ctaConfig.instagramUrl || ""}
                 onChange={handleChange}
+                className={validationErrors.instagramUrl ? "border-red-500" : ""}
               />
+              {validationErrors.instagramUrl && (
+                <p className="text-xs text-red-500 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {validationErrors.instagramUrl}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -318,7 +438,14 @@ export default function SettingsPage() {
                 placeholder="https://youtube.com/@xxx"
                 value={settings.ctaConfig.youtubeUrl || ""}
                 onChange={handleChange}
+                className={validationErrors.youtubeUrl ? "border-red-500" : ""}
               />
+              {validationErrors.youtubeUrl && (
+                <p className="text-xs text-red-500 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {validationErrors.youtubeUrl}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -330,7 +457,14 @@ export default function SettingsPage() {
                 placeholder="https://facebook.com/xxx"
                 value={settings.ctaConfig.facebookUrl || ""}
                 onChange={handleChange}
+                className={validationErrors.facebookUrl ? "border-red-500" : ""}
               />
+              {validationErrors.facebookUrl && (
+                <p className="text-xs text-red-500 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {validationErrors.facebookUrl}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -342,7 +476,14 @@ export default function SettingsPage() {
                 placeholder="https://tiktok.com/@xxx"
                 value={settings.ctaConfig.tiktokUrl || ""}
                 onChange={handleChange}
+                className={validationErrors.tiktokUrl ? "border-red-500" : ""}
               />
+              {validationErrors.tiktokUrl && (
+                <p className="text-xs text-red-500 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {validationErrors.tiktokUrl}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -354,7 +495,14 @@ export default function SettingsPage() {
                 placeholder="https://threads.net/@xxx"
                 value={settings.ctaConfig.threadsUrl || ""}
                 onChange={handleChange}
+                className={validationErrors.threadsUrl ? "border-red-500" : ""}
               />
+              {validationErrors.threadsUrl && (
+                <p className="text-xs text-red-500 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {validationErrors.threadsUrl}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -366,7 +514,14 @@ export default function SettingsPage() {
                 placeholder="https://x.com/xxx"
                 value={settings.ctaConfig.xUrl || ""}
                 onChange={handleChange}
+                className={validationErrors.xUrl ? "border-red-500" : ""}
               />
+              {validationErrors.xUrl && (
+                <p className="text-xs text-red-500 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {validationErrors.xUrl}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -378,7 +533,14 @@ export default function SettingsPage() {
                 placeholder="03-1234-5678"
                 value={settings.ctaConfig.phone || ""}
                 onChange={handleChange}
+                className={validationErrors.phone ? "border-red-500" : ""}
               />
+              {validationErrors.phone && (
+                <p className="text-xs text-red-500 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {validationErrors.phone}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -462,7 +624,14 @@ export default function SettingsPage() {
                     placeholder="例: 公式サイト"
                     value={cta.label}
                     onChange={(e) => updateCustomCTA(index, "label", e.target.value)}
+                    className={validationErrors[`customCTA_${index}_label`] ? "border-red-500" : ""}
                   />
+                  {validationErrors[`customCTA_${index}_label`] && (
+                    <p className="text-xs text-red-500 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {validationErrors[`customCTA_${index}_label`]}
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -472,7 +641,14 @@ export default function SettingsPage() {
                     placeholder="https://example.com"
                     value={cta.url}
                     onChange={(e) => updateCustomCTA(index, "url", e.target.value)}
+                    className={validationErrors[`customCTA_${index}_url`] ? "border-red-500" : ""}
                   />
+                  {validationErrors[`customCTA_${index}_url`] && (
+                    <p className="text-xs text-red-500 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {validationErrors[`customCTA_${index}_url`]}
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2">

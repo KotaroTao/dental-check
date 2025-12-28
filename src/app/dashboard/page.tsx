@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { BarChart3, Users, MousePointerClick, Percent, ChevronDown, QrCode, Plus, Settings, Trash2, Building2, TrendingUp } from "lucide-react";
+import { BarChart3, Users, MousePointerClick, Percent, ChevronDown, ChevronUp, QrCode, Plus, Settings, Trash2, Building2, TrendingUp, TrendingDown, Download, ArrowUpDown } from "lucide-react";
 import { LocationSection } from "@/components/dashboard/location-section";
 import { CTAChart } from "@/components/dashboard/cta-chart";
 
@@ -36,6 +36,17 @@ interface Stats {
   // 年齢・性別統計
   genderByType?: Record<string, number>;
   ageRanges?: Record<string, number>;
+  // 前期比トレンド
+  trends?: {
+    accessCount: number;
+    completedCount: number;
+    ctaCount: number;
+  };
+  prevPeriod?: {
+    accessCount: number;
+    completedCount: number;
+    ctaCount: number;
+  };
 }
 
 // CTAタイプの表示名
@@ -94,6 +105,60 @@ const AGE_RANGE_NAMES: Record<string, string> = {
   "60~": "60歳~",
 };
 
+// トレンドインジケーターコンポーネント
+function TrendIndicator({ value, showValue = true }: { value: number; showValue?: boolean }) {
+  if (value === 0) return null;
+  const isPositive = value > 0;
+  return (
+    <span className={`inline-flex items-center gap-0.5 text-xs font-medium ${
+      isPositive ? "text-green-600" : "text-red-600"
+    }`}>
+      {isPositive ? (
+        <TrendingUp className="w-3 h-3" />
+      ) : (
+        <TrendingDown className="w-3 h-3" />
+      )}
+      {showValue && <span>{isPositive ? "+" : ""}{value}%</span>}
+    </span>
+  );
+}
+
+// スケルトンコンポーネント
+function Skeleton({ className = "" }: { className?: string }) {
+  return (
+    <div className={`animate-pulse bg-gray-200 rounded ${className}`} />
+  );
+}
+
+// 統計カードスケルトン
+function StatsCardSkeleton() {
+  return (
+    <div className="bg-gray-50 rounded-lg p-4">
+      <Skeleton className="h-4 w-20 mb-2" />
+      <Skeleton className="h-8 w-24" />
+    </div>
+  );
+}
+
+// 履歴テーブルスケルトン
+function HistoryTableSkeleton() {
+  return (
+    <div className="divide-y">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <div key={i} className="px-4 py-4 flex gap-4">
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-4 w-12" />
+          <Skeleton className="h-4 w-12" />
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-4 w-16" />
+          <Skeleton className="h-4 w-12" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [channels, setChannels] = useState<Channel[]>([]);
@@ -102,6 +167,51 @@ export default function DashboardPage() {
   const [hasMore, setHasMore] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  // ソート
+  type SortField = "createdAt" | "userAge" | "ctaClickCount";
+  type SortDirection = "asc" | "desc";
+  const [sortField, setSortField] = useState<SortField>("createdAt");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+
+  // ソート切り替え
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("desc");
+    }
+  };
+
+  // ソートアイコン
+  const SortIcon = ({ field }: { field: SortField }) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="w-3 h-3 ml-1 text-gray-400" />;
+    }
+    return sortDirection === "asc" ? (
+      <ChevronUp className="w-3 h-3 ml-1" />
+    ) : (
+      <ChevronDown className="w-3 h-3 ml-1" />
+    );
+  };
+
+  // ソートされた履歴
+  const sortedHistory = [...history].sort((a, b) => {
+    let comparison = 0;
+    switch (sortField) {
+      case "createdAt":
+        comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        break;
+      case "userAge":
+        comparison = (a.userAge || 0) - (b.userAge || 0);
+        break;
+      case "ctaClickCount":
+        comparison = a.ctaClickCount - b.ctaClickCount;
+        break;
+    }
+    return sortDirection === "asc" ? comparison : -comparison;
+  });
 
   // フィルター
   const [period, setPeriod] = useState("month");
@@ -240,8 +350,156 @@ export default function DashboardPage() {
     fetchHistory(history.length, true);
   };
 
+  // CSVエクスポート：統計データ
+  const exportStatsToCSV = () => {
+    if (!stats) return;
+
+    const rows: string[][] = [
+      ["項目", "値"],
+      ["アクセス数", stats.accessCount.toString()],
+      ["診断完了数", stats.completedCount.toString()],
+      ["完了率(%)", stats.completionRate.toString()],
+      ["CTAクリック数", stats.ctaCount.toString()],
+      ["医院ページ閲覧数", stats.clinicPageViews.toString()],
+      ["診断結果→CTAクリック", stats.ctaFromResult.toString()],
+      ["診断結果→CTAコンバージョン率(%)", stats.resultConversionRate.toString()],
+      ["医院ページ→CTAクリック", stats.ctaFromClinicPage.toString()],
+      ["医院ページ→CTAコンバージョン率(%)", stats.clinicPageConversionRate.toString()],
+    ];
+
+    // CTA内訳
+    if (stats.ctaByType) {
+      rows.push(["", ""]);
+      rows.push(["CTAタイプ別クリック数", ""]);
+      Object.entries(stats.ctaByType).forEach(([type, count]) => {
+        rows.push([CTA_TYPE_NAMES[type] || type, count.toString()]);
+      });
+    }
+
+    // 性別分布
+    if (stats.genderByType) {
+      rows.push(["", ""]);
+      rows.push(["性別分布", ""]);
+      Object.entries(stats.genderByType).forEach(([gender, count]) => {
+        rows.push([GENDER_NAMES[gender] || gender, count.toString()]);
+      });
+    }
+
+    // 年齢層分布
+    if (stats.ageRanges) {
+      rows.push(["", ""]);
+      rows.push(["年齢層分布", ""]);
+      Object.entries(stats.ageRanges).forEach(([range, count]) => {
+        rows.push([AGE_RANGE_NAMES[range] || range, count.toString()]);
+      });
+    }
+
+    downloadCSV(rows, "統計サマリー");
+  };
+
+  // CSVエクスポート：診断履歴
+  const exportHistoryToCSV = async () => {
+    // 全履歴を取得
+    const params = new URLSearchParams({
+      period,
+      offset: "0",
+      limit: "10000", // 大量取得
+    });
+    if (selectedChannelId) params.set("channelId", selectedChannelId);
+    if (selectedDiagnosisType) params.set("diagnosisType", selectedDiagnosisType);
+    if (period === "custom") {
+      params.set("startDate", customStartDate);
+      params.set("endDate", customEndDate);
+    }
+
+    try {
+      const response = await fetch(`/api/dashboard/history?${params}`);
+      if (!response.ok) return;
+      const data = await response.json();
+
+      const rows: string[][] = [
+        ["日時", "年齢", "性別", "診断タイプ", "経路", "結果", "CTAクリック回数"],
+      ];
+
+      data.history.forEach((item: HistoryItem) => {
+        rows.push([
+          formatDate(item.createdAt),
+          item.userAge !== null ? item.userAge.toString() : "",
+          item.userGender || "",
+          item.diagnosisType,
+          item.channelName,
+          item.resultCategory,
+          item.ctaClickCount.toString(),
+        ]);
+      });
+
+      downloadCSV(rows, "診断履歴");
+    } catch (error) {
+      console.error("Failed to export history:", error);
+    }
+  };
+
+  // CSVダウンロード共通処理
+  const downloadCSV = (rows: string[][], filename: string) => {
+    const BOM = "\uFEFF"; // Excel用BOM
+    const csvContent = rows.map((row) =>
+      row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(",")
+    ).join("\n");
+
+    const blob = new Blob([BOM + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${filename}_${new Date().toISOString().split("T")[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // 初回読み込み中はスケルトンを表示
   if (isLoading && !stats && channels.length === 0) {
-    return <div className="text-gray-500">読み込み中...</div>;
+    return (
+      <div className="space-y-8">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-8 w-48" />
+        </div>
+        {/* 経路スケルトン */}
+        <div className="bg-white rounded-xl shadow-sm border">
+          <div className="p-6 border-b flex items-center justify-between">
+            <Skeleton className="h-6 w-24" />
+            <Skeleton className="h-9 w-32" />
+          </div>
+          <div className="p-6">
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-16 w-full" />
+              ))}
+            </div>
+          </div>
+        </div>
+        {/* 統計サマリースケルトン */}
+        <div className="bg-white rounded-xl shadow-sm border p-6">
+          <div className="flex items-center justify-between mb-6">
+            <Skeleton className="h-6 w-32" />
+            <Skeleton className="h-9 w-48" />
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <StatsCardSkeleton />
+            <StatsCardSkeleton />
+            <StatsCardSkeleton />
+            <StatsCardSkeleton />
+          </div>
+        </div>
+        {/* 履歴スケルトン */}
+        <div className="bg-white rounded-xl shadow-sm border">
+          <div className="p-6 border-b">
+            <Skeleton className="h-6 w-32" />
+          </div>
+          <HistoryTableSkeleton />
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -430,6 +688,16 @@ export default function DashboardPage() {
             統計サマリー
           </h2>
           <div className="flex flex-col sm:flex-row gap-2 sm:ml-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={exportStatsToCSV}
+              disabled={!stats}
+              className="gap-2"
+            >
+              <Download className="w-4 h-4" />
+              CSVエクスポート
+            </Button>
             <div className="flex gap-2">
               <select
                 value={period}
@@ -481,18 +749,34 @@ export default function DashboardPage() {
               <Users className="w-4 h-4" />
               アクセス
             </div>
-            <div className="text-2xl font-bold text-gray-900">
-              {stats?.accessCount.toLocaleString() || 0}
+            <div className="flex items-center gap-2">
+              <span className="text-2xl font-bold text-gray-900">
+                {stats?.accessCount.toLocaleString() || 0}
+              </span>
+              {stats?.trends && <TrendIndicator value={stats.trends.accessCount} />}
             </div>
+            {stats?.prevPeriod && stats.prevPeriod.accessCount > 0 && (
+              <div className="text-xs text-gray-400 mt-1">
+                前期: {stats.prevPeriod.accessCount.toLocaleString()}
+              </div>
+            )}
           </div>
           <div className="bg-gray-50 rounded-lg p-4">
             <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
               <BarChart3 className="w-4 h-4" />
               診断完了
             </div>
-            <div className="text-2xl font-bold text-green-600">
-              {stats?.completedCount.toLocaleString() || 0}
+            <div className="flex items-center gap-2">
+              <span className="text-2xl font-bold text-green-600">
+                {stats?.completedCount.toLocaleString() || 0}
+              </span>
+              {stats?.trends && <TrendIndicator value={stats.trends.completedCount} />}
             </div>
+            {stats?.prevPeriod && stats.prevPeriod.completedCount > 0 && (
+              <div className="text-xs text-gray-400 mt-1">
+                前期: {stats.prevPeriod.completedCount.toLocaleString()}
+              </div>
+            )}
           </div>
           <div className="bg-gray-50 rounded-lg p-4">
             <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
@@ -508,9 +792,17 @@ export default function DashboardPage() {
               <MousePointerClick className="w-4 h-4" />
               CTAクリック
             </div>
-            <div className="text-2xl font-bold text-purple-600">
-              {stats?.ctaCount.toLocaleString() || 0}
+            <div className="flex items-center gap-2">
+              <span className="text-2xl font-bold text-purple-600">
+                {stats?.ctaCount.toLocaleString() || 0}
+              </span>
+              {stats?.trends && <TrendIndicator value={stats.trends.ctaCount} />}
             </div>
+            {stats?.prevPeriod && stats.prevPeriod.ctaCount > 0 && (
+              <div className="text-xs text-gray-400 mt-1">
+                前期: {stats.prevPeriod.ctaCount.toLocaleString()}
+              </div>
+            )}
             {/* CTA内訳 */}
             {stats?.ctaByType && Object.keys(stats.ctaByType).length > 0 && (
               <div className="mt-2 pt-2 border-t border-gray-200 space-y-1">
@@ -664,6 +956,16 @@ export default function DashboardPage() {
                 <option value="oral-age">お口年齢診断</option>
                 <option value="child-orthodontics">矯正チェック</option>
               </select>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={exportHistoryToCSV}
+                disabled={history.length === 0}
+                className="gap-2"
+              >
+                <Download className="w-4 h-4" />
+                CSV
+              </Button>
             </div>
           </div>
         </div>
@@ -687,11 +989,23 @@ export default function DashboardPage() {
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">
-                      日時
+                    <th
+                      className="text-left px-4 py-3 text-sm font-medium text-gray-500 cursor-pointer hover:bg-gray-100 select-none"
+                      onClick={() => handleSort("createdAt")}
+                    >
+                      <span className="flex items-center">
+                        日時
+                        <SortIcon field="createdAt" />
+                      </span>
                     </th>
-                    <th className="text-center px-2 py-3 text-sm font-medium text-gray-500">
-                      年齢
+                    <th
+                      className="text-center px-2 py-3 text-sm font-medium text-gray-500 cursor-pointer hover:bg-gray-100 select-none"
+                      onClick={() => handleSort("userAge")}
+                    >
+                      <span className="flex items-center justify-center">
+                        年齢
+                        <SortIcon field="userAge" />
+                      </span>
                     </th>
                     <th className="text-center px-2 py-3 text-sm font-medium text-gray-500">
                       性別
@@ -705,13 +1019,19 @@ export default function DashboardPage() {
                     <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">
                       結果
                     </th>
-                    <th className="text-center px-4 py-3 text-sm font-medium text-gray-500">
-                      CTA
+                    <th
+                      className="text-center px-4 py-3 text-sm font-medium text-gray-500 cursor-pointer hover:bg-gray-100 select-none"
+                      onClick={() => handleSort("ctaClickCount")}
+                    >
+                      <span className="flex items-center justify-center">
+                        CTA
+                        <SortIcon field="ctaClickCount" />
+                      </span>
                     </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {history.map((item) => (
+                  {sortedHistory.map((item) => (
                     <tr key={item.id} className="hover:bg-gray-50">
                       <td className="px-4 py-4 text-sm text-gray-600 whitespace-nowrap">
                         {formatDate(item.createdAt)}
@@ -756,7 +1076,7 @@ export default function DashboardPage() {
 
             {/* モバイル用カード */}
             <div className="md:hidden divide-y">
-              {history.map((item) => (
+              {sortedHistory.map((item) => (
                 <div key={item.id} className="p-4">
                   <div className="flex items-start justify-between mb-2">
                     <div className="text-sm text-gray-500">
