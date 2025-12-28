@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Eye, EyeOff, Plus, Trash2, GripVertical, Bell } from "lucide-react";
+import { Eye, EyeOff, Plus, Trash2, GripVertical, Bell, Upload, Loader2 } from "lucide-react";
 import type { ClinicPage, ClinicPhoto, Treatment, Facility, Announcement, WeeklySchedule, DaySchedule } from "@/types/clinic";
 
 interface ClinicData {
@@ -77,6 +77,7 @@ export default function ClinicPageEditor() {
   } | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [useDetailedHours, setUseDetailedHours] = useState(false);
+  const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchClinicPage = async () => {
@@ -148,6 +149,34 @@ export default function ClinicPageEditor() {
     const newPhotos = [...(clinicPage.photos || [])];
     newPhotos[index] = { ...newPhotos[index], [field]: value };
     setClinicPage({ ...clinicPage, photos: newPhotos });
+  };
+
+  const handlePhotoUpload = async (index: number, file: File) => {
+    setUploadingIndex(index);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "アップロードに失敗しました");
+      }
+
+      const { url } = await response.json();
+      handlePhotoChange(index, "url", url);
+    } catch (error) {
+      setMessage({
+        type: "error",
+        text: error instanceof Error ? error.message : "アップロードに失敗しました",
+      });
+    } finally {
+      setUploadingIndex(null);
+    }
   };
 
   const addPhoto = () => {
@@ -407,39 +436,74 @@ export default function ClinicPageEditor() {
 
             <div className="space-y-4">
               {(clinicPage.photos || []).map((photo, index) => (
-                <div key={index} className="flex gap-2 items-start">
-                  <div className="text-gray-400 cursor-move">
-                    <GripVertical className="w-5 h-5" />
+                <div key={index} className="border rounded-lg p-4 bg-gray-50">
+                  <div className="flex gap-3 items-start">
+                    <div className="text-gray-400 cursor-move mt-2">
+                      <GripVertical className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1 space-y-3">
+                      <div className="flex gap-2 items-center">
+                        <label className="flex-1">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handlePhotoUpload(index, file);
+                            }}
+                          />
+                          <div className="flex gap-2">
+                            <Input
+                              placeholder="画像URL（またはアップロード）"
+                              value={photo.url}
+                              onChange={(e) => handlePhotoChange(index, "url", e.target.value)}
+                              className="flex-1"
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={uploadingIndex === index}
+                              onClick={(e) => {
+                                const input = (e.currentTarget.parentElement?.parentElement?.querySelector('input[type="file"]') as HTMLInputElement);
+                                input?.click();
+                              }}
+                              className="shrink-0"
+                            >
+                              {uploadingIndex === index ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Upload className="w-4 h-4" />
+                              )}
+                            </Button>
+                          </div>
+                        </label>
+                      </div>
+                      <Input
+                        placeholder="キャプション（例：外観、診察室）"
+                        value={photo.caption || ""}
+                        onChange={(e) => handlePhotoChange(index, "caption", e.target.value)}
+                      />
+                    </div>
+                    {photo.url && (
+                      <img
+                        src={photo.url}
+                        alt=""
+                        className="w-20 h-20 object-cover rounded-lg border"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      />
+                    )}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removePhoto(index)}
+                      className="text-red-500 mt-1"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </div>
-                  <div className="flex-1 space-y-2">
-                    <Input
-                      placeholder="画像URL"
-                      value={photo.url}
-                      onChange={(e) => handlePhotoChange(index, "url", e.target.value)}
-                    />
-                    <Input
-                      placeholder="キャプション（例：外観、診察室）"
-                      value={photo.caption || ""}
-                      onChange={(e) => handlePhotoChange(index, "caption", e.target.value)}
-                    />
-                  </div>
-                  {photo.url && (
-                    <img
-                      src={photo.url}
-                      alt=""
-                      className="w-16 h-16 object-cover rounded"
-                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                    />
-                  )}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removePhoto(index)}
-                    className="text-red-500"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
                 </div>
               ))}
               <Button type="button" variant="outline" onClick={addPhoto}>
