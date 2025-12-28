@@ -35,7 +35,6 @@ function isValidPhone(phone: string): boolean {
 
 interface ClinicSettings {
   name: string;
-  logoUrl: string;
   mainColor: string;
   ctaConfig: {
     bookingUrl?: string;
@@ -69,7 +68,6 @@ const CTA_BUTTON_NAMES: Record<string, string> = {
 export default function SettingsPage() {
   const [settings, setSettings] = useState<ClinicSettings>({
     name: "",
-    logoUrl: "",
     mainColor: "#2563eb",
     ctaConfig: {},
   });
@@ -121,10 +119,6 @@ export default function SettingsPage() {
       errors.phone = "有効な電話番号を入力してください";
     }
 
-    if (settings.logoUrl && !isValidUrl(settings.logoUrl)) {
-      errors.logoUrl = "有効なURLを入力してください";
-    }
-
     // カスタムCTAのバリデーション
     settings.ctaConfig.customCTAs?.forEach((cta, index) => {
       if (cta.url && !isValidUrl(cta.url)) {
@@ -147,7 +141,6 @@ export default function SettingsPage() {
           const data = await response.json();
           const loadedSettings = {
             name: data.clinic.name || "",
-            logoUrl: data.clinic.logoUrl || "",
             mainColor: data.clinic.mainColor || "#2563eb",
             ctaConfig: data.clinic.ctaConfig || {},
           };
@@ -310,25 +303,6 @@ export default function SettingsPage() {
                 value={settings.name}
                 onChange={handleChange}
               />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="logoUrl">ロゴURL</Label>
-              <Input
-                id="logoUrl"
-                name="logoUrl"
-                type="url"
-                placeholder="https://example.com/logo.png"
-                value={settings.logoUrl}
-                onChange={handleChange}
-                className={validationErrors.logoUrl ? "border-red-500" : ""}
-              />
-              {validationErrors.logoUrl && (
-                <p className="text-xs text-red-500 flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" />
-                  {validationErrors.logoUrl}
-                </p>
-              )}
             </div>
 
             <div className="space-y-2">
@@ -712,20 +686,6 @@ export default function SettingsPage() {
           {showPreview && (
             <div className="border rounded-lg p-6 bg-gray-50">
               <div className="max-w-md mx-auto space-y-4">
-                {/* ロゴプレビュー */}
-                {settings.logoUrl && (
-                  <div className="flex justify-center mb-4">
-                    <img
-                      src={settings.logoUrl}
-                      alt="Logo preview"
-                      className="h-12 object-contain"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = "none";
-                      }}
-                    />
-                  </div>
-                )}
-
                 {/* 医院名 */}
                 <h3 className="text-xl font-bold text-center" style={{ color: settings.mainColor }}>
                   {settings.name || "医院名"}
