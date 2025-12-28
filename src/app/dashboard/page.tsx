@@ -37,6 +37,7 @@ const CTA_TYPE_NAMES: Record<string, string> = {
   youtube: "YouTube",
   facebook: "Facebook",
   tiktok: "TikTok",
+  threads: "Threads",
   clinic_page: "医院ページ",
 };
 

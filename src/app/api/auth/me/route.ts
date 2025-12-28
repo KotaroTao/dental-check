@@ -37,6 +37,7 @@ export async function GET() {
         phone: clinic.phone,
         logoUrl: clinic.logoUrl,
         mainColor: clinic.mainColor,
+        ctaConfig: clinic.ctaConfig,
         status: clinic.status,
         subscription: clinic.subscription
           ? {
