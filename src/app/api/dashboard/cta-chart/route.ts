@@ -62,24 +62,47 @@ export async function GET(request: NextRequest) {
           ],
         };
 
-    // CTAクリックを日別に取得
-    const ctaClicks = await prisma.cTAClick.findMany({
-      where: {
-        clinicId: session.clinicId,
-        createdAt: {
-          gte: dateFrom,
-          lte: dateTo,
+    // 診断完了フィルター（アクティブチャンネルのみ）
+    const diagnosisChannelFilter = channelId
+      ? { channelId }
+      : activeChannelIds.length > 0
+        ? { channelId: { in: activeChannelIds } }
+        : {};
+
+    // CTAクリックと診断完了数を並行取得
+    const [ctaClicks, completedCount] = await Promise.all([
+      // CTAクリックを日別に取得
+      prisma.cTAClick.findMany({
+        where: {
+          clinicId: session.clinicId,
+          createdAt: {
+            gte: dateFrom,
+            lte: dateTo,
+          },
+          ...channelFilter,
         },
-        ...channelFilter,
-      },
-      select: {
-        createdAt: true,
-        channelId: true,
-      },
-      orderBy: {
-        createdAt: "asc",
-      },
-    });
+        select: {
+          createdAt: true,
+          channelId: true,
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+      }),
+      // 診断完了数
+      prisma.diagnosisSession.count({
+        where: {
+          clinicId: session.clinicId,
+          createdAt: {
+            gte: dateFrom,
+            lte: dateTo,
+          },
+          ...diagnosisChannelFilter,
+          isDemo: false,
+          completedAt: { not: null },
+        },
+      }),
+    ]);
 
     // 日別に集計
     const dailyData: Record<string, { count: number; fromResult: number; fromClinicPage: number }> = {};
@@ -111,7 +134,7 @@ export async function GET(request: NextRequest) {
       ...stats,
     }));
 
-    return NextResponse.json({ data });
+    return NextResponse.json({ data, completedCount });
   } catch (error) {
     console.error("CTA chart data error:", error);
     return NextResponse.json(
