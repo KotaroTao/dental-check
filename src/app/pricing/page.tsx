@@ -9,6 +9,7 @@ import {
   Clock,
   Award,
   HelpCircle,
+  Wand2,
 } from "lucide-react";
 
 export default function PricingPage() {
@@ -62,7 +63,7 @@ export default function PricingPage() {
               シンプルで分かりやすい料金プラン
             </h1>
             <p className="text-lg text-gray-600 mb-8">
-              医院様のニーズに合わせて3つのプランをご用意。
+              医院様のニーズに合わせて4つのプランをご用意。
               <br />
               すべてのプランで14日間の無料トライアルをお試しいただけます。
             </p>
@@ -87,7 +88,7 @@ export default function PricingPage() {
       {/* 料金プランセクション */}
       <section className="py-16">
         <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
             {/* スタータープラン */}
             <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-200 relative">
               <div className="text-center mb-8">
@@ -196,11 +197,65 @@ export default function PricingPage() {
               </Link>
             </div>
 
+            {/* カスタムプラン */}
+            <div className="bg-white rounded-2xl p-8 shadow-lg border-2 border-orange-400 relative">
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                <span className="inline-flex items-center gap-1 px-4 py-1.5 bg-orange-500 text-white rounded-full text-sm font-medium shadow-lg">
+                  <Wand2 className="w-4 h-4" />
+                  オリジナル診断
+                </span>
+              </div>
+
+              <div className="text-center mb-8 pt-4">
+                <h3 className="text-xl font-bold text-gray-900 mb-2">カスタムプラン</h3>
+                <p className="text-gray-500 text-sm mb-4">オリジナル診断を作成したい医院様向け</p>
+                <div className="flex items-baseline justify-center gap-1">
+                  <span className="text-lg text-orange-500">¥</span>
+                  <span className="text-5xl font-bold text-orange-600">13,800</span>
+                  <span className="text-gray-500">/月</span>
+                </div>
+                <p className="text-sm text-gray-400 mt-1">（税別）</p>
+              </div>
+
+              <ul className="space-y-4 mb-8">
+                <li className="flex items-start gap-3">
+                  <div className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Check className="w-3 h-3 text-orange-600" />
+                  </div>
+                  <span className="text-gray-700">QRコード<strong className="text-orange-600">無制限</strong></span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <div className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Check className="w-3 h-3 text-orange-600" />
+                  </div>
+                  <span className="text-gray-700">すべての診断コンテンツを利用可能</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <div className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Check className="w-3 h-3 text-orange-600" />
+                  </div>
+                  <span className="text-gray-700">詳細な分析機能・CSVエクスポート</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <div className="w-5 h-5 bg-orange-200 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Wand2 className="w-3 h-3 text-orange-600" />
+                  </div>
+                  <span className="text-gray-700"><strong className="text-orange-600">オリジナル診断作成</strong>（無制限）</span>
+                </li>
+              </ul>
+
+              <Link href="/signup">
+                <Button size="lg" className="w-full bg-orange-500 hover:bg-orange-600">
+                  14日間無料で試す
+                </Button>
+              </Link>
+            </div>
+
             {/* マネージドプラン */}
             <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-8 shadow-lg relative text-white">
               <div className="text-center mb-8">
                 <h3 className="text-xl font-bold mb-2">マネージドプラン</h3>
-                <p className="text-gray-300 text-sm mb-4">分析サポート付きのフルサポートプラン</p>
+                <p className="text-gray-300 text-sm mb-4">カスタムプラン+専任サポート付き</p>
                 <div className="flex items-baseline justify-center gap-1">
                   <span className="text-lg text-blue-300">¥</span>
                   <span className="text-5xl font-bold">24,800</span>
@@ -220,13 +275,13 @@ export default function PricingPage() {
                   <div className="w-5 h-5 bg-purple-500/30 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
                     <Check className="w-3 h-3 text-purple-300" />
                   </div>
-                  <span className="text-gray-200">すべての診断コンテンツを利用可能</span>
+                  <span className="text-gray-200">詳細な分析機能・CSVエクスポート</span>
                 </li>
                 <li className="flex items-start gap-3">
-                  <div className="w-5 h-5 bg-purple-500/30 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <Check className="w-3 h-3 text-purple-300" />
+                  <div className="w-5 h-5 bg-orange-500/30 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Wand2 className="w-3 h-3 text-orange-300" />
                   </div>
-                  <span className="text-gray-200">詳細な分析機能・CSVエクスポート</span>
+                  <span className="text-gray-200"><strong className="text-orange-300">オリジナル診断作成</strong>（無制限）</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <div className="w-5 h-5 bg-yellow-500/30 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -263,13 +318,14 @@ export default function PricingPage() {
             プラン比較表
           </h2>
 
-          <div className="max-w-4xl mx-auto overflow-x-auto">
+          <div className="max-w-5xl mx-auto overflow-x-auto">
             <table className="w-full bg-white rounded-xl shadow-sm border border-gray-200">
               <thead>
                 <tr className="border-b border-gray-200">
                   <th className="text-left p-4 font-medium text-gray-600">機能</th>
                   <th className="p-4 font-medium text-gray-900 text-center">スターター</th>
                   <th className="p-4 font-medium text-blue-600 text-center bg-blue-50">スタンダード</th>
+                  <th className="p-4 font-medium text-orange-600 text-center bg-orange-50">カスタム</th>
                   <th className="p-4 font-medium text-gray-900 text-center">マネージド</th>
                 </tr>
               </thead>
@@ -278,48 +334,56 @@ export default function PricingPage() {
                   <td className="p-4 text-gray-700">月額料金（税別）</td>
                   <td className="p-4 text-center font-medium">¥4,980</td>
                   <td className="p-4 text-center font-medium text-blue-600 bg-blue-50">¥8,800</td>
+                  <td className="p-4 text-center font-medium text-orange-600 bg-orange-50">¥13,800</td>
                   <td className="p-4 text-center font-medium">¥24,800</td>
                 </tr>
                 <tr className="border-b border-gray-100">
                   <td className="p-4 text-gray-700">QRコード作成数</td>
                   <td className="p-4 text-center">2枚まで</td>
                   <td className="p-4 text-center font-medium text-blue-600 bg-blue-50">無制限</td>
+                  <td className="p-4 text-center font-medium text-orange-600 bg-orange-50">無制限</td>
                   <td className="p-4 text-center">無制限</td>
                 </tr>
                 <tr className="border-b border-gray-100">
                   <td className="p-4 text-gray-700">診断コンテンツ</td>
                   <td className="p-4 text-center"><Check className="w-5 h-5 text-green-500 mx-auto" /></td>
                   <td className="p-4 text-center bg-blue-50"><Check className="w-5 h-5 text-green-500 mx-auto" /></td>
+                  <td className="p-4 text-center bg-orange-50"><Check className="w-5 h-5 text-green-500 mx-auto" /></td>
                   <td className="p-4 text-center"><Check className="w-5 h-5 text-green-500 mx-auto" /></td>
                 </tr>
                 <tr className="border-b border-gray-100">
                   <td className="p-4 text-gray-700">結果画面カスタマイズ</td>
                   <td className="p-4 text-center"><Check className="w-5 h-5 text-green-500 mx-auto" /></td>
                   <td className="p-4 text-center bg-blue-50"><Check className="w-5 h-5 text-green-500 mx-auto" /></td>
-                  <td className="p-4 text-center"><Check className="w-5 h-5 text-green-500 mx-auto" /></td>
-                </tr>
-                <tr className="border-b border-gray-100">
-                  <td className="p-4 text-gray-700">経路別アクセス統計</td>
-                  <td className="p-4 text-center"><Check className="w-5 h-5 text-green-500 mx-auto" /></td>
-                  <td className="p-4 text-center bg-blue-50"><Check className="w-5 h-5 text-green-500 mx-auto" /></td>
+                  <td className="p-4 text-center bg-orange-50"><Check className="w-5 h-5 text-green-500 mx-auto" /></td>
                   <td className="p-4 text-center"><Check className="w-5 h-5 text-green-500 mx-auto" /></td>
                 </tr>
                 <tr className="border-b border-gray-100">
                   <td className="p-4 text-gray-700">CSVエクスポート</td>
                   <td className="p-4 text-center text-gray-400">—</td>
                   <td className="p-4 text-center bg-blue-50"><Check className="w-5 h-5 text-green-500 mx-auto" /></td>
+                  <td className="p-4 text-center bg-orange-50"><Check className="w-5 h-5 text-green-500 mx-auto" /></td>
+                  <td className="p-4 text-center"><Check className="w-5 h-5 text-green-500 mx-auto" /></td>
+                </tr>
+                <tr className="border-b border-gray-100">
+                  <td className="p-4 text-gray-700">オリジナル診断作成</td>
+                  <td className="p-4 text-center text-gray-400">—</td>
+                  <td className="p-4 text-center text-gray-400 bg-blue-50">—</td>
+                  <td className="p-4 text-center bg-orange-50"><Check className="w-5 h-5 text-green-500 mx-auto" /></td>
                   <td className="p-4 text-center"><Check className="w-5 h-5 text-green-500 mx-auto" /></td>
                 </tr>
                 <tr className="border-b border-gray-100">
                   <td className="p-4 text-gray-700">専任担当者サポート</td>
                   <td className="p-4 text-center text-gray-400">—</td>
                   <td className="p-4 text-center text-gray-400 bg-blue-50">—</td>
+                  <td className="p-4 text-center text-gray-400 bg-orange-50">—</td>
                   <td className="p-4 text-center"><Check className="w-5 h-5 text-green-500 mx-auto" /></td>
                 </tr>
                 <tr>
                   <td className="p-4 text-gray-700">月次レポート</td>
                   <td className="p-4 text-center text-gray-400">—</td>
                   <td className="p-4 text-center text-gray-400 bg-blue-50">—</td>
+                  <td className="p-4 text-center text-gray-400 bg-orange-50">—</td>
                   <td className="p-4 text-center"><Check className="w-5 h-5 text-green-500 mx-auto" /></td>
                 </tr>
               </tbody>

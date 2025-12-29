@@ -86,7 +86,7 @@ export async function PATCH(
     const { planType } = body;
 
     // プランタイプの検証（管理者は全プラン設定可能）
-    const validPlanTypes: PlanType[] = ["starter", "standard", "managed", "free"];
+    const validPlanTypes: PlanType[] = ["starter", "standard", "custom", "managed", "free"];
     if (!planType || !validPlanTypes.includes(planType)) {
       return NextResponse.json(
         { error: "無効なプランタイプです" },

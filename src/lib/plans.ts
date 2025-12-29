@@ -1,6 +1,6 @@
 // プラン定義
 
-export type PlanType = "starter" | "standard" | "managed" | "free";
+export type PlanType = "starter" | "standard" | "custom" | "managed" | "free";
 
 export interface Plan {
   type: PlanType;
@@ -38,17 +38,32 @@ export const PLANS: Record<PlanType, Plan> = {
       "CSVエクスポート",
     ],
   },
-  managed: {
-    type: "managed",
-    name: "マネージドプラン",
-    price: 24800,
+  custom: {
+    type: "custom",
+    name: "カスタムプラン",
+    price: 13800,
     qrCodeLimit: null,
-    description: "分析サポート付きのフルサポートプラン",
+    description: "オリジナル診断を作成したい医院様向け",
     features: [
       "QRコード無制限",
       "診断結果の閲覧",
       "詳細な分析機能",
       "CSVエクスポート",
+      "オリジナル診断作成（無制限）",
+    ],
+  },
+  managed: {
+    type: "managed",
+    name: "マネージドプラン",
+    price: 24800,
+    qrCodeLimit: null,
+    description: "カスタムプラン+専任サポート付き",
+    features: [
+      "QRコード無制限",
+      "診断結果の閲覧",
+      "詳細な分析機能",
+      "CSVエクスポート",
+      "オリジナル診断作成（無制限）",
       "専任担当者による分析サポート",
       "月次レポート提供",
     ],
