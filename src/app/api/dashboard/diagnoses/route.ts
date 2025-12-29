@@ -2,6 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { getSubscriptionState } from "@/lib/subscription";
+import { diagnosisTypes } from "@/data/diagnosis-types";
+
+// 静的に定義されたデフォルト診断をDB形式に変換
+function getStaticDiagnoses() {
+  return Object.values(diagnosisTypes).map((d) => ({
+    id: `static-${d.slug}`,
+    slug: d.slug,
+    clinicId: null,
+    name: d.name,
+    description: d.description,
+    isActive: true,
+    createdAt: new Date().toISOString(),
+  }));
+}
 
 // クリニックの診断一覧を取得
 export async function GET() {
@@ -11,12 +25,19 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // クリニックが利用可能な診断を取得
-    // 1. システム提供の診断（clinicId = null または未設定）
-    // 2. 自分のクリニックの診断
-    let diagnoses;
+    // データベースから診断を取得
+    let dbDiagnoses: Array<{
+      id: string;
+      slug: string;
+      clinicId: string | null;
+      name: string;
+      description: string | null;
+      isActive: boolean;
+      createdAt: Date | string;
+    }> = [];
+
     try {
-      diagnoses = await prisma.diagnosisType.findMany({
+      dbDiagnoses = await prisma.diagnosisType.findMany({
         where: {
           OR: [
             { clinicId: null },
@@ -25,26 +46,48 @@ export async function GET() {
           isActive: true,
         },
         orderBy: [
-          { clinicId: "asc" }, // システム診断を先に
+          { clinicId: "asc" },
           { createdAt: "desc" },
         ],
       });
     } catch (dbError) {
-      // clinicIdカラムが存在しない場合のフォールバック（マイグレーション未適用時）
       console.warn("clinicId query failed, falling back to simple query:", dbError);
-      diagnoses = await prisma.diagnosisType.findMany({
+      const fallbackDiagnoses = await prisma.diagnosisType.findMany({
         where: { isActive: true },
         orderBy: { createdAt: "desc" },
       });
-      // clinicIdが存在しない場合、すべてシステム診断として扱う
-      diagnoses = diagnoses.map((d: Record<string, unknown>) => ({ ...d, clinicId: null }));
+      dbDiagnoses = fallbackDiagnoses.map((d: Record<string, unknown>) => ({
+        ...d,
+        clinicId: null,
+      })) as typeof dbDiagnoses;
     }
+
+    // 静的診断を取得
+    const staticDiagnoses = getStaticDiagnoses();
+
+    // DBに存在するスラッグを取得
+    const dbSlugs = new Set(dbDiagnoses.map((d) => d.slug));
+
+    // DBに存在しない静的診断を追加
+    const missingStaticDiagnoses = staticDiagnoses.filter(
+      (d) => !dbSlugs.has(d.slug)
+    );
+
+    // 結合して返す（システム診断を先に、その後カスタム診断）
+    const allDiagnoses = [...missingStaticDiagnoses, ...dbDiagnoses];
+
+    // システム診断（clinicId = null）を先に、オリジナル診断を後に
+    const sortedDiagnoses = allDiagnoses.sort((a, b) => {
+      if (a.clinicId === null && b.clinicId !== null) return -1;
+      if (a.clinicId !== null && b.clinicId === null) return 1;
+      return 0;
+    });
 
     // 契約状態を取得してオリジナル診断作成可能か確認
     const subscriptionState = await getSubscriptionState(session.clinicId);
 
     return NextResponse.json({
-      diagnoses,
+      diagnoses: sortedDiagnoses,
       canCreateCustomDiagnosis: subscriptionState.canCreateCustomDiagnosis,
     });
   } catch (error) {
