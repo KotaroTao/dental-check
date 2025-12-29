@@ -60,6 +60,9 @@ export function ResultCard({ diagnosis, isDemo, clinicSlug, ctaConfig, clinicNam
   useEffect(() => {
     if (!sessionId || isDemo) return;
 
+    // SSR時はスキップ
+    if (typeof window === "undefined") return;
+
     // 以前に拒否したかチェック
     const locationDenied = localStorage.getItem("location_prompt_denied");
     if (locationDenied) return;
