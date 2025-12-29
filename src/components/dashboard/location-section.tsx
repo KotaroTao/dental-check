@@ -201,7 +201,7 @@ export function LocationSection({
       <div className="bg-white rounded-xl shadow-sm border p-6">
         <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
           <MapPin className="w-5 h-5" />
-          診断実施エリア
+          QR読み込みエリア
         </h2>
         <ChannelSelector />
         <div className="animate-pulse">
@@ -221,13 +221,13 @@ export function LocationSection({
       <div className="bg-white rounded-xl shadow-sm border p-6">
         <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
           <MapPin className="w-5 h-5" />
-          診断実施エリア
+          QR読み込みエリア
         </h2>
         <ChannelSelector />
         <div className="text-center py-8 text-gray-500">
           <MapPin className="w-12 h-12 mx-auto mb-2 text-gray-300" />
           <p>{selectedChannelIds.length === 0 ? "QRコードを選択してください" : "この期間のエリアデータはありません"}</p>
-          <p className="text-sm mt-1">診断が実施されると、ここに地域別の統計が表示されます</p>
+          <p className="text-sm mt-1">QRコードが読み込まれると、ここに地域別の統計が表示されます</p>
         </div>
       </div>
     );
@@ -257,7 +257,7 @@ export function LocationSection({
       <div className="flex items-center gap-2 mb-4">
         <h2 className="text-lg font-bold flex items-center gap-2">
           <MapPin className="w-5 h-5" />
-          診断実施エリア
+          QR読み込みエリア
           <span className="text-sm font-normal text-gray-500">
             （{total}件中 位置特定 {validLocations.length}件）
           </span>

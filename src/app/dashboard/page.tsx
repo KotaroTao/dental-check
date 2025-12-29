@@ -758,7 +758,7 @@ export default function DashboardPage() {
                       <div className="bg-purple-50 rounded-lg py-3 px-4 flex items-center justify-center gap-3">
                         <MousePointerClick className="w-5 h-5 text-purple-600" />
                         <div>
-                          <div className="text-xs text-gray-500">スキャン回数</div>
+                          <div className="text-xs text-gray-500">QR読み込み</div>
                           <div className="text-2xl font-bold text-purple-600">{channel.scanCount}</div>
                         </div>
                       </div>
@@ -958,7 +958,7 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* 診断実施エリア */}
+      {/* QR読み込みエリア */}
       <LocationSection
         period={period}
         channels={channels}
@@ -966,11 +966,11 @@ export default function DashboardPage() {
         customEndDate={period === "custom" ? customEndDate : undefined}
       />
 
-      {/* 診断完了履歴 */}
+      {/* QR読み込み履歴 */}
       <div className="bg-white rounded-xl shadow-sm border">
         <div className="p-6 border-b">
           <div className="flex flex-wrap items-center gap-4">
-            <h2 className="text-lg font-bold">診断完了履歴</h2>
+            <h2 className="text-lg font-bold">QR読み込み履歴</h2>
             <div className="flex gap-2 ml-auto">
               <select
                 value={selectedDiagnosisType}
