@@ -113,7 +113,7 @@ export default function DiagnosesPage() {
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Link href={`/d/${diagnosis.slug}?demo=true`} target="_blank">
+                  <Link href={`/demo/${diagnosis.slug}`} target="_blank">
                     <Button variant="outline" size="sm">
                       <Eye className="w-4 h-4" />
                     </Button>
@@ -165,7 +165,7 @@ export default function DiagnosesPage() {
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Link href={`/d/${diagnosis.slug}?demo=true`} target="_blank">
+                  <Link href={`/demo/${diagnosis.slug}`} target="_blank">
                     <Button variant="outline" size="sm">
                       <Eye className="w-4 h-4" />
                     </Button>
