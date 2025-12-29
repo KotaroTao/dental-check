@@ -7,6 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
+import Link from "next/link";
 
 interface Props {
   diagnosisName: string;
@@ -15,6 +17,7 @@ interface Props {
 export function ProfileForm({ diagnosisName }: Props) {
   const [age, setAge] = useState("");
   const [gender, setGender] = useState<string | null>(null);
+  const [agreed, setAgreed] = useState(false);
   const { setProfile } = useDiagnosisStore();
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -25,7 +28,7 @@ export function ProfileForm({ diagnosisName }: Props) {
     }
   };
 
-  const isValid = age && parseInt(age, 10) > 0 && parseInt(age, 10) < 120 && gender;
+  const isValid = age && parseInt(age, 10) > 0 && parseInt(age, 10) < 120 && gender && agreed;
 
   return (
     <Card>
@@ -78,6 +81,24 @@ export function ProfileForm({ diagnosisName }: Props) {
                 </Label>
               </div>
             </RadioGroup>
+          </div>
+
+          <div className="flex items-start space-x-2">
+            <Checkbox
+              id="terms"
+              checked={agreed}
+              onCheckedChange={(checked) => setAgreed(checked === true)}
+            />
+            <Label htmlFor="terms" className="text-sm font-normal leading-relaxed cursor-pointer">
+              <Link href="/terms" target="_blank" className="text-blue-600 hover:underline">
+                利用規約
+              </Link>
+              ・
+              <Link href="/privacy" target="_blank" className="text-blue-600 hover:underline">
+                プライバシーポリシー
+              </Link>
+              に同意する
+            </Label>
           </div>
 
           <Button
