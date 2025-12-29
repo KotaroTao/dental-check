@@ -1,12 +1,10 @@
 "use client";
 
 import { useMemo } from "react";
-import { MapContainer, TileLayer, GeoJSON } from "react-leaflet";
+import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import type { Feature, Polygon } from "geojson";
-import type { PathOptions } from "leaflet";
 import {
-  getJapanGeoJSON,
+  PREFECTURE_CENTERS,
   normalizePrefectureName,
 } from "@/data/japan-prefectures";
 
@@ -21,9 +19,18 @@ interface LocationMapProps {
   locations: LocationData[];
 }
 
-// 件数に応じた境界線の色を返す（グラデーション）
-function getBorderColor(count: number, maxCount: number): string {
-  if (count === 0) return "#d1d5db"; // gray-300（データなし）
+interface MarkerData {
+  key: string;
+  position: [number, number];
+  region: string;
+  city: string;
+  town: string | null;
+  count: number;
+}
+
+// 件数に応じたマーカーの色を返す
+function getMarkerColor(count: number, maxCount: number): string {
+  if (count === 0) return "#d1d5db"; // gray-300
 
   const ratio = count / maxCount;
 
@@ -34,149 +41,98 @@ function getBorderColor(count: number, maxCount: number): string {
   return "#93c5fd"; // blue-300
 }
 
-// 件数に応じた境界線の太さを返す
-function getBorderWeight(count: number, maxCount: number): number {
-  if (count === 0) return 1;
+// 件数に応じたマーカーのサイズを返す
+function getMarkerRadius(count: number, maxCount: number): number {
+  const minRadius = 6;
+  const maxRadius = 20;
+
+  if (maxCount <= 1) return minRadius;
 
   const ratio = count / maxCount;
+  return minRadius + (maxRadius - minRadius) * Math.sqrt(ratio);
+}
 
-  if (ratio > 0.6) return 4;
-  if (ratio > 0.3) return 3;
-  return 2;
+// 文字列からハッシュ値を生成（オフセット計算用）
+function hashString(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return hash;
+}
+
+// 市区町村名からオフセットを計算（同じ都道府県内で重ならないように）
+function getCityOffset(city: string, index: number): [number, number] {
+  const hash = hashString(city);
+  // -0.3 ~ 0.3 の範囲でオフセット（約30km程度）
+  const latOffset = ((hash % 100) / 100 - 0.5) * 0.6;
+  const lngOffset = (((hash >> 8) % 100) / 100 - 0.5) * 0.6;
+
+  // インデックスによる追加オフセット（同じ市内の複数マーカー用）
+  const angleStep = (2 * Math.PI) / 8;
+  const radius = 0.05 * (Math.floor(index / 8) + 1);
+  const angle = angleStep * (index % 8);
+
+  return [
+    latOffset + radius * Math.sin(angle),
+    lngOffset + radius * Math.cos(angle),
+  ];
 }
 
 export default function LocationMap({ locations }: LocationMapProps) {
   // 日本の中心付近
   const defaultCenter: [number, number] = [36.5, 138.0];
 
-  // 都道府県別に集計（市区町村・町丁目データも含む）
-  const prefectureData = useMemo(() => {
-    const data: Record<string, {
-      count: number;
-      cities: Record<string, {
-        count: number;
-        towns: Record<string, number>;
-      }>;
-    }> = {};
+  // マーカーデータを生成
+  const markers = useMemo(() => {
+    const result: MarkerData[] = [];
+    const cityIndexMap: Record<string, number> = {};
 
     for (const loc of locations) {
-      if (!loc.region) continue;
+      if (!loc.region || !loc.city) continue;
 
       const prefName = normalizePrefectureName(loc.region);
+      const basePosition = PREFECTURE_CENTERS[prefName];
 
-      if (!data[prefName]) {
-        data[prefName] = { count: 0, cities: {} };
+      if (!basePosition) continue;
+
+      // 市区町村内のインデックスを取得
+      const cityKey = `${prefName}-${loc.city}`;
+      if (!cityIndexMap[cityKey]) {
+        cityIndexMap[cityKey] = 0;
       }
-      data[prefName].count += loc.count;
+      const cityIndex = cityIndexMap[cityKey]++;
 
-      if (loc.city) {
-        if (!data[prefName].cities[loc.city]) {
-          data[prefName].cities[loc.city] = { count: 0, towns: {} };
-        }
-        data[prefName].cities[loc.city].count += loc.count;
+      // オフセットを計算
+      const [latOffset, lngOffset] = getCityOffset(loc.city, cityIndex);
 
-        // 町丁目データを追加
-        if (loc.town) {
-          if (!data[prefName].cities[loc.city].towns[loc.town]) {
-            data[prefName].cities[loc.city].towns[loc.town] = 0;
-          }
-          data[prefName].cities[loc.city].towns[loc.town] += loc.count;
-        }
-      }
-    }
+      const position: [number, number] = [
+        basePosition[0] + latOffset,
+        basePosition[1] + lngOffset,
+      ];
 
-    return data;
-  }, [locations]);
+      const key = `${prefName}-${loc.city}-${loc.town || "notown"}-${result.length}`;
 
-  // 最大件数
-  const maxCount = useMemo(() => {
-    const counts = Object.values(prefectureData).map((d) => d.count);
-    return counts.length > 0 ? Math.max(...counts, 1) : 1;
-  }, [prefectureData]);
-
-  // GeoJSONデータ
-  const geoJsonData = useMemo(() => getJapanGeoJSON(), []);
-
-  // 各都道府県のスタイル（境界線のみ、塗りつぶしなし）
-  const getStyle = (feature: Feature<Polygon, { name: string }> | undefined): PathOptions => {
-    if (!feature) return {};
-
-    const prefName = feature.properties.name;
-    const data = prefectureData[prefName];
-    const count = data?.count || 0;
-
-    return {
-      fillColor: "transparent",
-      fillOpacity: 0,
-      weight: getBorderWeight(count, maxCount),
-      opacity: 1,
-      color: getBorderColor(count, maxCount),
-    };
-  };
-
-  // 各都道府県にイベントを追加
-  const onEachFeature = (
-    feature: Feature<Polygon, { name: string }>,
-    layer: L.Layer
-  ) => {
-    const prefName = feature.properties.name;
-    const data = prefectureData[prefName];
-    const count = data?.count || 0;
-
-    // ツールチップを追加
-    if (count > 0) {
-      const cities = data?.cities || {};
-      const topCities = Object.entries(cities)
-        .sort((a, b) => b[1].count - a[1].count)
-        .slice(0, 3);
-
-      let tooltipContent = `<div class="text-center">
-        <div class="font-bold">${prefName}</div>
-        <div class="text-blue-600 font-bold">${count}件</div>`;
-
-      if (topCities.length > 0) {
-        tooltipContent += '<div class="text-xs text-gray-500 mt-1">';
-        topCities.forEach(([city, cityData]) => {
-          tooltipContent += `<div class="font-medium">${city}: ${cityData.count}件</div>`;
-          // 町丁目データがあれば表示（上位2件まで）
-          const topTowns = Object.entries(cityData.towns)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 2);
-          if (topTowns.length > 0) {
-            topTowns.forEach(([town, townCount]) => {
-              tooltipContent += `<span class="text-gray-400 ml-2">└ ${town}: ${townCount}件</span><br/>`;
-            });
-          }
-        });
-        tooltipContent += "</div>";
-      }
-
-      tooltipContent += "</div>";
-
-      layer.bindTooltip(tooltipContent, {
-        permanent: false,
-        direction: "top",
-        className: "prefecture-tooltip",
+      result.push({
+        key,
+        position,
+        region: prefName,
+        city: loc.city,
+        town: loc.town,
+        count: loc.count,
       });
     }
 
-    // ホバー時のスタイル変更
-    layer.on({
-      mouseover: (e) => {
-        const target = e.target;
-        target.setStyle({
-          weight: count > 0 ? 5 : 2,
-          color: count > 0 ? "#1d4ed8" : "#6b7280", // blue-700 or gray-500
-          fillOpacity: 0,
-        });
-        target.bringToFront();
-      },
-      mouseout: (e) => {
-        const target = e.target;
-        target.setStyle(getStyle(feature));
-      },
-    });
-  };
+    return result;
+  }, [locations]);
+
+  // 最大件数（マーカーサイズ・色の基準）
+  const maxCount = useMemo(() => {
+    if (markers.length === 0) return 1;
+    return Math.max(...markers.map((m) => m.count), 1);
+  }, [markers]);
 
   return (
     <MapContainer
@@ -190,12 +146,30 @@ export default function LocationMap({ locations }: LocationMapProps) {
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      <GeoJSON
-        key={JSON.stringify(prefectureData)}
-        data={geoJsonData}
-        style={getStyle as (feature: Feature | undefined) => PathOptions}
-        onEachFeature={onEachFeature}
-      />
+      {markers.map((marker) => (
+        <CircleMarker
+          key={marker.key}
+          center={marker.position}
+          radius={getMarkerRadius(marker.count, maxCount)}
+          pathOptions={{
+            color: getMarkerColor(marker.count, maxCount),
+            fillColor: getMarkerColor(marker.count, maxCount),
+            fillOpacity: 0.7,
+            weight: 2,
+          }}
+        >
+          <Popup>
+            <div className="text-center min-w-[120px]">
+              <div className="font-bold text-gray-800">{marker.region}</div>
+              <div className="text-sm text-gray-600">{marker.city}</div>
+              {marker.town && (
+                <div className="text-xs text-gray-500">{marker.town}</div>
+              )}
+              <div className="text-blue-600 font-bold mt-1">{marker.count}件</div>
+            </div>
+          </Popup>
+        </CircleMarker>
+      ))}
     </MapContainer>
   );
 }
