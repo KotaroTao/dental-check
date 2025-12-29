@@ -348,7 +348,7 @@ export default function BillingPage() {
             <span className="text-gray-600">QRコード</span>
             <span className="font-medium">
               {subscription?.qrCodeCount || 0} / {subscription?.qrCodeLimit === null ? "無制限" : `${subscription?.qrCodeLimit}枚`}
-              {subscription?.remainingQRCodes !== null && subscription.remainingQRCodes > 0 && (
+              {subscription?.remainingQRCodes != null && subscription.remainingQRCodes > 0 && (
                 <span className="text-gray-500 text-sm ml-2">
                   （残り{subscription.remainingQRCodes}枚）
                 </span>

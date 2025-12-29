@@ -31,7 +31,7 @@ export async function GET() {
       },
     });
 
-    const clinicsWithPlan = clinics.map((clinic) => ({
+    const clinicsWithPlan = clinics.map((clinic: typeof clinics[number]) => ({
       id: clinic.id,
       slug: clinic.slug,
       name: clinic.name,
