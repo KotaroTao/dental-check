@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Upload, X, Loader2, Image as ImageIcon, Calendar } from "lucide-react";
+import { ArrowLeft, Upload, X, Loader2, Image as ImageIcon, Calendar, Link2 } from "lucide-react";
 
 // 診断タイプの表示名
 const DIAGNOSIS_TYPE_NAMES: Record<string, string> = {
@@ -19,7 +19,9 @@ interface Channel {
   name: string;
   description: string | null;
   imageUrl: string | null;
-  diagnosisTypeSlug: string;
+  channelType: "diagnosis" | "link";
+  diagnosisTypeSlug: string | null;
+  redirectUrl: string | null;
   isActive: boolean;
   expiresAt: string | null;
 }
@@ -34,6 +36,7 @@ export default function EditChannelPage() {
     description: "",
     isActive: true,
     imageUrl: "" as string | null,
+    redirectUrl: "",
     expiresAt: "",
   });
   const [error, setError] = useState("");
@@ -60,6 +63,7 @@ export default function EditChannelPage() {
             description: data.channel.description || "",
             isActive: data.channel.isActive,
             imageUrl: data.channel.imageUrl || null,
+            redirectUrl: data.channel.redirectUrl || "",
             expiresAt: expiresAtValue,
           });
         } else {
@@ -206,6 +210,20 @@ export default function EditChannelPage() {
       return;
     }
 
+    // リンクタイプの場合はURLの検証
+    if (channel?.channelType === "link") {
+      if (!formData.redirectUrl.trim()) {
+        setError("リダイレクト先URLを入力してください");
+        return;
+      }
+      try {
+        new URL(formData.redirectUrl);
+      } catch {
+        setError("有効なURLを入力してください（https://で始まる形式）");
+        return;
+      }
+    }
+
     setIsSaving(true);
 
     try {
@@ -215,6 +233,7 @@ export default function EditChannelPage() {
         body: JSON.stringify({
           ...formData,
           expiresAt: formData.expiresAt || null,
+          redirectUrl: channel?.channelType === "link" ? formData.redirectUrl : null,
         }),
       });
 
@@ -376,15 +395,40 @@ export default function EditChannelPage() {
             />
           </div>
 
-          <div className="space-y-2">
-            <Label>診断タイプ</Label>
-            <div className="px-3 py-2 bg-gray-50 rounded-md text-sm text-gray-600">
-              {DIAGNOSIS_TYPE_NAMES[channel.diagnosisTypeSlug] || channel.diagnosisTypeSlug}
+          {/* 診断タイプ表示（診断タイプの場合） */}
+          {channel.channelType === "diagnosis" && channel.diagnosisTypeSlug && (
+            <div className="space-y-2">
+              <Label>診断タイプ</Label>
+              <div className="px-3 py-2 bg-gray-50 rounded-md text-sm text-gray-600">
+                {DIAGNOSIS_TYPE_NAMES[channel.diagnosisTypeSlug] || channel.diagnosisTypeSlug}
+              </div>
+              <p className="text-xs text-gray-500">
+                診断タイプは変更できません
+              </p>
             </div>
-            <p className="text-xs text-gray-500">
-              診断タイプは変更できません
-            </p>
-          </div>
+          )}
+
+          {/* リダイレクトURL入力（リンクタイプの場合） */}
+          {channel.channelType === "link" && (
+            <div className="space-y-2">
+              <Label htmlFor="redirectUrl" className="flex items-center gap-2">
+                <Link2 className="w-4 h-4 text-gray-500" />
+                リダイレクト先URL <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="redirectUrl"
+                name="redirectUrl"
+                type="url"
+                placeholder="https://example.com/page"
+                value={formData.redirectUrl}
+                onChange={handleChange}
+                disabled={isSaving}
+              />
+              <p className="text-xs text-gray-500">
+                QRコードをスキャンした際のリダイレクト先URL
+              </p>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="description">説明（任意）</Label>

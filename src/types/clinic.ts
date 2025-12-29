@@ -142,9 +142,12 @@ export interface Channel {
   name: string;
   description: string | null;
   imageUrl: string | null;
-  diagnosisTypeSlug: string;
+  channelType: "diagnosis" | "link";
+  diagnosisTypeSlug: string | null;
+  redirectUrl: string | null;
   isActive: boolean;
   expiresAt: Date | null;
+  scanCount: number;
   createdAt: Date;
   updatedAt: Date;
 }

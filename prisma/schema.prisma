@@ -45,10 +45,13 @@ model Channel {
   name              String   // 例: "ポスティング用", "駅看板", "Instagram広告"
   description       String?
   imageUrl          String?   @map("image_url") // QRコードに紐付く画像
-  diagnosisTypeSlug String    @default("oral-age") @map("diagnosis_type_slug") // 紐付ける診断タイプ
+  channelType       String    @default("diagnosis") @map("channel_type") // "diagnosis" | "link"
+  diagnosisTypeSlug String?   @map("diagnosis_type_slug") // 診断タイプ（diagnosisタイプ用）
+  redirectUrl       String?   @map("redirect_url") // リダイレクト先URL（linkタイプ用）
   sortOrder         Int       @default(0) @map("sort_order") // 表示順序
   isActive          Boolean   @default(true) @map("is_active")
   expiresAt         DateTime? @map("expires_at") // 有効期限（nullは無期限）
+  scanCount         Int       @default(0) @map("scan_count") // スキャン回数（linkタイプ用）
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, X, Image as ImageIcon, Calendar } from "lucide-react";
+import { ArrowLeft, X, Image as ImageIcon, Calendar, Link2, Stethoscope } from "lucide-react";
 
 interface DiagnosisType {
   slug: string;
@@ -17,10 +17,12 @@ interface DiagnosisType {
 export default function NewChannelPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [channelType, setChannelType] = useState<"diagnosis" | "link">("diagnosis");
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     diagnosisTypeSlug: "",
+    redirectUrl: "",
     expiresAt: "",
   });
   const [diagnosisTypes, setDiagnosisTypes] = useState<DiagnosisType[]>([]);
@@ -145,9 +147,24 @@ export default function NewChannelPage() {
       return;
     }
 
-    if (!formData.diagnosisTypeSlug) {
+    if (channelType === "diagnosis" && !formData.diagnosisTypeSlug) {
       setError("診断タイプを選択してください");
       return;
+    }
+
+    if (channelType === "link" && !formData.redirectUrl.trim()) {
+      setError("リダイレクト先URLを入力してください");
+      return;
+    }
+
+    // URL形式チェック
+    if (channelType === "link") {
+      try {
+        new URL(formData.redirectUrl);
+      } catch {
+        setError("有効なURLを入力してください（https://で始まる形式）");
+        return;
+      }
     }
 
     setIsLoading(true);
@@ -165,7 +182,9 @@ export default function NewChannelPage() {
         body: JSON.stringify({
           name: formData.name,
           description: formData.description,
-          diagnosisTypeSlug: formData.diagnosisTypeSlug,
+          channelType,
+          diagnosisTypeSlug: channelType === "diagnosis" ? formData.diagnosisTypeSlug : null,
+          redirectUrl: channelType === "link" ? formData.redirectUrl : null,
           expiresAt: formData.expiresAt || null,
           imageUrl,
         }),
@@ -229,44 +248,103 @@ export default function NewChannelPage() {
             </p>
           </div>
 
+          {/* タイプ選択 */}
           <div className="space-y-2">
-            <Label htmlFor="diagnosisTypeSlug">
-              診断タイプ <span className="text-red-500">*</span>
-            </Label>
-            <select
-              id="diagnosisTypeSlug"
-              name="diagnosisTypeSlug"
-              value={formData.diagnosisTypeSlug}
-              onChange={handleChange}
-              disabled={isLoading || isLoadingDiagnoses}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <option value="">
-                {isLoadingDiagnoses ? "読み込み中..." : "選択してください"}
-              </option>
-              {defaultDiagnoses.length > 0 && (
-                <optgroup label="デフォルト診断">
-                  {defaultDiagnoses.map((type) => (
-                    <option key={type.slug} value={type.slug}>
-                      {type.name}
-                    </option>
-                  ))}
-                </optgroup>
-              )}
-              {customDiagnoses.length > 0 && (
-                <optgroup label="オリジナル診断">
-                  {customDiagnoses.map((type) => (
-                    <option key={type.slug} value={type.slug}>
-                      {type.name}
-                    </option>
-                  ))}
-                </optgroup>
-              )}
-            </select>
-            <p className="text-xs text-gray-500">
-              このQRコードで使用する診断を選択してください
-            </p>
+            <Label>タイプ <span className="text-red-500">*</span></Label>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setChannelType("diagnosis")}
+                disabled={isLoading}
+                className={`p-4 rounded-lg border-2 text-left transition-colors ${
+                  channelType === "diagnosis"
+                    ? "border-blue-500 bg-blue-50"
+                    : "border-gray-200 hover:border-gray-300"
+                }`}
+              >
+                <Stethoscope className={`w-6 h-6 mb-2 ${channelType === "diagnosis" ? "text-blue-600" : "text-gray-400"}`} />
+                <div className="font-medium">診断付き</div>
+                <div className="text-xs text-gray-500">お口年齢診断などを実施</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setChannelType("link")}
+                disabled={isLoading}
+                className={`p-4 rounded-lg border-2 text-left transition-colors ${
+                  channelType === "link"
+                    ? "border-blue-500 bg-blue-50"
+                    : "border-gray-200 hover:border-gray-300"
+                }`}
+              >
+                <Link2 className={`w-6 h-6 mb-2 ${channelType === "link" ? "text-blue-600" : "text-gray-400"}`} />
+                <div className="font-medium">リンクのみ</div>
+                <div className="text-xs text-gray-500">任意のURLへリダイレクト</div>
+              </button>
+            </div>
           </div>
+
+          {/* 診断タイプ選択（診断付きの場合） */}
+          {channelType === "diagnosis" && (
+            <div className="space-y-2">
+              <Label htmlFor="diagnosisTypeSlug">
+                診断タイプ <span className="text-red-500">*</span>
+              </Label>
+              <select
+                id="diagnosisTypeSlug"
+                name="diagnosisTypeSlug"
+                value={formData.diagnosisTypeSlug}
+                onChange={handleChange}
+                disabled={isLoading || isLoadingDiagnoses}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="">
+                  {isLoadingDiagnoses ? "読み込み中..." : "選択してください"}
+                </option>
+                {defaultDiagnoses.length > 0 && (
+                  <optgroup label="デフォルト診断">
+                    {defaultDiagnoses.map((type) => (
+                      <option key={type.slug} value={type.slug}>
+                        {type.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {customDiagnoses.length > 0 && (
+                  <optgroup label="オリジナル診断">
+                    {customDiagnoses.map((type) => (
+                      <option key={type.slug} value={type.slug}>
+                        {type.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+              </select>
+              <p className="text-xs text-gray-500">
+                このQRコードで使用する診断を選択してください
+              </p>
+            </div>
+          )}
+
+          {/* リダイレクトURL（リンクのみの場合） */}
+          {channelType === "link" && (
+            <div className="space-y-2">
+              <Label htmlFor="redirectUrl">
+                リダイレクト先URL <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="redirectUrl"
+                name="redirectUrl"
+                type="url"
+                placeholder="https://example.com/page"
+                value={formData.redirectUrl}
+                onChange={handleChange}
+                disabled={isLoading}
+              />
+              <p className="text-xs text-gray-500">
+                QRコードをスキャンした際のリダイレクト先URLを入力してください
+              </p>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="description">説明（任意）</Label>

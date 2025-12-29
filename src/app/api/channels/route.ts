@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, description, diagnosisTypeSlug, imageUrl, expiresAt } = body;
+    const { name, description, channelType, diagnosisTypeSlug, redirectUrl, imageUrl, expiresAt } = body;
 
     if (!name || name.trim() === "") {
       return NextResponse.json(
@@ -67,11 +67,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!diagnosisTypeSlug || diagnosisTypeSlug.trim() === "") {
+    const type = channelType || "diagnosis";
+
+    // 診断タイプの場合は診断スラッグが必須
+    if (type === "diagnosis" && (!diagnosisTypeSlug || diagnosisTypeSlug.trim() === "")) {
       return NextResponse.json(
         { error: "診断タイプを選択してください" },
         { status: 400 }
       );
+    }
+
+    // リンクタイプの場合はリダイレクトURLが必須
+    if (type === "link" && (!redirectUrl || redirectUrl.trim() === "")) {
+      return NextResponse.json(
+        { error: "リダイレクト先URLを入力してください" },
+        { status: 400 }
+      );
+    }
+
+    // URL形式チェック
+    if (type === "link") {
+      try {
+        new URL(redirectUrl);
+      } catch {
+        return NextResponse.json(
+          { error: "有効なURLを入力してください" },
+          { status: 400 }
+        );
+      }
     }
 
     // ユニークなコードを生成
@@ -83,7 +106,9 @@ export async function POST(request: NextRequest) {
         name: name.trim(),
         description: description?.trim() || null,
         imageUrl: imageUrl || null,
-        diagnosisTypeSlug: diagnosisTypeSlug.trim(),
+        channelType: type,
+        diagnosisTypeSlug: type === "diagnosis" ? diagnosisTypeSlug.trim() : null,
+        redirectUrl: type === "link" ? redirectUrl.trim() : null,
         expiresAt: expiresAt ? new Date(expiresAt) : null,
         code,
       },

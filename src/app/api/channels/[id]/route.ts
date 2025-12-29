@@ -53,7 +53,7 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await request.json();
-    const { name, description, isActive, imageUrl, expiresAt } = body;
+    const { name, description, isActive, imageUrl, expiresAt, redirectUrl } = body;
 
     const existingChannel = await prisma.channel.findFirst({
       where: {
@@ -69,6 +69,24 @@ export async function PATCH(
       );
     }
 
+    // リンクタイプでリダイレクトURLが指定された場合は検証
+    if (existingChannel.channelType === "link" && redirectUrl !== undefined) {
+      if (!redirectUrl || redirectUrl.trim() === "") {
+        return NextResponse.json(
+          { error: "リダイレクト先URLを入力してください" },
+          { status: 400 }
+        );
+      }
+      try {
+        new URL(redirectUrl);
+      } catch {
+        return NextResponse.json(
+          { error: "有効なURLを入力してください" },
+          { status: 400 }
+        );
+      }
+    }
+
     const channel = (await prisma.channel.update({
       where: { id },
       data: {
@@ -77,6 +95,7 @@ export async function PATCH(
         ...(isActive !== undefined && { isActive }),
         ...(imageUrl !== undefined && { imageUrl: imageUrl || null }),
         ...(expiresAt !== undefined && { expiresAt: expiresAt ? new Date(expiresAt) : null }),
+        ...(redirectUrl !== undefined && existingChannel.channelType === "link" && { redirectUrl: redirectUrl.trim() }),
       },
     })) as Channel;
 
