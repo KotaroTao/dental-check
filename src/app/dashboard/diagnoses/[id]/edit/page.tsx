@@ -560,24 +560,6 @@ export default function EditDiagnosisPage({
                 <div className="space-y-3">
                   <div>
                     <label className="block text-sm font-medium mb-1">
-                      カテゴリ
-                    </label>
-                    <select
-                      value={pattern.category}
-                      onChange={(e) =>
-                        updateResultPattern(pattern.id, "category", e.target.value)
-                      }
-                      className="w-full border rounded-lg px-3 py-2"
-                    >
-                      <option value="excellent">優秀</option>
-                      <option value="good">良好</option>
-                      <option value="normal">普通</option>
-                      <option value="warning">要注意</option>
-                      <option value="danger">危険</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
                       タイトル <span className="text-red-500">*</span>
                     </label>
                     <input
