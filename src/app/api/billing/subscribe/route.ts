@@ -1,10 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { payjp, PLAN_ID } from "@/lib/payjp";
+import { getPlan, type PlanType } from "@/lib/plans";
 
 // サブスクリプションを開始
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
     if (!payjp) {
       return NextResponse.json(
@@ -17,6 +18,19 @@ export async function POST() {
     if (!session) {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
     }
+
+    // リクエストボディからプランタイプを取得
+    let planType: PlanType = "starter";
+    try {
+      const body = await request.json();
+      if (body.planType && ["starter", "standard", "managed"].includes(body.planType)) {
+        planType = body.planType as PlanType;
+      }
+    } catch {
+      // ボディがない場合はデフォルトのstarterプランを使用
+    }
+
+    const plan = getPlan(planType);
 
     const subscription = await prisma.subscription.findUnique({
       where: { clinicId: session.clinicId },
@@ -58,9 +72,11 @@ export async function POST() {
       data: {
         payjpSubscriptionId: payjpSubscription.id,
         status: "active",
+        planType: planType,
         currentPeriodStart: now,
         currentPeriodEnd: periodEnd,
         trialEnd: null,
+        gracePeriodEnd: null,
       },
     });
 
@@ -73,6 +89,8 @@ export async function POST() {
     return NextResponse.json({
       subscription: {
         status: "active",
+        planType: planType,
+        planName: plan.name,
         currentPeriodEnd: periodEnd.toISOString(),
       },
     });

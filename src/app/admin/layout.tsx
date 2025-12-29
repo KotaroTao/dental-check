@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Shield, FileText, LogOut, BarChart3 } from "lucide-react";
+import { Shield, FileText, LogOut, BarChart3, Building2 } from "lucide-react";
 
 interface Admin {
   id: string;
@@ -96,6 +96,15 @@ export default function AdminLayout({
               >
                 <BarChart3 className="w-4 h-4" />
                 統計
+              </Link>
+              <Link
+                href="/admin/clinics"
+                className={`flex items-center gap-2 hover:text-gray-300 ${
+                  pathname.startsWith("/admin/clinics") ? "text-white" : "text-gray-400"
+                }`}
+              >
+                <Building2 className="w-4 h-4" />
+                医院管理
               </Link>
             </nav>
           </div>

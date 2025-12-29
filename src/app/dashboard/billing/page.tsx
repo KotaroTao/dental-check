@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { CreditCard, AlertCircle, CheckCircle, XCircle } from "lucide-react";
+import { CreditCard, AlertCircle, CheckCircle, XCircle, Check, Clock } from "lucide-react";
 
 interface CardInfo {
   last4: string;
@@ -11,16 +11,35 @@ interface CardInfo {
   expYear: number;
 }
 
+interface Plan {
+  type: string;
+  name: string;
+  price: number;
+  qrCodeLimit: number | null;
+  features: string[];
+  description: string;
+}
+
 interface SubscriptionInfo {
   status: string;
+  planType: string;
+  planName: string;
   trialEnd: string | null;
   trialDaysLeft: number | null;
+  gracePeriodDaysLeft: number | null;
   currentPeriodStart: string | null;
   currentPeriodEnd: string | null;
   canceledAt: string | null;
   hasCard: boolean;
   card: CardInfo | null;
   planAmount: number;
+  qrCodeLimit: number | null;
+  qrCodeCount: number;
+  remainingQRCodes: number | null;
+  canCreateQR: boolean;
+  canTrack: boolean;
+  message: string | null;
+  alertType: "info" | "warning" | "error" | null;
 }
 
 declare global {
@@ -39,6 +58,8 @@ declare global {
 
 export default function BillingPage() {
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
+  const [availablePlans, setAvailablePlans] = useState<Plan[]>([]);
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [message, setMessage] = useState<{
@@ -55,6 +76,7 @@ export default function BillingPage() {
       if (response.ok) {
         const data = await response.json();
         setSubscription(data.subscription);
+        setAvailablePlans(data.availablePlans || []);
       }
     } catch (error) {
       console.error("Failed to fetch subscription:", error);
@@ -151,17 +173,20 @@ export default function BillingPage() {
     );
   };
 
-  const handleSubscribe = async () => {
+  const handleSubscribe = async (planType?: string) => {
     setIsProcessing(true);
     setMessage(null);
 
     try {
       const response = await fetch("/api/billing/subscribe", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planType: planType || selectedPlan || "starter" }),
       });
 
       if (response.ok) {
-        setMessage({ type: "success", text: "有料プランを開始しました" });
+        setMessage({ type: "success", text: "プランを開始しました" });
+        setSelectedPlan(null);
         fetchSubscription();
       } else {
         const data = await response.json();
@@ -209,6 +234,11 @@ export default function BillingPage() {
     });
   };
 
+  const formatPrice = (price: number) => {
+    if (price === 0) return "無料";
+    return `¥${price.toLocaleString()}`;
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "trial":
@@ -239,6 +269,14 @@ export default function BillingPage() {
             支払い遅延
           </span>
         );
+      case "expired":
+      case "grace_period":
+        return (
+          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm bg-red-100 text-red-700">
+            <Clock className="w-4 h-4" />
+            期限切れ
+          </span>
+        );
       default:
         return null;
     }
@@ -248,8 +286,13 @@ export default function BillingPage() {
     return <div className="text-gray-500">読み込み中...</div>;
   }
 
+  const needsSubscription =
+    subscription?.status === "expired" ||
+    subscription?.status === "grace_period" ||
+    subscription?.status === "trial";
+
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-4xl">
       <h1 className="text-2xl font-bold mb-6">契約・お支払い</h1>
 
       {message && (
@@ -264,6 +307,23 @@ export default function BillingPage() {
         </div>
       )}
 
+      {/* 契約状態アラート */}
+      {subscription?.message && subscription?.alertType === "error" && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-red-700">{subscription.message}</p>
+              {subscription.gracePeriodDaysLeft !== null && subscription.gracePeriodDaysLeft > 0 && (
+                <p className="text-red-600 text-sm mt-1">
+                  猶予期間: 残り{subscription.gracePeriodDaysLeft}日
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 現在のプラン */}
       <div className="bg-white rounded-xl shadow-sm border p-6 mb-6">
         <div className="flex items-center justify-between mb-4">
@@ -274,13 +334,25 @@ export default function BillingPage() {
         <div className="space-y-4">
           <div className="flex justify-between items-center py-2 border-b">
             <span className="text-gray-600">プラン名</span>
-            <span className="font-medium">月額プラン</span>
+            <span className="font-medium">{subscription?.planName || "未契約"}</span>
           </div>
 
           <div className="flex justify-between items-center py-2 border-b">
             <span className="text-gray-600">料金</span>
             <span className="font-medium">
-              ¥{subscription?.planAmount?.toLocaleString() || "3,300"}/月（税込）
+              {formatPrice(subscription?.planAmount || 0)}/月（税込）
+            </span>
+          </div>
+
+          <div className="flex justify-between items-center py-2 border-b">
+            <span className="text-gray-600">QRコード</span>
+            <span className="font-medium">
+              {subscription?.qrCodeCount || 0} / {subscription?.qrCodeLimit === null ? "無制限" : `${subscription?.qrCodeLimit}枚`}
+              {subscription?.remainingQRCodes !== null && subscription.remainingQRCodes > 0 && (
+                <span className="text-gray-500 text-sm ml-2">
+                  （残り{subscription.remainingQRCodes}枚）
+                </span>
+              )}
             </span>
           </div>
 
@@ -300,7 +372,7 @@ export default function BillingPage() {
             </div>
           )}
 
-          {subscription?.currentPeriodEnd && subscription.status !== "trial" && (
+          {subscription?.currentPeriodEnd && subscription.status === "active" && (
             <div className="flex justify-between items-center py-2 border-b">
               <span className="text-gray-600">次回請求日</span>
               <span className="font-medium">
@@ -319,6 +391,89 @@ export default function BillingPage() {
           )}
         </div>
       </div>
+
+      {/* プラン選択 */}
+      {needsSubscription && availablePlans.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm border p-6 mb-6">
+          <h2 className="text-lg font-bold mb-4">プランを選択</h2>
+          <p className="text-gray-600 text-sm mb-6">
+            {subscription?.status === "trial"
+              ? "トライアル終了後に適用されるプランを選択してください"
+              : "継続利用するプランを選択してください"}
+          </p>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            {availablePlans.map((plan) => {
+              const isCurrentPlan = subscription?.planType === plan.type;
+              const isSelected = selectedPlan === plan.type;
+
+              return (
+                <div
+                  key={plan.type}
+                  onClick={() => setSelectedPlan(plan.type)}
+                  className={`relative rounded-xl border-2 p-5 cursor-pointer transition-all ${
+                    isSelected
+                      ? "border-blue-500 bg-blue-50"
+                      : isCurrentPlan
+                      ? "border-green-300 bg-green-50"
+                      : "border-gray-200 hover:border-gray-300"
+                  }`}
+                >
+                  {isCurrentPlan && (
+                    <span className="absolute -top-3 left-4 bg-green-500 text-white text-xs px-2 py-0.5 rounded">
+                      現在のプラン
+                    </span>
+                  )}
+
+                  <h3 className="font-bold text-lg mb-1">{plan.name}</h3>
+                  <p className="text-2xl font-bold mb-2">
+                    {formatPrice(plan.price)}
+                    <span className="text-sm font-normal text-gray-500">/月</span>
+                  </p>
+                  <p className="text-sm text-gray-600 mb-4">{plan.description}</p>
+
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium text-gray-700">
+                      QRコード: {plan.qrCodeLimit === null ? "無制限" : `${plan.qrCodeLimit}枚まで`}
+                    </div>
+                    <ul className="space-y-1">
+                      {plan.features.map((feature, i) => (
+                        <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
+                          <Check className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {selectedPlan && subscription?.hasCard && (
+            <div className="mt-6 flex justify-center">
+              <Button
+                size="lg"
+                onClick={() => handleSubscribe()}
+                disabled={isProcessing}
+              >
+                {isProcessing ? "処理中..." : "このプランで契約する"}
+              </Button>
+            </div>
+          )}
+
+          {selectedPlan && !subscription?.hasCard && (
+            <div className="mt-6 text-center">
+              <p className="text-orange-600 text-sm mb-4">
+                ※ 契約するにはカード登録が必要です
+              </p>
+              <Button onClick={() => setShowCardForm(true)}>
+                カードを登録
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* カード情報 */}
       <div className="bg-white rounded-xl shadow-sm border p-6 mb-6">
@@ -387,28 +542,10 @@ export default function BillingPage() {
 
       {/* アクションボタン */}
       <div className="bg-white rounded-xl shadow-sm border p-6">
-        {subscription?.status === "trial" && (
-          <div className="space-y-4">
-            <p className="text-gray-600">
-              トライアル期間終了後、自動的に有料プランへ移行します。
-            </p>
-            {!subscription.hasCard && (
-              <p className="text-orange-600 text-sm">
-                ※ 継続利用にはカード登録が必要です
-              </p>
-            )}
-            {subscription.hasCard && (
-              <Button onClick={handleSubscribe} disabled={isProcessing}>
-                {isProcessing ? "処理中..." : "今すぐ有料プランを開始"}
-              </Button>
-            )}
-          </div>
-        )}
-
         {subscription?.status === "active" && (
           <div className="space-y-4">
             <p className="text-gray-600">
-              有料プランをご利用いただきありがとうございます。
+              {subscription.planName}をご利用いただきありがとうございます。
             </p>
             <Button
               variant="outline"
@@ -424,10 +561,10 @@ export default function BillingPage() {
         {subscription?.status === "canceled" && (
           <div className="space-y-4">
             <p className="text-gray-600">
-              解約済みです。現在の期間終了まで利用可能です。
+              解約済みです。{subscription.currentPeriodEnd && formatDate(subscription.currentPeriodEnd)}まで利用可能です。
             </p>
             {subscription.hasCard && (
-              <Button onClick={handleSubscribe} disabled={isProcessing}>
+              <Button onClick={() => handleSubscribe(subscription.planType)} disabled={isProcessing}>
                 {isProcessing ? "処理中..." : "再度契約する"}
               </Button>
             )}
