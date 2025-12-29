@@ -221,7 +221,7 @@ export default function ChannelDetailPage() {
             </div>
             <div className="flex items-center gap-2">
               <MousePointerClick className="w-4 h-4 text-gray-500" />
-              <span className="text-sm text-gray-500">スキャン回数:</span>
+              <span className="text-sm text-gray-500">QR読み込み回数:</span>
               <span className="text-lg font-bold text-purple-600">{channel.scanCount}</span>
             </div>
           </div>

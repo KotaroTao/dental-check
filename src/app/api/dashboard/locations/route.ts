@@ -11,6 +11,13 @@ interface LocationGroupResult {
   _avg: { latitude: number | null; longitude: number | null };
 }
 
+interface AccessLogGroupResult {
+  region: string | null;
+  city: string | null;
+  channelId: string | null;
+  _count: { id: number };
+}
+
 interface RegionGroupResult {
   region: string | null;
   _count: { id: number };
@@ -95,8 +102,8 @@ export async function GET(request: NextRequest) {
       take: 100, // 上位100件に制限
     });
 
-    // レスポンス形式に変換
-    const locations = (locationData as LocationGroupResult[]).map((item) => ({
+    // レスポンス形式に変換（診断セッション）
+    const diagnosisLocations = (locationData as LocationGroupResult[]).map((item) => ({
       region: item.region,
       city: item.city,
       town: item.town,
@@ -104,7 +111,48 @@ export async function GET(request: NextRequest) {
       longitude: item._avg.longitude,
       count: item._count.id,
       channelId: item.channelId,
+      type: "diagnosis" as const,
     }));
+
+    // QRスキャン（リンクタイプ）のエリアデータを取得
+    const qrScanData = await prisma.accessLog.groupBy({
+      by: ["region", "city", "channelId"],
+      where: {
+        clinicId: session.clinicId,
+        eventType: "qr_scan",
+        createdAt: {
+          gte: dateFrom,
+          lte: dateTo,
+        },
+        region: { not: null },
+        city: { not: null },
+        ...channelFilter,
+      },
+      _count: {
+        id: true,
+      },
+      orderBy: {
+        _count: {
+          id: "desc",
+        },
+      },
+      take: 100,
+    });
+
+    // QRスキャンデータを統合形式に変換
+    const qrScanLocations = (qrScanData as AccessLogGroupResult[]).map((item) => ({
+      region: item.region,
+      city: item.city,
+      town: null,
+      latitude: null,
+      longitude: null,
+      count: item._count.id,
+      channelId: item.channelId,
+      type: "qr_scan" as const,
+    }));
+
+    // 両方のデータを統合
+    const locations = [...diagnosisLocations, ...qrScanLocations];
 
     // 都道府県別の集計（DB側で実行）
     const regionData = await prisma.diagnosisSession.groupBy({
@@ -130,24 +178,67 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const topRegions = (regionData as RegionGroupResult[]).map((item) => ({
-      region: item.region,
-      count: item._count.id,
-    }));
-
-    // 全体の件数
-    const total = await prisma.diagnosisSession.count({
+    // QRスキャンの都道府県別集計
+    const qrScanRegionData = await prisma.accessLog.groupBy({
+      by: ["region"],
       where: {
         clinicId: session.clinicId,
-        completedAt: { not: null },
-        isDemo: false,
+        eventType: "qr_scan",
         createdAt: {
           gte: dateFrom,
           lte: dateTo,
         },
+        region: { not: null },
         ...channelFilter,
       },
+      _count: {
+        id: true,
+      },
     });
+
+    // 都道府県別データを統合
+    const regionMap: Record<string, number> = {};
+    for (const item of regionData as RegionGroupResult[]) {
+      if (item.region) {
+        regionMap[item.region] = (regionMap[item.region] || 0) + item._count.id;
+      }
+    }
+    for (const item of qrScanRegionData as RegionGroupResult[]) {
+      if (item.region) {
+        regionMap[item.region] = (regionMap[item.region] || 0) + item._count.id;
+      }
+    }
+    const topRegions = Object.entries(regionMap)
+      .map(([region, count]) => ({ region, count }))
+      .sort((a, b) => b.count - a.count);
+
+    // 全体の件数（診断 + QRスキャン）
+    const [diagnosisTotal, qrScanTotal] = await Promise.all([
+      prisma.diagnosisSession.count({
+        where: {
+          clinicId: session.clinicId,
+          completedAt: { not: null },
+          isDemo: false,
+          createdAt: {
+            gte: dateFrom,
+            lte: dateTo,
+          },
+          ...channelFilter,
+        },
+      }),
+      prisma.accessLog.count({
+        where: {
+          clinicId: session.clinicId,
+          eventType: "qr_scan",
+          createdAt: {
+            gte: dateFrom,
+            lte: dateTo,
+          },
+          ...channelFilter,
+        },
+      }),
+    ]);
+    const total = diagnosisTotal + qrScanTotal;
 
     return NextResponse.json({
       locations,

@@ -148,7 +148,8 @@ export async function GET(request: NextRequest) {
       _count: { ctaClicks: number };
     };
 
-    const history = (sessions as SessionWithRelations[]).map((s) => {
+    // 診断履歴を整形
+    const diagnosisHistory = (sessions as SessionWithRelations[]).map((s) => {
       // CTA内訳を集計
       const ctaByType: Record<string, number> = {};
       for (const click of s.ctaClicks) {
@@ -168,6 +169,7 @@ export async function GET(request: NextRequest) {
       const ctaClick = s.ctaClicks[0];
       return {
         id: s.id,
+        type: "diagnosis" as const,
         createdAt: s.createdAt,
         userAge: s.userAge,
         userGender: s.userGender ? GENDER_NAMES[s.userGender] || s.userGender : null,
@@ -182,10 +184,112 @@ export async function GET(request: NextRequest) {
       };
     });
 
+    // QRスキャン（リンクタイプ）の履歴を取得
+    type AccessLogFilterType = {
+      clinicId: string;
+      eventType: string;
+      createdAt: { gte: Date; lte: Date };
+      channelId?: string | { in: string[] };
+    };
+
+    const accessLogFilter: AccessLogFilterType = {
+      clinicId: session.clinicId,
+      eventType: "qr_scan",
+      createdAt: {
+        gte: dateFrom,
+        lte: dateTo,
+      },
+    };
+
+    if (channelId) {
+      accessLogFilter.channelId = channelId;
+    } else if (activeChannelIds.length > 0) {
+      accessLogFilter.channelId = { in: activeChannelIds };
+    }
+
+    // diagnosisTypeが指定されている場合はQRスキャンを除外
+    const includeQRScans = !diagnosisType;
+
+    let qrScanHistory: Array<{
+      id: string;
+      type: "qr_scan";
+      createdAt: Date;
+      userAge: null;
+      userGender: null;
+      diagnosisType: string;
+      diagnosisTypeSlug: null;
+      channelName: string;
+      channelId: string | null;
+      area: string;
+      ctaType: null;
+      ctaClickCount: number;
+      ctaByType: Record<string, number>;
+    }> = [];
+
+    if (includeQRScans) {
+      type AccessLogWithChannel = {
+        id: string;
+        createdAt: Date;
+        region: string | null;
+        city: string | null;
+        channel: { id: string; name: string } | null;
+      };
+
+      const qrScans = await prisma.accessLog.findMany({
+        where: accessLogFilter,
+        include: {
+          channel: {
+            select: { id: true, name: true },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+        skip: offset,
+        take: limit,
+      }) as AccessLogWithChannel[];
+
+      qrScanHistory = qrScans.map((log: AccessLogWithChannel) => {
+        let area = "-";
+        if (log.region && log.city) {
+          area = `${log.region} ${log.city}`;
+        } else if (log.region) {
+          area = log.region;
+        } else if (log.city) {
+          area = log.city;
+        }
+
+        return {
+          id: log.id,
+          type: "qr_scan" as const,
+          createdAt: log.createdAt,
+          userAge: null,
+          userGender: null,
+          diagnosisType: "QR読み込み",
+          diagnosisTypeSlug: null,
+          channelName: log.channel?.name || "不明",
+          channelId: log.channel?.id || null,
+          area,
+          ctaType: null,
+          ctaClickCount: 0,
+          ctaByType: {},
+        };
+      });
+    }
+
+    // 両方の履歴を統合し、日時でソート
+    const history = [...diagnosisHistory, ...qrScanHistory].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    ).slice(0, limit);
+
+    // 合計件数
+    const qrScanTotalCount = includeQRScans
+      ? await prisma.accessLog.count({ where: accessLogFilter })
+      : 0;
+    const combinedTotalCount = totalCount + qrScanTotalCount;
+
     return NextResponse.json({
       history,
-      totalCount,
-      hasMore: offset + limit < totalCount,
+      totalCount: combinedTotalCount,
+      hasMore: offset + limit < combinedTotalCount,
       offset,
       limit,
     });
