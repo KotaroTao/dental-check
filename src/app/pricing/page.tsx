@@ -10,6 +10,7 @@ import {
   Award,
   HelpCircle,
   Wand2,
+  Video,
 } from "lucide-react";
 
 export default function PricingPage() {
@@ -190,7 +191,7 @@ export default function PricingPage() {
               </ul>
 
               <Link href="/signup">
-                <Button size="lg" variant="gradient" className="w-full group">
+                <Button size="lg" className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 group">
                   14日間無料で試す
                   <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
                 </Button>
@@ -287,13 +288,13 @@ export default function PricingPage() {
                   <div className="w-5 h-5 bg-yellow-500/30 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
                     <Star className="w-3 h-3 text-yellow-300" />
                   </div>
-                  <span className="text-gray-200"><strong className="text-yellow-300">専任担当者</strong>による分析サポート</span>
+                  <span className="text-gray-200"><strong className="text-yellow-300">専任担当者</strong>によるサポートとアドバイス</span>
                 </li>
                 <li className="flex items-start gap-3">
-                  <div className="w-5 h-5 bg-yellow-500/30 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <Star className="w-3 h-3 text-yellow-300" />
+                  <div className="w-5 h-5 bg-green-500/30 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Video className="w-3 h-3 text-green-300" />
                   </div>
-                  <span className="text-gray-200"><strong className="text-yellow-300">月次レポート</strong>提供</span>
+                  <span className="text-gray-200"><strong className="text-green-300">毎月30分</strong>の戦略ミーティング（Zoom）</span>
                 </li>
               </ul>
 
@@ -380,7 +381,7 @@ export default function PricingPage() {
                   <td className="p-4 text-center"><Check className="w-5 h-5 text-green-500 mx-auto" /></td>
                 </tr>
                 <tr>
-                  <td className="p-4 text-gray-700">月次レポート</td>
+                  <td className="p-4 text-gray-700">戦略ミーティング（Zoom）</td>
                   <td className="p-4 text-center text-gray-400">—</td>
                   <td className="p-4 text-center text-gray-400 bg-blue-50">—</td>
                   <td className="p-4 text-center text-gray-400 bg-orange-50">—</td>
