@@ -12,6 +12,8 @@ interface LocationData {
   region: string | null;
   city: string | null;
   town: string | null;
+  latitude: number | null;
+  longitude: number | null;
   count: number;
 }
 
@@ -26,6 +28,7 @@ interface MarkerData {
   city: string;
   town: string | null;
   count: number;
+  hasGPS: boolean;
 }
 
 // 件数に応じたマーカーの色を返す
@@ -52,35 +55,6 @@ function getMarkerRadius(count: number, maxCount: number): number {
   return minRadius + (maxRadius - minRadius) * Math.sqrt(ratio);
 }
 
-// 文字列からハッシュ値を生成（オフセット計算用）
-function hashString(str: string): number {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
-  }
-  return hash;
-}
-
-// 市区町村名からオフセットを計算（同じ都道府県内で重ならないように）
-function getCityOffset(city: string, index: number): [number, number] {
-  const hash = hashString(city);
-  // -0.3 ~ 0.3 の範囲でオフセット（約30km程度）
-  const latOffset = ((hash % 100) / 100 - 0.5) * 0.6;
-  const lngOffset = (((hash >> 8) % 100) / 100 - 0.5) * 0.6;
-
-  // インデックスによる追加オフセット（同じ市内の複数マーカー用）
-  const angleStep = (2 * Math.PI) / 8;
-  const radius = 0.05 * (Math.floor(index / 8) + 1);
-  const angle = angleStep * (index % 8);
-
-  return [
-    latOffset + radius * Math.sin(angle),
-    lngOffset + radius * Math.cos(angle),
-  ];
-}
-
 export default function LocationMap({ locations }: LocationMapProps) {
   // 日本の中心付近
   const defaultCenter: [number, number] = [36.5, 138.0];
@@ -88,30 +62,24 @@ export default function LocationMap({ locations }: LocationMapProps) {
   // マーカーデータを生成
   const markers = useMemo(() => {
     const result: MarkerData[] = [];
-    const cityIndexMap: Record<string, number> = {};
 
     for (const loc of locations) {
       if (!loc.region || !loc.city) continue;
 
       const prefName = normalizePrefectureName(loc.region);
-      const basePosition = PREFECTURE_CENTERS[prefName];
 
-      if (!basePosition) continue;
+      // GPS座標があればそれを使用、なければ都道府県の中心座標にフォールバック
+      let position: [number, number];
+      let hasGPS = false;
 
-      // 市区町村内のインデックスを取得
-      const cityKey = `${prefName}-${loc.city}`;
-      if (!cityIndexMap[cityKey]) {
-        cityIndexMap[cityKey] = 0;
+      if (loc.latitude !== null && loc.longitude !== null) {
+        position = [loc.latitude, loc.longitude];
+        hasGPS = true;
+      } else {
+        const fallbackPosition = PREFECTURE_CENTERS[prefName];
+        if (!fallbackPosition) continue;
+        position = fallbackPosition;
       }
-      const cityIndex = cityIndexMap[cityKey]++;
-
-      // オフセットを計算
-      const [latOffset, lngOffset] = getCityOffset(loc.city, cityIndex);
-
-      const position: [number, number] = [
-        basePosition[0] + latOffset,
-        basePosition[1] + lngOffset,
-      ];
 
       const key = `${prefName}-${loc.city}-${loc.town || "notown"}-${result.length}`;
 
@@ -122,6 +90,7 @@ export default function LocationMap({ locations }: LocationMapProps) {
         city: loc.city,
         town: loc.town,
         count: loc.count,
+        hasGPS,
       });
     }
 
@@ -134,10 +103,47 @@ export default function LocationMap({ locations }: LocationMapProps) {
     return Math.max(...markers.map((m) => m.count), 1);
   }, [markers]);
 
+  // マーカーがある場合、その範囲に合わせてズーム
+  const bounds = useMemo(() => {
+    if (markers.length === 0) return null;
+    const lats = markers.map((m) => m.position[0]);
+    const lngs = markers.map((m) => m.position[1]);
+    return {
+      minLat: Math.min(...lats),
+      maxLat: Math.max(...lats),
+      minLng: Math.min(...lngs),
+      maxLng: Math.max(...lngs),
+    };
+  }, [markers]);
+
+  // 中心座標を計算
+  const center: [number, number] = useMemo(() => {
+    if (!bounds) return defaultCenter;
+    return [
+      (bounds.minLat + bounds.maxLat) / 2,
+      (bounds.minLng + bounds.maxLng) / 2,
+    ];
+  }, [bounds]);
+
+  // ズームレベルを計算
+  const zoom = useMemo(() => {
+    if (!bounds) return 5;
+    const latDiff = bounds.maxLat - bounds.minLat;
+    const lngDiff = bounds.maxLng - bounds.minLng;
+    const maxDiff = Math.max(latDiff, lngDiff);
+
+    if (maxDiff < 0.1) return 13;
+    if (maxDiff < 0.5) return 11;
+    if (maxDiff < 1) return 10;
+    if (maxDiff < 2) return 9;
+    if (maxDiff < 5) return 7;
+    return 5;
+  }, [bounds]);
+
   return (
     <MapContainer
-      center={defaultCenter}
-      zoom={5}
+      center={center}
+      zoom={zoom}
       className="h-64 rounded-lg z-0"
       scrollWheelZoom={false}
       style={{ background: "#f9fafb" }}
@@ -166,6 +172,9 @@ export default function LocationMap({ locations }: LocationMapProps) {
                 <div className="text-xs text-gray-500">{marker.town}</div>
               )}
               <div className="text-blue-600 font-bold mt-1">{marker.count}件</div>
+              {!marker.hasGPS && (
+                <div className="text-xs text-gray-400 mt-1">※位置は概算</div>
+              )}
             </div>
           </Popup>
         </CircleMarker>

@@ -34,12 +34,12 @@ export async function POST(request: NextRequest) {
     const location = await reverseGeocode(latitude, longitude);
 
     // セッションの位置情報を更新
-    // プライバシー保護のため、GPS座標は保存せず町丁目レベルまで記録
+    // GPS座標も保存（マーカー表示用）
     await prisma.diagnosisSession.update({
       where: { id: sessionId },
       data: {
-        latitude: null,  // 座標は保存しない
-        longitude: null, // 座標は保存しない
+        latitude,
+        longitude,
         region: location?.region || null,
         city: location?.city || null,
         town: location?.town || null,
