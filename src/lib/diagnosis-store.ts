@@ -10,6 +10,7 @@ interface DiagnosisState {
   // プロフィール
   userAge: number | null;
   userGender: string | null;
+  locationConsent: boolean;
 
   // 診断進行状態
   currentStep: number;
@@ -21,7 +22,7 @@ interface DiagnosisState {
   oralAge: number | null;
 
   // アクション
-  setProfile: (age: number, gender: string | null) => void;
+  setProfile: (age: number, gender: string | null, locationConsent: boolean) => void;
   setAnswer: (step: number, choiceIndex: number, score: number) => void;
   nextStep: () => void;
   prevStep: () => void;
@@ -32,13 +33,14 @@ interface DiagnosisState {
 export const useDiagnosisStore = create<DiagnosisState>((set, get) => ({
   userAge: null,
   userGender: null,
+  locationConsent: false,
   currentStep: 0,
   answers: [],
   totalScore: null,
   resultPattern: null,
   oralAge: null,
 
-  setProfile: (age, gender) => set({ userAge: age, userGender: gender }),
+  setProfile: (age, gender, locationConsent) => set({ userAge: age, userGender: gender, locationConsent }),
 
   setAnswer: (step, choiceIndex, score) => {
     const answers = [...get().answers];
@@ -78,6 +80,7 @@ export const useDiagnosisStore = create<DiagnosisState>((set, get) => ({
     set({
       userAge: null,
       userGender: null,
+      locationConsent: false,
       currentStep: 0,
       answers: [],
       totalScore: null,

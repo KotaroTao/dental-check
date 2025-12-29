@@ -89,7 +89,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-xl font-bold text-gray-900 mb-4">7. 位置情報の取得・利用</h2>
             <p className="text-gray-700 leading-relaxed mb-4">
-              本サービスでは、診断完了後にユーザーの許可を得た場合に限り、ブラウザの位置情報機能（GPS等）を使用して
+              本サービスでは、診断開始時にユーザーの同意を得た場合に限り、ブラウザの位置情報機能（GPS等）を使用して
               位置情報を取得し、以下の目的で利用しております。
             </p>
             <ul className="list-disc list-inside text-gray-700 space-y-2 mb-4">
@@ -100,10 +100,10 @@ export default function PrivacyPage() {
               <strong>位置情報の取得について：</strong>
             </p>
             <ul className="list-disc list-inside text-gray-700 space-y-2 mb-4">
-              <li>位置情報の提供は任意であり、許可しなくても診断をご利用いただけます</li>
-              <li>位置情報の取得には、診断完了後に表示される確認画面での明示的な許可が必要です</li>
+              <li>位置情報の提供は任意であり、同意しなくても診断をご利用いただけます</li>
+              <li>診断開始時の「位置情報の利用に同意する」チェックボックスで同意を選択した場合のみ取得します</li>
               <li>取得した位置情報は都道府県・市区町村レベルで記録され、詳細な住所は保存されません</li>
-              <li>位置情報の提供を拒否された場合、エリア情報は記録されません</li>
+              <li>同意されなかった場合、エリア情報は記録されません</li>
             </ul>
           </section>
 
