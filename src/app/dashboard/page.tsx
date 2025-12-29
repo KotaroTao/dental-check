@@ -19,6 +19,8 @@ import {
   Info,
   Calendar,
   AlertTriangle,
+  Link2,
+  MousePointerClick,
 } from "lucide-react";
 import { LocationSection } from "@/components/dashboard/location-section";
 
@@ -74,9 +76,12 @@ interface Channel {
   name: string;
   description: string | null;
   imageUrl: string | null;
-  diagnosisTypeSlug: string;
+  channelType: "diagnosis" | "link";
+  diagnosisTypeSlug: string | null;
+  redirectUrl: string | null;
   isActive: boolean;
   expiresAt: string | null;
+  scanCount: number;
   createdAt: string;
 }
 
@@ -671,6 +676,12 @@ export default function DashboardPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <span className="font-medium truncate">{channel.name}</span>
+                        {channel.channelType === "link" && (
+                          <span className="shrink-0 text-xs px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded flex items-center gap-0.5">
+                            <Link2 className="w-3 h-3" />
+                            リンク
+                          </span>
+                        )}
                         {channel.isActive ? (
                           <span className="shrink-0 text-xs px-1.5 py-0.5 bg-green-100 text-green-700 rounded">
                             有効
@@ -688,7 +699,17 @@ export default function DashboardPage() {
                         )}
                       </div>
                       <div className="text-sm text-gray-500 flex items-center gap-2 flex-wrap">
-                        <span>{DIAGNOSIS_TYPE_NAMES[channel.diagnosisTypeSlug]} / {new Date(channel.createdAt).toLocaleDateString("ja-JP")}</span>
+                        <span>
+                          {channel.channelType === "diagnosis"
+                            ? `${channel.diagnosisTypeSlug ? DIAGNOSIS_TYPE_NAMES[channel.diagnosisTypeSlug] || channel.diagnosisTypeSlug : "診断"}`
+                            : "リンク"} / {new Date(channel.createdAt).toLocaleDateString("ja-JP")}
+                        </span>
+                        {channel.channelType === "link" && (
+                          <span className="flex items-center gap-1 text-xs text-purple-600">
+                            <MousePointerClick className="w-3 h-3" />
+                            {channel.scanCount}回
+                          </span>
+                        )}
                         {channel.expiresAt && (
                           <span className="flex items-center gap-1 text-xs">
                             <Calendar className="w-3 h-3" />
@@ -732,7 +753,19 @@ export default function DashboardPage() {
                   </div>
 
                   {/* 統計カード */}
-                  {channel.isActive && stats && (
+                  {channel.isActive && channel.channelType === "link" && (
+                    <div className="grid grid-cols-1 gap-2 text-center">
+                      <div className="bg-purple-50 rounded-lg py-3 px-4 flex items-center justify-center gap-3">
+                        <MousePointerClick className="w-5 h-5 text-purple-600" />
+                        <div>
+                          <div className="text-xs text-gray-500">スキャン回数</div>
+                          <div className="text-2xl font-bold text-purple-600">{channel.scanCount}</div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {channel.isActive && channel.channelType === "diagnosis" && stats && (
                     <>
                       {/* PC版: ホバーでポップオーバー */}
                       <div className="hidden md:grid grid-cols-4 gap-2 text-center">

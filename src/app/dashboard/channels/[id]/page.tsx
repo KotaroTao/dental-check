@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import QRCode from "qrcode";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Download, Copy, ExternalLink, Edit, Image as ImageIcon, X, Calendar, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Download, Copy, ExternalLink, Edit, Image as ImageIcon, X, Calendar, AlertTriangle, Link2, MousePointerClick } from "lucide-react";
 
 // 診断タイプの表示名
 const DIAGNOSIS_TYPE_NAMES: Record<string, string> = {
@@ -19,9 +19,12 @@ interface Channel {
   name: string;
   description: string | null;
   imageUrl: string | null;
-  diagnosisTypeSlug: string;
+  channelType: "diagnosis" | "link";
+  diagnosisTypeSlug: string | null;
+  redirectUrl: string | null;
   isActive: boolean;
   expiresAt: string | null;
+  scanCount: number;
 }
 
 export default function ChannelDetailPage() {
@@ -33,8 +36,11 @@ export default function ChannelDetailPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
-  const diagnosisUrl = channel
-    ? `${baseUrl}/c/${channel.code}/${channel.diagnosisTypeSlug}`
+  // 診断タイプ: /c/{code}/{diagnosisTypeSlug}、リンクタイプ: /c/{code}
+  const qrUrl = channel
+    ? channel.channelType === "diagnosis"
+      ? `${baseUrl}/c/${channel.code}/${channel.diagnosisTypeSlug}`
+      : `${baseUrl}/c/${channel.code}`
     : "";
 
   useEffect(() => {
@@ -59,7 +65,7 @@ export default function ChannelDetailPage() {
 
   useEffect(() => {
     if (channel && canvasRef.current) {
-      QRCode.toCanvas(canvasRef.current, diagnosisUrl, {
+      QRCode.toCanvas(canvasRef.current, qrUrl, {
         width: 256,
         margin: 2,
         color: {
@@ -68,7 +74,7 @@ export default function ChannelDetailPage() {
         },
       });
     }
-  }, [channel, diagnosisUrl]);
+  }, [channel, qrUrl]);
 
   const handleDownloadPNG = () => {
     if (!canvasRef.current || !channel) return;
@@ -83,7 +89,7 @@ export default function ChannelDetailPage() {
     if (!channel) return;
 
     try {
-      const svgString = await QRCode.toString(diagnosisUrl, {
+      const svgString = await QRCode.toString(qrUrl, {
         type: "svg",
         width: 256,
         margin: 2,
@@ -102,7 +108,7 @@ export default function ChannelDetailPage() {
   };
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(diagnosisUrl);
+    await navigator.clipboard.writeText(qrUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -115,8 +121,9 @@ export default function ChannelDetailPage() {
     return <div className="text-gray-500">QRコードが見つかりません</div>;
   }
 
-  const diagnosisTypeName =
-    DIAGNOSIS_TYPE_NAMES[channel.diagnosisTypeSlug] || channel.diagnosisTypeSlug;
+  const diagnosisTypeName = channel.diagnosisTypeSlug
+    ? DIAGNOSIS_TYPE_NAMES[channel.diagnosisTypeSlug] || channel.diagnosisTypeSlug
+    : null;
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -182,12 +189,43 @@ export default function ChannelDetailPage() {
             </code>
           </div>
           <div>
-            <div className="text-sm text-gray-500 mb-1">診断タイプ</div>
-            <span className="inline-flex items-center px-3 py-1.5 rounded text-sm font-medium bg-blue-50 text-blue-700">
-              {diagnosisTypeName}
-            </span>
+            <div className="text-sm text-gray-500 mb-1">タイプ</div>
+            {channel.channelType === "diagnosis" ? (
+              <span className="inline-flex items-center px-3 py-1.5 rounded text-sm font-medium bg-blue-50 text-blue-700">
+                {diagnosisTypeName}
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded text-sm font-medium bg-purple-50 text-purple-700">
+                <Link2 className="w-4 h-4" />
+                リンクのみ
+              </span>
+            )}
           </div>
         </div>
+
+        {/* リンクタイプの場合: リダイレクト先とスキャン数を表示 */}
+        {channel.channelType === "link" && (
+          <div className="border-t pt-4 mt-4 space-y-3">
+            <div>
+              <div className="text-sm text-gray-500 mb-1">リダイレクト先URL</div>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 bg-gray-100 px-3 py-1.5 rounded text-sm break-all">
+                  {channel.redirectUrl}
+                </code>
+                <a href={channel.redirectUrl || "#"} target="_blank" rel="noopener noreferrer">
+                  <Button variant="ghost" size="sm">
+                    <ExternalLink className="w-4 h-4" />
+                  </Button>
+                </a>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <MousePointerClick className="w-4 h-4 text-gray-500" />
+              <span className="text-sm text-gray-500">スキャン回数:</span>
+              <span className="text-lg font-bold text-purple-600">{channel.scanCount}</span>
+            </div>
+          </div>
+        )}
 
         {/* 有効期限表示 */}
         {channel.expiresAt && (
@@ -231,7 +269,9 @@ export default function ChannelDetailPage() {
           </div>
 
           <p className="text-sm text-gray-600 mb-4">
-            このQRコードをスキャンすると「{diagnosisTypeName}」が開始されます
+            {channel.channelType === "diagnosis"
+              ? `このQRコードをスキャンすると「${diagnosisTypeName}」が開始されます`
+              : "このQRコードをスキャンするとリダイレクト先URLに遷移します"}
           </p>
 
           <div className="flex flex-wrap gap-3 mb-6 justify-center">
@@ -250,12 +290,14 @@ export default function ChannelDetailPage() {
           </div>
 
           <div className="w-full bg-gray-50 rounded-lg p-4">
-            <div className="text-sm text-gray-500 mb-1">診断URL</div>
+            <div className="text-sm text-gray-500 mb-1">
+              {channel.channelType === "diagnosis" ? "診断URL" : "QRコードURL"}
+            </div>
             <div className="flex items-center gap-2">
               <code className="flex-1 bg-white px-3 py-2 rounded border text-sm break-all">
-                {diagnosisUrl}
+                {qrUrl}
               </code>
-              <a href={diagnosisUrl} target="_blank" rel="noopener noreferrer">
+              <a href={qrUrl} target="_blank" rel="noopener noreferrer">
                 <Button variant="ghost" size="sm">
                   <ExternalLink className="w-4 h-4" />
                 </Button>
