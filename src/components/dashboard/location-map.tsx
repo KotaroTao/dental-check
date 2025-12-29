@@ -1,142 +1,166 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { MapContainer, TileLayer, CircleMarker, Tooltip, useMap } from "react-leaflet";
+import { useMemo } from "react";
+import { MapContainer, TileLayer, GeoJSON } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
+import type { Feature, Polygon } from "geojson";
+import type { PathOptions } from "leaflet";
+import {
+  getJapanGeoJSON,
+  normalizePrefectureName,
+} from "@/data/japan-prefectures";
 
-interface Location {
+interface LocationData {
   region: string | null;
   city: string | null;
   count: number;
-  latitude: number | null;
-  longitude: number | null;
-  channelId: string | null;
-}
-
-interface Channel {
-  id: string;
-  name: string;
 }
 
 interface LocationMapProps {
-  locations: Location[];
-  channelColorMap?: Record<string, string>;
-  channels?: Channel[];
+  locations: LocationData[];
 }
 
-// 地図の表示範囲を自動調整するコンポーネント（初回のみ、都道府県レベルに制限）
-function FitBounds({ locations }: { locations: Location[] }) {
-  const map = useMap();
-  const hasInitialized = useRef(false);
+// 件数に応じた色を返す（グラデーション）
+function getColor(count: number, maxCount: number): string {
+  if (count === 0) return "#f3f4f6"; // gray-100
 
-  useEffect(() => {
-    // 初回のみ実行（QRコード選択変更時はズームを維持）
-    if (hasInitialized.current) return;
-    if (locations.length === 0) return;
+  const ratio = count / maxCount;
 
-    const validLocations = locations.filter(
-      (loc) => loc.latitude && loc.longitude
-    );
+  if (ratio > 0.8) return "#1e40af"; // blue-800
+  if (ratio > 0.6) return "#2563eb"; // blue-600
+  if (ratio > 0.4) return "#3b82f6"; // blue-500
+  if (ratio > 0.2) return "#60a5fa"; // blue-400
+  if (ratio > 0.1) return "#93c5fd"; // blue-300
+  return "#bfdbfe"; // blue-200
+}
 
-    if (validLocations.length === 0) return;
+export default function LocationMap({ locations }: LocationMapProps) {
+  // 日本の中心付近
+  const defaultCenter: [number, number] = [36.5, 138.0];
 
-    hasInitialized.current = true;
+  // 都道府県別に集計
+  const prefectureData = useMemo(() => {
+    const data: Record<string, { count: number; cities: Record<string, number> }> = {};
 
-    if (validLocations.length === 1) {
-      // 1件のみの場合は都道府県レベルでズーム（zoom 7）
-      map.setView(
-        [validLocations[0].latitude!, validLocations[0].longitude!],
-        7
-      );
-    } else {
-      // 複数の場合は全体が見えるように調整（最大ズームを7に制限）
-      const bounds = validLocations.map(
-        (loc) => [loc.latitude!, loc.longitude!] as [number, number]
-      );
-      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 7 });
+    for (const loc of locations) {
+      if (!loc.region) continue;
+
+      const prefName = normalizePrefectureName(loc.region);
+
+      if (!data[prefName]) {
+        data[prefName] = { count: 0, cities: {} };
+      }
+      data[prefName].count += loc.count;
+
+      if (loc.city) {
+        if (!data[prefName].cities[loc.city]) {
+          data[prefName].cities[loc.city] = 0;
+        }
+        data[prefName].cities[loc.city] += loc.count;
+      }
     }
-  }, [locations, map]);
 
-  return null;
-}
+    return data;
+  }, [locations]);
 
-export default function LocationMap({ locations, channelColorMap, channels }: LocationMapProps) {
-  // 日本の中心付近（大阪あたり）
-  const defaultCenter: [number, number] = [34.6937, 135.5023];
+  // 最大件数
+  const maxCount = useMemo(() => {
+    return Math.max(...Object.values(prefectureData).map((d) => d.count), 1);
+  }, [prefectureData]);
 
-  // 有効な位置データのみ
-  const validLocations = locations.filter(
-    (loc) => loc.latitude && loc.longitude
-  );
+  // GeoJSONデータ
+  const geoJsonData = useMemo(() => getJapanGeoJSON(), []);
 
-  // 最大件数（円のサイズ計算用）
-  const maxCount = Math.max(...validLocations.map((loc) => loc.count), 1);
+  // 各都道府県のスタイル
+  const getStyle = (feature: Feature<Polygon, { name: string }> | undefined): PathOptions => {
+    if (!feature) return {};
 
-  // チャンネル名を取得するヘルパー
-  const getChannelName = (channelId: string | null) => {
-    if (!channelId || !channels) return null;
-    return channels.find((c) => c.id === channelId)?.name;
+    const prefName = feature.properties.name;
+    const data = prefectureData[prefName];
+    const count = data?.count || 0;
+
+    return {
+      fillColor: getColor(count, maxCount),
+      weight: 1,
+      opacity: 1,
+      color: "#94a3b8", // slate-400
+      fillOpacity: count > 0 ? 0.7 : 0.3,
+    };
   };
 
-  // チャンネルの色を取得するヘルパー
-  const getChannelColor = (channelId: string | null) => {
-    if (!channelId || !channelColorMap) return "#3b82f6";
-    return channelColorMap[channelId] || "#3b82f6";
-  };
+  // 各都道府県にイベントを追加
+  const onEachFeature = (
+    feature: Feature<Polygon, { name: string }>,
+    layer: L.Layer
+  ) => {
+    const prefName = feature.properties.name;
+    const data = prefectureData[prefName];
+    const count = data?.count || 0;
 
-  // 色を暗くするヘルパー（ボーダー用）
-  const darkenColor = (hex: string): string => {
-    const num = parseInt(hex.replace("#", ""), 16);
-    const r = Math.max(0, (num >> 16) - 40);
-    const g = Math.max(0, ((num >> 8) & 0x00ff) - 40);
-    const b = Math.max(0, (num & 0x0000ff) - 40);
-    return `#${(r << 16 | g << 8 | b).toString(16).padStart(6, "0")}`;
+    // ツールチップを追加
+    if (count > 0) {
+      const cities = data?.cities || {};
+      const topCities = Object.entries(cities)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3);
+
+      let tooltipContent = `<div class="text-center">
+        <div class="font-bold">${prefName}</div>
+        <div class="text-blue-600 font-bold">${count}件</div>`;
+
+      if (topCities.length > 0) {
+        tooltipContent += '<div class="text-xs text-gray-500 mt-1">';
+        topCities.forEach(([city, cityCount]) => {
+          tooltipContent += `${city}: ${cityCount}件<br/>`;
+        });
+        tooltipContent += "</div>";
+      }
+
+      tooltipContent += "</div>";
+
+      layer.bindTooltip(tooltipContent, {
+        permanent: false,
+        direction: "top",
+        className: "prefecture-tooltip",
+      });
+    }
+
+    // ホバー時のスタイル変更
+    layer.on({
+      mouseover: (e) => {
+        const target = e.target;
+        target.setStyle({
+          weight: 2,
+          color: "#3b82f6",
+          fillOpacity: 0.9,
+        });
+        target.bringToFront();
+      },
+      mouseout: (e) => {
+        const target = e.target;
+        target.setStyle(getStyle(feature));
+      },
+    });
   };
 
   return (
     <MapContainer
       center={defaultCenter}
-      zoom={6}
+      zoom={5}
       className="h-64 rounded-lg z-0"
       scrollWheelZoom={false}
+      style={{ background: "#e5e7eb" }}
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      <FitBounds locations={validLocations} />
-      {validLocations.map((loc, index) => {
-        // 件数に応じて円のサイズを調整（最小8、最大30）
-        const radius = Math.max(8, Math.min(30, 8 + (loc.count / maxCount) * 22));
-        // 件数に応じて透明度を調整
-        const opacity = Math.max(0.4, Math.min(0.8, 0.4 + (loc.count / maxCount) * 0.4));
-
-        const fillColor = getChannelColor(loc.channelId);
-        const borderColor = darkenColor(fillColor);
-        const channelName = getChannelName(loc.channelId);
-
-        return (
-          <CircleMarker
-            key={`${loc.city}-${loc.channelId}-${index}`}
-            center={[loc.latitude!, loc.longitude!]}
-            radius={radius}
-            fillColor={fillColor}
-            fillOpacity={opacity}
-            color={borderColor}
-            weight={2}
-          >
-            <Tooltip direction="top" offset={[0, -10]}>
-              <div className="text-center">
-                <div className="font-medium">{loc.city || loc.region}</div>
-                {channelName && (
-                  <div className="text-xs" style={{ color: fillColor }}>{channelName}</div>
-                )}
-                <div className="font-bold" style={{ color: fillColor }}>{loc.count}件</div>
-              </div>
-            </Tooltip>
-          </CircleMarker>
-        );
-      })}
+      <GeoJSON
+        key={JSON.stringify(prefectureData)}
+        data={geoJsonData}
+        style={getStyle as (feature: Feature | undefined) => PathOptions}
+        onEachFeature={onEachFeature}
+      />
     </MapContainer>
   );
 }

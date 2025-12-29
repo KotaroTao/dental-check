@@ -18,8 +18,6 @@ interface LocationData {
   region: string | null;
   city: string | null;
   count: number;
-  latitude: number | null;
-  longitude: number | null;
   channelId: string | null;
 }
 
@@ -140,9 +138,9 @@ export function LocationSection({
     fetchLocations();
   }, [period, selectedChannelIds, customStartDate, customEndDate]);
 
-  // 位置情報があるデータのみ抽出
+  // 都道府県情報があるデータのみ抽出
   const validLocations = locations.filter(
-    (loc) => loc.latitude && loc.longitude && loc.city
+    (loc) => loc.region
   );
 
   // チャンネル選択UI
@@ -233,7 +231,7 @@ export function LocationSection({
   }
 
   // 都市別に集計（同じ都市の複数チャンネルをまとめる）
-  const cityAggregated: Record<string, { region: string | null; city: string | null; count: number; latitude: number | null; longitude: number | null }> = {};
+  const cityAggregated: Record<string, { region: string | null; city: string | null; count: number }> = {};
   for (const loc of locations) {
     const key = `${loc.region}-${loc.city}`;
     if (!cityAggregated[key]) {
@@ -241,8 +239,6 @@ export function LocationSection({
         region: loc.region,
         city: loc.city,
         count: 0,
-        latitude: loc.latitude,
-        longitude: loc.longitude,
       };
     }
     cityAggregated[key].count += loc.count;
@@ -283,14 +279,10 @@ export function LocationSection({
       <ChannelSelector />
 
       <div className="grid md:grid-cols-2 gap-6">
-        {/* 地図 */}
+        {/* 地図（都道府県ポリゴン表示） */}
         <div>
           {validLocations.length > 0 ? (
-            <LocationMap
-              locations={validLocations}
-              channelColorMap={channelColorMap}
-              channels={activeChannels}
-            />
+            <LocationMap locations={validLocations} />
           ) : (
             <div className="h-64 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">
               位置データなし
