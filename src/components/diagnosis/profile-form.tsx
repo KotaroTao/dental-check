@@ -24,12 +24,44 @@ export function ProfileForm({ diagnosisName }: Props) {
   const [isRequestingLocation, setIsRequestingLocation] = useState(false);
   const { setProfile } = useDiagnosisStore();
 
-  // GPS許可ダイアログを表示
-  const handleTermsChange = (checked: boolean) => {
+  // GPS許可状態を確認してダイアログ表示を判断
+  const handleTermsChange = async (checked: boolean) => {
     if (checked) {
       setAgreed(true);
-      // カスタムダイアログを表示
-      setShowLocationDialog(true);
+
+      // Permissions APIで現在の許可状態を確認
+      if (typeof window !== "undefined" && navigator.permissions) {
+        try {
+          const permission = await navigator.permissions.query({ name: "geolocation" as PermissionName });
+
+          if (permission.state === "granted") {
+            // 既に許可済み → ダイアログなしで直接取得
+            setIsRequestingLocation(true);
+            try {
+              await new Promise<GeolocationPosition>((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, {
+                  enableHighAccuracy: true,
+                  timeout: 10000,
+                  maximumAge: 0,
+                });
+              });
+              setLocationGranted(true);
+            } catch {
+              setLocationGranted(false);
+            }
+            setIsRequestingLocation(false);
+          } else {
+            // 未許可 or 拒否 → カスタムダイアログを表示
+            setShowLocationDialog(true);
+          }
+        } catch {
+          // Permissions API未対応 → カスタムダイアログを表示
+          setShowLocationDialog(true);
+        }
+      } else {
+        // Permissions API未対応 → カスタムダイアログを表示
+        setShowLocationDialog(true);
+      }
     } else {
       setAgreed(false);
       setLocationGranted(false);
