@@ -96,7 +96,7 @@ export default function PrivacyPage() {
               <strong>■ 利用目的</strong>
             </p>
             <ul className="list-disc list-inside text-gray-700 space-y-2 mb-4">
-              <li>お近くの歯科医院からの情報提供やサービス向上に活用</li>
+              <li>診断利用状況の地域分布の把握</li>
               <li>地域ごとの歯科健康意識の傾向分析</li>
               <li>歯科医院様のサービス改善支援</li>
             </ul>
