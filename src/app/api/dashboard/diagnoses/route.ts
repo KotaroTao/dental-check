@@ -12,21 +12,33 @@ export async function GET() {
     }
 
     // クリニックが利用可能な診断を取得
-    // 1. システム提供の診断（clinicId = null）
+    // 1. システム提供の診断（clinicId = null または未設定）
     // 2. 自分のクリニックの診断
-    const diagnoses = await prisma.diagnosisType.findMany({
-      where: {
-        OR: [
-          { clinicId: null },
-          { clinicId: session.clinicId },
+    let diagnoses;
+    try {
+      diagnoses = await prisma.diagnosisType.findMany({
+        where: {
+          OR: [
+            { clinicId: null },
+            { clinicId: session.clinicId },
+          ],
+          isActive: true,
+        },
+        orderBy: [
+          { clinicId: "asc" }, // システム診断を先に
+          { createdAt: "desc" },
         ],
-        isActive: true,
-      },
-      orderBy: [
-        { clinicId: "asc" }, // システム診断を先に
-        { createdAt: "desc" },
-      ],
-    });
+      });
+    } catch (dbError) {
+      // clinicIdカラムが存在しない場合のフォールバック（マイグレーション未適用時）
+      console.warn("clinicId query failed, falling back to simple query:", dbError);
+      diagnoses = await prisma.diagnosisType.findMany({
+        where: { isActive: true },
+        orderBy: { createdAt: "desc" },
+      });
+      // clinicIdが存在しない場合、すべてシステム診断として扱う
+      diagnoses = diagnoses.map((d: Record<string, unknown>) => ({ ...d, clinicId: null }));
+    }
 
     // 契約状態を取得してオリジナル診断作成可能か確認
     const subscriptionState = await getSubscriptionState(session.clinicId);
