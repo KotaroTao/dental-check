@@ -79,6 +79,7 @@ export async function generateStaticParams() {
   return [
     { type: "oral-age" },
     { type: "child-orthodontics" },
+    { type: "periodontal-risk" },
   ];
 }
 
