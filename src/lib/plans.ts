@@ -5,7 +5,7 @@ export type PlanType = "starter" | "standard" | "managed" | "free";
 export interface Plan {
   type: PlanType;
   name: string;
-  price: number; // 税込月額（円）
+  price: number; // 税別月額（円）
   qrCodeLimit: number | null; // null = 無制限
   features: string[];
   description: string;
@@ -41,7 +41,7 @@ export const PLANS: Record<PlanType, Plan> = {
   managed: {
     type: "managed",
     name: "マネージドプラン",
-    price: 29800,
+    price: 24800,
     qrCodeLimit: null,
     description: "分析サポート付きのフルサポートプラン",
     features: [
@@ -117,5 +117,5 @@ export function formatPlanPrice(price: number): string {
   if (price === 0) {
     return "無料";
   }
-  return `¥${price.toLocaleString()}/月`;
+  return `¥${price.toLocaleString()}/月（税別）`;
 }
