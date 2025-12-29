@@ -183,3 +183,70 @@ export const PREFECTURES = [
   "徳島県", "香川県", "愛媛県", "高知県",
   "福岡県", "佐賀県", "長崎県", "熊本県", "大分県", "宮崎県", "鹿児島県", "沖縄県",
 ];
+
+// 都道府県コード対応表（GeoJSONファイル名用）
+export const PREFECTURE_CODES: Record<string, string> = {
+  "北海道": "01_hokkaido",
+  "青森県": "02_aomori",
+  "岩手県": "03_iwate",
+  "宮城県": "04_miyagi",
+  "秋田県": "05_akita",
+  "山形県": "06_yamagata",
+  "福島県": "07_fukushima",
+  "茨城県": "08_ibaraki",
+  "栃木県": "09_tochigi",
+  "群馬県": "10_gunma",
+  "埼玉県": "11_saitama",
+  "千葉県": "12_chiba",
+  "東京都": "13_tokyo",
+  "神奈川県": "14_kanagawa",
+  "新潟県": "15_niigata",
+  "富山県": "16_toyama",
+  "石川県": "17_ishikawa",
+  "福井県": "18_fukui",
+  "山梨県": "19_yamanashi",
+  "長野県": "20_nagano",
+  "岐阜県": "21_gifu",
+  "静岡県": "22_shizuoka",
+  "愛知県": "23_aichi",
+  "三重県": "24_mie",
+  "滋賀県": "25_shiga",
+  "京都府": "26_kyoto",
+  "大阪府": "27_osaka",
+  "兵庫県": "28_hyogo",
+  "奈良県": "29_nara",
+  "和歌山県": "30_wakayama",
+  "鳥取県": "31_tottori",
+  "島根県": "32_shimane",
+  "岡山県": "33_okayama",
+  "広島県": "34_hiroshima",
+  "山口県": "35_yamaguchi",
+  "徳島県": "36_tokushima",
+  "香川県": "37_kagawa",
+  "愛媛県": "38_ehime",
+  "高知県": "39_kochi",
+  "福岡県": "40_fukuoka",
+  "佐賀県": "41_saga",
+  "長崎県": "42_nagasaki",
+  "熊本県": "43_kumamoto",
+  "大分県": "44_oita",
+  "宮崎県": "45_miyazaki",
+  "鹿児島県": "46_kagoshima",
+  "沖縄県": "47_okinawa",
+};
+
+// 都道府県コードを取得
+export function getPrefCode(prefName: string): string | null {
+  const normalized = normalizePrefectureName(prefName);
+  return PREFECTURE_CODES[normalized] || null;
+}
+
+// 町丁目名の正規化（算用数字→漢数字変換、丁目補完）
+export function normalizeTownName(name: string): string {
+  if (!name) return "";
+  return name
+    .replace(/1/g, "一").replace(/2/g, "二").replace(/3/g, "三")
+    .replace(/4/g, "四").replace(/5/g, "五").replace(/6/g, "六")
+    .replace(/7/g, "七").replace(/8/g, "八").replace(/9/g, "九")
+    .replace(/([一二三四五六七八九十])$/, "$1丁目");
+}

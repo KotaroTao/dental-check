@@ -131,13 +131,14 @@ model DiagnosisSession {
   completedAt     DateTime? @map("completed_at")
   createdAt       DateTime  @default(now()) @map("created_at")
 
-  // 位置情報（IPベース）
+  // 位置情報（GPSベース、プライバシー保護のため座標は保存しない）
   ipAddress       String?   @map("ip_address")
   country         String?   // 国コード (JP)
   region          String?   // 都道府県 (兵庫県)
   city            String?   // 市区町村 (西宮市)
-  latitude        Float?    // 緯度（市区町村中心点）
-  longitude       Float?    // 経度（市区町村中心点）
+  town            String?   // 町丁目 (神南一丁目)
+  latitude        Float?    // 緯度（使用しない、null）
+  longitude       Float?    // 経度（使用しない、null）
 
   clinic        Clinic?       @relation(fields: [clinicId], references: [id], onDelete: SetNull)
   channel       Channel?      @relation(fields: [channelId], references: [id], onDelete: SetNull)
