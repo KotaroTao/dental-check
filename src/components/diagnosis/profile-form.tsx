@@ -18,14 +18,41 @@ export function ProfileForm({ diagnosisName }: Props) {
   const [age, setAge] = useState("");
   const [gender, setGender] = useState<string | null>(null);
   const [agreed, setAgreed] = useState(false);
-  const [locationConsent, setLocationConsent] = useState(false);
+  const [locationGranted, setLocationGranted] = useState(false);
   const { setProfile } = useDiagnosisStore();
+
+  // 規約同意チェック時にGPS許可を求める
+  const handleTermsChange = async (checked: boolean) => {
+    if (checked) {
+      // チェックを入れたらGPS許可ダイアログを表示
+      if (typeof window !== "undefined" && navigator.geolocation) {
+        try {
+          await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 0,
+            });
+          });
+          // GPS許可された
+          setLocationGranted(true);
+        } catch {
+          // GPS拒否されても同意は有効
+          setLocationGranted(false);
+        }
+      }
+      setAgreed(true);
+    } else {
+      setAgreed(false);
+      setLocationGranted(false);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const ageNum = parseInt(age, 10);
     if (ageNum > 0 && ageNum < 120 && gender) {
-      setProfile(ageNum, gender, locationConsent);
+      setProfile(ageNum, gender, locationGranted);
     }
   };
 
@@ -84,12 +111,12 @@ export function ProfileForm({ diagnosisName }: Props) {
             </RadioGroup>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-1">
             <div className="flex items-start space-x-2">
               <Checkbox
                 id="terms"
                 checked={agreed}
-                onCheckedChange={(checked) => setAgreed(checked === true)}
+                onCheckedChange={(checked) => handleTermsChange(checked === true)}
               />
               <Label htmlFor="terms" className="text-sm font-normal leading-relaxed cursor-pointer">
                 <Link href="/terms" target="_blank" className="text-blue-600 hover:underline">
@@ -102,17 +129,9 @@ export function ProfileForm({ diagnosisName }: Props) {
                 に同意する <span className="text-red-500">*</span>
               </Label>
             </div>
-
-            <div className="flex items-start space-x-2">
-              <Checkbox
-                id="location"
-                checked={locationConsent}
-                onCheckedChange={(checked) => setLocationConsent(checked === true)}
-              />
-              <Label htmlFor="location" className="text-sm font-normal leading-relaxed cursor-pointer text-gray-600">
-                位置情報の利用に同意する（任意）
-              </Label>
-            </div>
+            <p className="text-xs text-gray-500 ml-6">
+              ※位置情報は市区町村レベルで統計目的に利用されます
+            </p>
           </div>
 
           <Button
