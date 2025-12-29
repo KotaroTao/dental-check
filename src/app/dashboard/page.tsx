@@ -981,9 +981,6 @@ export default function DashboardPage() {
                     <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">診断</th>
                     <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">QRコード</th>
                     <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">エリア</th>
-                    <th className="text-center px-4 py-3 text-sm font-medium text-gray-500 cursor-pointer hover:bg-gray-100" onClick={() => handleSort("ctaClickCount")}>
-                      <span className="flex items-center justify-center">CTA<SortIcon field="ctaClickCount" /></span>
-                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -997,38 +994,6 @@ export default function DashboardPage() {
                       </td>
                       <td className="px-4 py-4 text-sm">{item.channelName}</td>
                       <td className="px-4 py-4 text-sm text-gray-700">{item.area}</td>
-                      <td className="px-4 py-4 text-center">
-                        {item.ctaClickCount > 0 ? (
-                          <Popover
-                            trigger={
-                              <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-50 text-green-700 cursor-pointer hover:bg-green-100">
-                                {item.ctaClickCount}回 <Info className="w-3 h-3 ml-1" />
-                              </span>
-                            }
-                            className="right-0 top-full mt-1"
-                          >
-                            <div className="text-sm">
-                              <div className="font-medium text-gray-700 mb-2">CTA内訳</div>
-                              <div className="space-y-1">
-                                {Object.entries(item.ctaByType).length === 0 ? (
-                                  <div className="text-gray-400">データなし</div>
-                                ) : (
-                                  Object.entries(item.ctaByType)
-                                    .sort((a, b) => b[1] - a[1])
-                                    .map(([type, count]) => (
-                                      <div key={type} className="flex justify-between text-gray-600">
-                                        <span>{CTA_TYPE_NAMES[type] || type}</span>
-                                        <span>{count}</span>
-                                      </div>
-                                    ))
-                                )}
-                              </div>
-                            </div>
-                          </Popover>
-                        ) : (
-                          <span className="text-gray-400">−</span>
-                        )}
-                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -1039,32 +1004,8 @@ export default function DashboardPage() {
             <div className="md:hidden divide-y">
               {sortedHistory.map((item) => (
                 <div key={item.id} className="p-4">
-                  <div className="flex items-start justify-between mb-2">
+                  <div className="mb-2">
                     <div className="text-sm text-gray-500">{formatDate(item.createdAt)}</div>
-                    {item.ctaClickCount > 0 && (
-                      <Popover
-                        trigger={
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-green-700 cursor-pointer">
-                            CTA {item.ctaClickCount}回 <Info className="w-3 h-3 ml-1" />
-                          </span>
-                        }
-                        className="right-0 top-full mt-1"
-                      >
-                        <div className="text-sm">
-                          <div className="font-medium text-gray-700 mb-2">CTA内訳</div>
-                          <div className="space-y-1">
-                            {Object.entries(item.ctaByType)
-                              .sort((a, b) => b[1] - a[1])
-                              .map(([type, count]) => (
-                                <div key={type} className="flex justify-between text-gray-600">
-                                  <span>{CTA_TYPE_NAMES[type] || type}</span>
-                                  <span>{count}</span>
-                                </div>
-                              ))}
-                          </div>
-                        </div>
-                      </Popover>
-                    )}
                   </div>
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-sm text-gray-600">{item.userAge !== null ? `${item.userAge}歳` : "-"} / {item.userGender || "-"}</span>
