@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getClientIP, getLocationFromIP } from "@/lib/geolocation";
+import { getClientIP } from "@/lib/geolocation";
 import { canTrackSession } from "@/lib/subscription";
 
 export async function POST(request: NextRequest) {
@@ -57,11 +57,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // IPアドレスから位置情報を取得
+    // IPアドレスを取得（参考用に保存、位置情報はGPSベースのみ使用）
     const ip = getClientIP(request);
-    const location = await getLocationFromIP(ip);
 
     // 診断セッションを作成
+    // 位置情報はGPSベースのみ記録（IPベースは精度が低いため使用しない）
     const session = await prisma.diagnosisSession.create({
       data: {
         clinicId: channel.clinicId,
@@ -74,13 +74,14 @@ export async function POST(request: NextRequest) {
         totalScore: totalScore || null,
         resultCategory: resultCategory || null,
         completedAt: new Date(),
-        // 位置情報
+        // IPアドレスは参考用に保存
         ipAddress: ip !== "unknown" ? ip : null,
-        country: location?.countryCode || null,
-        region: location?.regionName || null,
-        city: location?.city || null,
-        latitude: location?.lat || null,
-        longitude: location?.lon || null,
+        // 位置情報はGPSベースの更新API経由でのみ設定される
+        country: null,
+        region: null,
+        city: null,
+        latitude: null,
+        longitude: null,
       },
     });
 

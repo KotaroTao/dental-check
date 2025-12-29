@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useDiagnosisStore } from "@/lib/diagnosis-store";
 import { DiagnosisType } from "@/data/diagnosis-types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DemoCTA } from "./demo-cta";
-import { Share2, Calendar, Phone, MessageCircle, Building2, Printer } from "lucide-react";
+import { Share2, Calendar, Phone, MessageCircle, Building2, Printer, MapPin, X, Check } from "lucide-react";
 import Link from "next/link";
 import type { CTAConfig } from "@/types/clinic";
 
@@ -25,6 +25,9 @@ export function ResultCard({ diagnosis, isDemo, clinicSlug, ctaConfig, clinicNam
   const { userAge, userGender, answers, totalScore, resultPattern, oralAge, reset } =
     useDiagnosisStore();
   const hasTrackedRef = useRef(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [showLocationPrompt, setShowLocationPrompt] = useState(false);
+  const [locationStatus, setLocationStatus] = useState<"idle" | "requesting" | "success" | "denied">("idle");
 
   // 診断完了をトラッキング（非デモモードのみ、1回だけ）
   useEffect(() => {
@@ -43,8 +46,74 @@ export function ResultCard({ diagnosis, isDemo, clinicSlug, ctaConfig, clinicNam
         totalScore,
         resultCategory: resultPattern.category,
       }),
-    }).catch(() => {});
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.sessionId) {
+          setSessionId(data.sessionId);
+        }
+      })
+      .catch(() => {});
   }, [isDemo, channelId, diagnosis.slug, resultPattern, userAge, userGender, answers, totalScore]);
+
+  // 位置情報プロンプトを遅延表示（結果を見せた後に）
+  useEffect(() => {
+    if (!sessionId || isDemo) return;
+
+    // 以前に拒否したかチェック
+    const locationDenied = localStorage.getItem("location_prompt_denied");
+    if (locationDenied) return;
+
+    // Geolocation APIが利用可能かチェック
+    if (!navigator.geolocation) return;
+
+    const timer = setTimeout(() => {
+      setShowLocationPrompt(true);
+    }, 3000); // 3秒後に表示
+
+    return () => clearTimeout(timer);
+  }, [sessionId, isDemo]);
+
+  // 位置情報を取得して送信
+  const handleLocationPermission = async () => {
+    if (!sessionId) return;
+
+    setLocationStatus("requesting");
+
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0,
+        });
+      });
+
+      // 位置情報をサーバーに送信
+      await fetch("/api/track/update-location", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId,
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        }),
+      });
+
+      setLocationStatus("success");
+      setTimeout(() => setShowLocationPrompt(false), 1500);
+    } catch {
+      setLocationStatus("denied");
+      localStorage.setItem("location_prompt_denied", "true");
+      setTimeout(() => setShowLocationPrompt(false), 1500);
+    }
+  };
+
+  // 位置情報許可をスキップ
+  const handleSkipLocation = () => {
+    localStorage.setItem("location_prompt_denied", "true");
+    setShowLocationPrompt(false);
+  };
 
   if (!resultPattern) return null;
 
@@ -201,6 +270,76 @@ export function ResultCard({ diagnosis, isDemo, clinicSlug, ctaConfig, clinicNam
           </p>
         </CardContent>
       </Card>
+
+      {/* 位置情報許可プロンプト */}
+      <AnimatePresence>
+        {showLocationPrompt && (
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="fixed bottom-4 left-4 right-4 max-w-lg mx-auto bg-white rounded-xl shadow-lg border p-4 z-50 print:hidden"
+          >
+            {locationStatus === "idle" && (
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                  <MapPin className="w-5 h-5 text-blue-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900">
+                    位置情報の利用について
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    サービス改善のため、おおまかな地域情報の取得にご協力ください
+                  </p>
+                  <div className="flex gap-2 mt-3">
+                    <Button
+                      size="sm"
+                      onClick={handleLocationPermission}
+                      className="text-xs px-3 py-1 h-7"
+                    >
+                      許可する
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={handleSkipLocation}
+                      className="text-xs px-3 py-1 h-7 text-gray-500"
+                    >
+                      スキップ
+                    </Button>
+                  </div>
+                </div>
+                <button
+                  onClick={handleSkipLocation}
+                  className="text-gray-400 hover:text-gray-600 p-1"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+            {locationStatus === "requesting" && (
+              <div className="flex items-center gap-3 py-2">
+                <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                <p className="text-sm text-gray-600">位置情報を取得中...</p>
+              </div>
+            )}
+            {locationStatus === "success" && (
+              <div className="flex items-center gap-3 py-2">
+                <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+                  <Check className="w-4 h-4 text-green-600" />
+                </div>
+                <p className="text-sm text-gray-600">ご協力ありがとうございます</p>
+              </div>
+            )}
+            {locationStatus === "denied" && (
+              <div className="flex items-center gap-3 py-2">
+                <p className="text-sm text-gray-500">位置情報の取得をスキップしました</p>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
