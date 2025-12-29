@@ -178,7 +178,32 @@ export async function getSubscriptionState(
   }
 
   // 有効な契約
-  if (subscription.status === "active" && subscription.currentPeriodEnd) {
+  if (subscription.status === "active") {
+    // currentPeriodEndがnullの場合（無期限または設定なし）は有効とみなす
+    if (!subscription.currentPeriodEnd) {
+      const canCreate = canCreateQRCode(planType, qrCount);
+      const remaining = getRemainingQRCodes(planType, qrCount);
+
+      return {
+        status: "active",
+        planType,
+        isActive: true,
+        canCreateQR: canCreate,
+        canTrack: true,
+        trialDaysLeft: null,
+        gracePeriodDaysLeft: null,
+        currentPeriodEnd: null,
+        message:
+          remaining !== null && remaining <= 0
+            ? `QRコード作成上限に達しています。プランをアップグレードしてください。`
+            : null,
+        alertType: remaining !== null && remaining <= 0 ? "warning" : null,
+        qrCodeLimit: plan.qrCodeLimit,
+        qrCodeCount: qrCount,
+        remainingQRCodes: remaining,
+      };
+    }
+
     const periodEnd = new Date(subscription.currentPeriodEnd);
 
     if (now <= periodEnd) {
@@ -377,7 +402,9 @@ export async function canTrackSession(clinicId: string): Promise<boolean> {
   }
 
   // 有効な契約
-  if (subscription.status === "active" && subscription.currentPeriodEnd) {
+  if (subscription.status === "active") {
+    // currentPeriodEndがnullの場合は無期限とみなす
+    if (!subscription.currentPeriodEnd) return true;
     return now <= new Date(subscription.currentPeriodEnd);
   }
 
