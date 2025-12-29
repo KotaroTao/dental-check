@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 type LocationGroupResult = {
   region: string | null;
   city: string | null;
+  town: string | null;
   channelId: string | null;
   _count: { id: number };
 };
@@ -63,10 +64,10 @@ export async function GET(request: NextRequest) {
       ? { channelId }
       : {};
 
-    // 市区町村別の診断完了数を集計（チャンネル別）
-    // 注: 緯度経度は保存していないため、region/cityのみで集計
+    // 町丁目別の診断完了数を集計（チャンネル別）
+    // 注: 緯度経度は保存していないため、region/city/townで集計
     const locationData = await prisma.diagnosisSession.groupBy({
-      by: ["region", "city", "channelId"],
+      by: ["region", "city", "town", "channelId"],
       where: {
         clinicId: session.clinicId,
         completedAt: { not: null },
@@ -132,6 +133,7 @@ export async function GET(request: NextRequest) {
     const locations = (locationData as LocationGroupResult[]).map((item) => ({
       region: item.region,
       city: item.city,
+      town: item.town,
       count: item._count.id,
       channelId: item.channelId,
     }));

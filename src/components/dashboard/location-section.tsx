@@ -17,6 +17,7 @@ const LocationMap = dynamic(() => import("./location-map"), {
 interface LocationData {
   region: string | null;
   city: string | null;
+  town: string | null;
   count: number;
   channelId: string | null;
 }
@@ -230,20 +231,24 @@ export function LocationSection({
     );
   }
 
-  // 都市別に集計（同じ都市の複数チャンネルをまとめる）
-  const cityAggregated: Record<string, { region: string | null; city: string | null; count: number }> = {};
+  // 町丁目別に集計（同じ町丁目の複数チャンネルをまとめる）
+  const townAggregated: Record<string, { region: string | null; city: string | null; town: string | null; count: number }> = {};
   for (const loc of locations) {
-    const key = `${loc.region}-${loc.city}`;
-    if (!cityAggregated[key]) {
-      cityAggregated[key] = {
+    // 町丁目がある場合は町丁目レベルで集計、なければ市区町村レベル
+    const key = loc.town
+      ? `${loc.region}-${loc.city}-${loc.town}`
+      : `${loc.region}-${loc.city}`;
+    if (!townAggregated[key]) {
+      townAggregated[key] = {
         region: loc.region,
         city: loc.city,
+        town: loc.town,
         count: 0,
       };
     }
-    cityAggregated[key].count += loc.count;
+    townAggregated[key].count += loc.count;
   }
-  const aggregatedLocations = Object.values(cityAggregated).sort((a, b) => b.count - a.count);
+  const aggregatedLocations = Object.values(townAggregated).sort((a, b) => b.count - a.count);
 
   return (
     <div className="bg-white rounded-xl shadow-sm border p-6">
@@ -264,7 +269,7 @@ export function LocationSection({
           </button>
           {showHelp && (
             <div className="absolute left-0 top-6 z-50 w-64 p-3 bg-white rounded-lg shadow-xl border text-sm text-gray-600">
-              <p>個人情報保護の観点から、詳細な位置情報ではなく大まかな地域（市区町村レベル）のみを表示しています。</p>
+              <p>個人情報保護の観点から、GPS座標は保存せず町丁目レベル（例: ○○区△△一丁目）のみを表示しています。</p>
               <button
                 onClick={() => setShowHelp(false)}
                 className="mt-2 text-xs text-blue-600 hover:underline"
@@ -297,15 +302,20 @@ export function LocationSection({
               const maxCount = aggregatedLocations[0]?.count || 1;
               const percentage = (loc.count / maxCount) * 100;
 
+              // 表示名を決定（町丁目 > 市区町村 > 都道府県）
+              const displayName = loc.town
+                ? `${loc.city} ${loc.town}`
+                : loc.city || loc.region || "不明";
+
               return (
-                <div key={`${loc.region}-${loc.city}-${index}`} className="flex items-center gap-3">
+                <div key={`${loc.region}-${loc.city}-${loc.town}-${index}`} className="flex items-center gap-3">
                   <span className="text-sm text-gray-400 w-5">{index + 1}.</span>
                   <div className="flex-1">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium">
-                        {loc.city || loc.region || "不明"}
+                      <span className="text-sm font-medium truncate" title={displayName}>
+                        {displayName}
                       </span>
-                      <span className="text-sm text-gray-500">{loc.count}件</span>
+                      <span className="text-sm text-gray-500 ml-2 whitespace-nowrap">{loc.count}件</span>
                     </div>
                     <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                       <div

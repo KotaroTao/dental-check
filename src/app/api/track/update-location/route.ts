@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     const location = await reverseGeocode(latitude, longitude);
 
     // セッションの位置情報を更新
-    // プライバシー保護のため、GPS座標は保存せず市区町村レベルのみ記録
+    // プライバシー保護のため、GPS座標は保存せず町丁目レベルまで記録
     await prisma.diagnosisSession.update({
       where: { id: sessionId },
       data: {
@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
         longitude: null, // 座標は保存しない
         region: location?.region || null,
         city: location?.city || null,
+        town: location?.town || null,
         country: location?.country || "JP",
       },
     });
@@ -60,6 +61,7 @@ async function reverseGeocode(lat: number, lon: number): Promise<{
   country: string;
   region: string;
   city: string;
+  town: string;
 } | null> {
   try {
     // OpenStreetMap Nominatim API（無料、1リクエスト/秒制限）
@@ -90,10 +92,17 @@ async function reverseGeocode(lat: number, lon: number): Promise<{
     // 市区町村を取得（city, town, village, municipality のいずれか）
     const city = address.city || address.town || address.village || address.municipality || "";
 
+    // 町丁目を取得（フォールバック付き）
+    // neighbourhood: 町丁目名（最優先）
+    // quarter: 地区名
+    // suburb: 郊外地区名
+    const town = address.neighbourhood || address.quarter || address.suburb || "";
+
     return {
       country: address.country_code?.toUpperCase() || "JP",
       region,
       city,
+      town,
     };
   } catch (error) {
     console.error("Reverse geocode error:", error);

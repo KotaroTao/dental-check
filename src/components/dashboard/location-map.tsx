@@ -13,6 +13,7 @@ import {
 interface LocationData {
   region: string | null;
   city: string | null;
+  town: string | null;
   count: number;
 }
 
@@ -48,9 +49,15 @@ export default function LocationMap({ locations }: LocationMapProps) {
   // 日本の中心付近
   const defaultCenter: [number, number] = [36.5, 138.0];
 
-  // 都道府県別に集計
+  // 都道府県別に集計（市区町村・町丁目データも含む）
   const prefectureData = useMemo(() => {
-    const data: Record<string, { count: number; cities: Record<string, number> }> = {};
+    const data: Record<string, {
+      count: number;
+      cities: Record<string, {
+        count: number;
+        towns: Record<string, number>;
+      }>;
+    }> = {};
 
     for (const loc of locations) {
       if (!loc.region) continue;
@@ -64,9 +71,17 @@ export default function LocationMap({ locations }: LocationMapProps) {
 
       if (loc.city) {
         if (!data[prefName].cities[loc.city]) {
-          data[prefName].cities[loc.city] = 0;
+          data[prefName].cities[loc.city] = { count: 0, towns: {} };
         }
-        data[prefName].cities[loc.city] += loc.count;
+        data[prefName].cities[loc.city].count += loc.count;
+
+        // 町丁目データを追加
+        if (loc.town) {
+          if (!data[prefName].cities[loc.city].towns[loc.town]) {
+            data[prefName].cities[loc.city].towns[loc.town] = 0;
+          }
+          data[prefName].cities[loc.city].towns[loc.town] += loc.count;
+        }
       }
     }
 
@@ -75,7 +90,8 @@ export default function LocationMap({ locations }: LocationMapProps) {
 
   // 最大件数
   const maxCount = useMemo(() => {
-    return Math.max(...Object.values(prefectureData).map((d) => d.count), 1);
+    const counts = Object.values(prefectureData).map((d) => d.count);
+    return counts.length > 0 ? Math.max(...counts, 1) : 1;
   }, [prefectureData]);
 
   // GeoJSONデータ
@@ -111,7 +127,7 @@ export default function LocationMap({ locations }: LocationMapProps) {
     if (count > 0) {
       const cities = data?.cities || {};
       const topCities = Object.entries(cities)
-        .sort((a, b) => b[1] - a[1])
+        .sort((a, b) => b[1].count - a[1].count)
         .slice(0, 3);
 
       let tooltipContent = `<div class="text-center">
@@ -120,8 +136,17 @@ export default function LocationMap({ locations }: LocationMapProps) {
 
       if (topCities.length > 0) {
         tooltipContent += '<div class="text-xs text-gray-500 mt-1">';
-        topCities.forEach(([city, cityCount]) => {
-          tooltipContent += `${city}: ${cityCount}件<br/>`;
+        topCities.forEach(([city, cityData]) => {
+          tooltipContent += `<div class="font-medium">${city}: ${cityData.count}件</div>`;
+          // 町丁目データがあれば表示（上位2件まで）
+          const topTowns = Object.entries(cityData.towns)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 2);
+          if (topTowns.length > 0) {
+            topTowns.forEach(([town, townCount]) => {
+              tooltipContent += `<span class="text-gray-400 ml-2">└ ${town}: ${townCount}件</span><br/>`;
+            });
+          }
         });
         tooltipContent += "</div>";
       }
