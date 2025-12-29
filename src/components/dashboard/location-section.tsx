@@ -18,6 +18,8 @@ interface LocationData {
   region: string | null;
   city: string | null;
   town: string | null;
+  latitude: number | null;
+  longitude: number | null;
   count: number;
   channelId: string | null;
 }
@@ -269,7 +271,7 @@ export function LocationSection({
           </button>
           {showHelp && (
             <div className="absolute left-0 top-6 z-50 w-64 p-3 bg-white rounded-lg shadow-xl border text-sm text-gray-600">
-              <p>個人情報保護の観点から、GPS座標は保存せず町丁目レベル（例: ○○区△△一丁目）のみを表示しています。</p>
+              <p>GPS座標を使用して町丁目レベル（例: ○○区△△一丁目）でマーカーを表示しています。</p>
               <button
                 onClick={() => setShowHelp(false)}
                 className="mt-2 text-xs text-blue-600 hover:underline"

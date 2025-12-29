@@ -2,18 +2,24 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-type LocationGroupResult = {
+interface LocationRecord {
   region: string | null;
   city: string | null;
   town: string | null;
+  latitude: number | null;
+  longitude: number | null;
   channelId: string | null;
-  _count: { id: number };
-};
+}
 
-type RegionGroupResult = {
+interface AggregatedLocation {
   region: string | null;
-  _count: { id: number };
-};
+  city: string | null;
+  town: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  count: number;
+  channelId: string | null;
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -64,10 +70,8 @@ export async function GET(request: NextRequest) {
       ? { channelId }
       : {};
 
-    // 町丁目別の診断完了数を集計（チャンネル別）
-    // 注: 緯度経度は保存していないため、region/city/townで集計
-    const locationData = await prisma.diagnosisSession.groupBy({
-      by: ["region", "city", "town", "channelId"],
+    // 位置情報付きの診断セッションを取得
+    const sessions = await prisma.diagnosisSession.findMany({
       where: {
         clinicId: session.clinicId,
         completedAt: { not: null },
@@ -80,40 +84,63 @@ export async function GET(request: NextRequest) {
         city: { not: null },
         ...channelFilter,
       },
-      _count: {
-        id: true,
+      select: {
+        region: true,
+        city: true,
+        town: true,
+        latitude: true,
+        longitude: true,
+        channelId: true,
       },
       orderBy: {
-        _count: {
-          id: "desc",
-        },
+        createdAt: "desc",
       },
-      take: 20, // 上位20件
     });
 
+    // 町丁目レベルで集計（座標は最初のレコードを使用）
+    const locationMap = new Map<string, AggregatedLocation>();
+
+    for (const s of sessions as LocationRecord[]) {
+      const key = `${s.region}-${s.city}-${s.town || "notown"}-${s.channelId || "nochannel"}`;
+
+      if (!locationMap.has(key)) {
+        locationMap.set(key, {
+          region: s.region,
+          city: s.city,
+          town: s.town,
+          latitude: s.latitude,
+          longitude: s.longitude,
+          count: 0,
+          channelId: s.channelId,
+        });
+      }
+
+      const loc = locationMap.get(key)!;
+      loc.count++;
+
+      // 座標がない場合は更新
+      if (loc.latitude === null && s.latitude !== null) {
+        loc.latitude = s.latitude;
+        loc.longitude = s.longitude;
+      }
+    }
+
+    // 配列に変換してソート
+    const locations = Array.from(locationMap.values())
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 50); // 上位50件
+
     // 都道府県別の集計
-    const regionData = await prisma.diagnosisSession.groupBy({
-      by: ["region"],
-      where: {
-        clinicId: session.clinicId,
-        completedAt: { not: null },
-        isDemo: false,
-        createdAt: {
-          gte: dateFrom,
-          lte: dateTo,
-        },
-        region: { not: null },
-        ...channelFilter,
-      },
-      _count: {
-        id: true,
-      },
-      orderBy: {
-        _count: {
-          id: "desc",
-        },
-      },
-    });
+    const regionMap = new Map<string, number>();
+    for (const s of sessions) {
+      if (s.region) {
+        regionMap.set(s.region, (regionMap.get(s.region) || 0) + 1);
+      }
+    }
+
+    const topRegions = Array.from(regionMap.entries())
+      .map(([region, count]) => ({ region, count }))
+      .sort((a, b) => b.count - a.count);
 
     // 全体の件数
     const total = await prisma.diagnosisSession.count({
@@ -128,20 +155,6 @@ export async function GET(request: NextRequest) {
         ...channelFilter,
       },
     });
-
-    // レスポンス形式に変換（緯度経度は含まない）
-    const locations = (locationData as LocationGroupResult[]).map((item) => ({
-      region: item.region,
-      city: item.city,
-      town: item.town,
-      count: item._count.id,
-      channelId: item.channelId,
-    }));
-
-    const topRegions = (regionData as RegionGroupResult[]).map((item) => ({
-      region: item.region,
-      count: item._count.id,
-    }));
 
     return NextResponse.json({
       locations,
