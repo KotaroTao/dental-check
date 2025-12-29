@@ -279,7 +279,7 @@ export default function NewChannelPage() {
 
           {/* 画像アップロード */}
           <div className="space-y-2">
-            <Label>設置場所の写真（任意）</Label>
+            <Label>チラシや看板の写真（任意）</Label>
             <div
               className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
                 imagePreview ? "border-blue-300 bg-blue-50" : "border-gray-300 hover:border-gray-400"
@@ -329,7 +329,7 @@ export default function NewChannelPage() {
               />
             </div>
             <p className="text-xs text-gray-500">
-              チラシやポスターの設置場所を撮影しておくと、後から確認できます
+              配布チラシのデザイン画像や、ポスター・看板の設置場所を登録しておくと、QRコードの管理がしやすくなります
             </p>
           </div>
 
