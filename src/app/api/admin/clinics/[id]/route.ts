@@ -112,7 +112,6 @@ export async function PATCH(
 
     // プランを更新
     const plan = getPlan(planType);
-    const now = new Date();
 
     // 無料プランの場合は active に設定
     const newStatus = planType === "free" ? "active" : clinic.subscription.status;
