@@ -17,6 +17,8 @@ import {
   X,
   RotateCcw,
   Info,
+  Calendar,
+  AlertTriangle,
 } from "lucide-react";
 import { LocationSection } from "@/components/dashboard/location-section";
 
@@ -74,6 +76,7 @@ interface Channel {
   imageUrl: string | null;
   diagnosisTypeSlug: string;
   isActive: boolean;
+  expiresAt: string | null;
   createdAt: string;
 }
 
@@ -666,7 +669,7 @@ export default function DashboardPage() {
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <span className="font-medium truncate">{channel.name}</span>
                         {channel.isActive ? (
                           <span className="shrink-0 text-xs px-1.5 py-0.5 bg-green-100 text-green-700 rounded">
@@ -677,9 +680,21 @@ export default function DashboardPage() {
                             無効
                           </span>
                         )}
+                        {channel.expiresAt && new Date() > new Date(channel.expiresAt) && (
+                          <span className="shrink-0 text-xs px-1.5 py-0.5 bg-red-100 text-red-700 rounded flex items-center gap-0.5">
+                            <AlertTriangle className="w-3 h-3" />
+                            有効期限切れ
+                          </span>
+                        )}
                       </div>
-                      <div className="text-sm text-gray-500">
-                        {DIAGNOSIS_TYPE_NAMES[channel.diagnosisTypeSlug]} / {new Date(channel.createdAt).toLocaleDateString("ja-JP")}
+                      <div className="text-sm text-gray-500 flex items-center gap-2 flex-wrap">
+                        <span>{DIAGNOSIS_TYPE_NAMES[channel.diagnosisTypeSlug]} / {new Date(channel.createdAt).toLocaleDateString("ja-JP")}</span>
+                        {channel.expiresAt && (
+                          <span className="flex items-center gap-1 text-xs">
+                            <Calendar className="w-3 h-3" />
+                            {new Date(channel.expiresAt).toLocaleDateString("ja-JP")}まで
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
