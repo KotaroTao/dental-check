@@ -87,13 +87,13 @@ export default function DiagnosesPage() {
         )}
       </div>
 
-      {/* システム提供の診断 */}
+      {/* デフォルト診断 */}
       <div className="mb-8">
-        <h2 className="text-lg font-semibold mb-4 text-gray-700">システム提供の診断</h2>
+        <h2 className="text-lg font-semibold mb-4 text-gray-700">デフォルト診断</h2>
         <div className="bg-white rounded-lg shadow divide-y">
           {systemDiagnoses.length === 0 ? (
             <div className="p-6 text-center text-gray-500">
-              システム診断がありません
+              デフォルト診断がありません
             </div>
           ) : (
             systemDiagnoses.map((diagnosis) => (
@@ -102,7 +102,7 @@ export default function DiagnosesPage() {
                   <div className="flex items-center gap-2">
                     <h3 className="font-medium">{diagnosis.name}</h3>
                     <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
-                      システム
+                      デフォルト
                     </span>
                   </div>
                   <p className="text-sm text-gray-500 mt-1">

@@ -70,7 +70,7 @@ export const PLANS: Record<PlanType, Plan> = {
   },
   free: {
     type: "free",
-    name: "無料プラン",
+    name: "特別プラン（無料・無制限）",
     price: 0,
     qrCodeLimit: null,
     description: "管理者専用設定",
