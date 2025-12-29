@@ -172,11 +172,11 @@ export default function DiagnosesPage() {
                   </Link>
                   {canCreateCustomDiagnosis && (
                     <>
-                      <Link href={`/dashboard/diagnoses/${diagnosis.id}/edit`}>
-                        <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href={`/dashboard/diagnoses/${diagnosis.id}/edit`}>
                           <Edit className="w-4 h-4" />
-                        </Button>
-                      </Link>
+                        </Link>
+                      </Button>
                       {deleteConfirm === diagnosis.id ? (
                         <div className="flex items-center gap-1">
                           <Button
