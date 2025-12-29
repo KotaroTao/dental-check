@@ -305,9 +305,159 @@ export const childOrthodonticsDiagnosis: DiagnosisType = {
   ],
 };
 
+export const periodontalDiseaseDiagnosis: DiagnosisType = {
+  slug: "periodontal-risk",
+  name: "歯周病リスク診断",
+  description:
+    "簡単な質問に答えて、あなたの歯周病リスクをチェックしましょう",
+  targetAge: "20歳以上",
+  questions: [
+    {
+      id: 1,
+      text: "歯磨きの時に歯茎から出血することがありますか？",
+      choices: [
+        { text: "毎回ある", score: 0 },
+        { text: "よくある", score: 3 },
+        { text: "たまにある", score: 7 },
+        { text: "ほとんどない", score: 10 },
+      ],
+    },
+    {
+      id: 2,
+      text: "歯茎が赤く腫れていると感じることはありますか？",
+      choices: [
+        { text: "常に腫れている", score: 0 },
+        { text: "よく腫れる", score: 3 },
+        { text: "たまに腫れる", score: 7 },
+        { text: "腫れていない", score: 10 },
+      ],
+    },
+    {
+      id: 3,
+      text: "口臭が気になることはありますか？",
+      choices: [
+        { text: "いつも気になる", score: 0 },
+        { text: "よく気になる", score: 3 },
+        { text: "たまに気になる", score: 7 },
+        { text: "ほとんど気にならない", score: 10 },
+      ],
+    },
+    {
+      id: 4,
+      text: "歯と歯の間に食べ物が詰まりやすくなりましたか？",
+      choices: [
+        { text: "とても詰まりやすい", score: 0 },
+        { text: "詰まりやすい", score: 3 },
+        { text: "少し詰まる", score: 7 },
+        { text: "詰まらない", score: 10 },
+      ],
+    },
+    {
+      id: 5,
+      text: "歯が長くなった（歯茎が下がった）ように感じますか？",
+      choices: [
+        { text: "かなり長くなった", score: 0 },
+        { text: "少し長くなった", score: 5 },
+        { text: "変わらない", score: 10 },
+      ],
+    },
+    {
+      id: 6,
+      text: "歯がグラグラ動くことがありますか？",
+      choices: [
+        { text: "複数の歯がグラグラする", score: 0 },
+        { text: "1本だけグラグラする", score: 3 },
+        { text: "少し動く気がする", score: 7 },
+        { text: "動かない", score: 10 },
+      ],
+    },
+    {
+      id: 7,
+      text: "硬いものを噛むと痛みや違和感がありますか？",
+      choices: [
+        { text: "よくある", score: 0 },
+        { text: "たまにある", score: 5 },
+        { text: "ほとんどない", score: 10 },
+      ],
+    },
+    {
+      id: 8,
+      text: "喫煙習慣はありますか？",
+      choices: [
+        { text: "毎日吸う", score: 0 },
+        { text: "たまに吸う", score: 3 },
+        { text: "以前吸っていた", score: 7 },
+        { text: "吸わない", score: 10 },
+      ],
+    },
+    {
+      id: 9,
+      text: "糖尿病と診断されたことはありますか？",
+      choices: [
+        { text: "はい、治療中", score: 0 },
+        { text: "予備軍と言われた", score: 5 },
+        { text: "いいえ", score: 10 },
+      ],
+    },
+    {
+      id: 10,
+      text: "定期的に歯科検診やクリーニングを受けていますか？",
+      choices: [
+        { text: "受けていない", score: 0 },
+        { text: "1年に1回程度", score: 5 },
+        { text: "半年に1回程度", score: 8 },
+        { text: "3ヶ月に1回以上", score: 10 },
+      ],
+    },
+  ],
+  resultPatterns: [
+    {
+      minScore: 0,
+      maxScore: 30,
+      category: "高リスク",
+      title: "歯周病の可能性が高いです",
+      message:
+        "歯周病の症状が複数見られます。できるだけ早く歯科医院を受診し、専門的な検査と治療を受けることを強くおすすめします。歯周病は放置すると歯を失う原因になります。",
+    },
+    {
+      minScore: 31,
+      maxScore: 50,
+      category: "中リスク",
+      title: "歯周病の初期症状があるかもしれません",
+      message:
+        "いくつか気になる症状があります。早めに歯科医院でチェックを受けることをおすすめします。初期段階であれば、適切なケアで改善できる可能性があります。",
+    },
+    {
+      minScore: 51,
+      maxScore: 70,
+      category: "やや注意",
+      title: "予防を心がけましょう",
+      message:
+        "現時点では大きな問題はなさそうですが、油断は禁物です。毎日の丁寧なブラッシングと定期検診で、歯周病を予防しましょう。",
+    },
+    {
+      minScore: 71,
+      maxScore: 85,
+      category: "低リスク",
+      title: "良い状態を維持しています",
+      message:
+        "歯茎の状態は良好です。今のケアを続けながら、定期的な歯科検診を受けて、健康な歯茎を維持しましょう。",
+    },
+    {
+      minScore: 86,
+      maxScore: 100,
+      category: "優良",
+      title: "素晴らしい歯茎の健康状態です",
+      message:
+        "歯周病のリスクは非常に低いです。素晴らしいオーラルケアができています！この調子で継続してください。",
+    },
+  ],
+};
+
 export const diagnosisTypes: Record<string, DiagnosisType> = {
   "oral-age": oralAgeDiagnosis,
   "child-orthodontics": childOrthodonticsDiagnosis,
+  "periodontal-risk": periodontalDiseaseDiagnosis,
 };
 
 export function getDiagnosisType(slug: string): DiagnosisType | undefined {
