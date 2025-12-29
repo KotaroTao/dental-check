@@ -10,14 +10,12 @@ import {
   Palette,
   Target,
   BarChart3,
-  Check,
   ArrowRight,
   FileText,
   Globe,
   Instagram,
   MapPin,
   Play,
-  Star,
   TrendingUp,
   Shield,
   Clock,
@@ -44,9 +42,9 @@ export default function Home() {
               <a href="#how-it-works" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
                 使い方
               </a>
-              <a href="#pricing" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
+              <Link href="/pricing" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
                 料金
-              </a>
+              </Link>
             </div>
             <div className="flex items-center gap-3">
               <Link href="/login">
@@ -492,92 +490,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 料金セクション */}
-      <section id="pricing" className="py-24 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <span className="inline-block px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-medium mb-4">
-              PRICING
-            </span>
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              シンプルな料金プラン
-            </h2>
-            <p className="text-gray-600 max-w-xl mx-auto">
-              すべての機能を月額3,000円で利用可能。追加料金なし。
-            </p>
-          </div>
-
-          <div className="max-w-lg mx-auto">
-            <div className="bg-white rounded-3xl p-8 md:p-10 shadow-xl shadow-gray-200/50 border-2 border-blue-100 relative overflow-hidden">
-              {/* 装飾 */}
-              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-bl-full" />
-              <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-gradient-to-tr from-green-500/10 to-blue-500/10 rounded-full" />
-
-              {/* バッジ */}
-              <div className="absolute top-6 right-6">
-                <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
-                  <Star className="w-3 h-3" />
-                  14日間無料
-                </span>
-              </div>
-
-              <div className="relative text-center">
-                <h3 className="text-xl font-bold text-gray-900 mb-2">スタンダードプラン</h3>
-                <div className="flex items-baseline justify-center gap-1 mb-6">
-                  <span className="text-lg text-gray-500">¥</span>
-                  <span className="text-6xl font-bold text-gradient-primary">3,000</span>
-                  <span className="text-gray-500">/月（税抜）</span>
-                </div>
-
-                <ul className="text-left space-y-4 mb-8">
-                  <li className="flex items-center gap-3">
-                    <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                      <Check className="w-4 h-4 text-green-600" />
-                    </div>
-                    <span className="text-gray-700">すべての診断コンテンツを利用可能</span>
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                      <Check className="w-4 h-4 text-green-600" />
-                    </div>
-                    <span className="text-gray-700">経路別QRコード発行（無制限）</span>
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                      <Check className="w-4 h-4 text-green-600" />
-                    </div>
-                    <span className="text-gray-700">結果画面のカスタマイズ</span>
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                      <Check className="w-4 h-4 text-green-600" />
-                    </div>
-                    <span className="text-gray-700">経路別アクセス統計・効果比較</span>
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                      <Check className="w-4 h-4 text-green-600" />
-                    </div>
-                    <span className="text-gray-700">いつでも解約OK</span>
-                  </li>
-                </ul>
-
-                <Link href="/signup">
-                  <Button size="2xl" variant="gradient" className="w-full group">
-                    14日間無料で試す
-                    <ArrowRight className="w-5 h-5 ml-2 transition-transform group-hover:translate-x-1" />
-                  </Button>
-                </Link>
-
-                <p className="mt-4 text-sm text-gray-500">
-                  クレジットカード不要で始められます
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* CTA セクション */}
       <section className="py-24 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 relative overflow-hidden">
         {/* 装飾 */}
@@ -633,9 +545,9 @@ export default function Home() {
               <a href="#how-it-works" className="text-sm text-gray-400 hover:text-white transition-colors">
                 使い方
               </a>
-              <a href="#pricing" className="text-sm text-gray-400 hover:text-white transition-colors">
+              <Link href="/pricing" className="text-sm text-gray-400 hover:text-white transition-colors">
                 料金
-              </a>
+              </Link>
               <Link href="/terms" className="text-sm text-gray-400 hover:text-white transition-colors">
                 利用規約
               </Link>
