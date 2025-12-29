@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -8,11 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, X, Image as ImageIcon } from "lucide-react";
 
-// 利用可能な診断タイプ
-const DIAGNOSIS_TYPES = [
-  { slug: "oral-age", name: "お口年齢診断" },
-  { slug: "child-orthodontics", name: "子供の矯正タイミングチェック" },
-];
+interface DiagnosisType {
+  slug: string;
+  name: string;
+  clinicId: string | null;
+}
 
 export default function NewChannelPage() {
   const router = useRouter();
@@ -22,11 +22,31 @@ export default function NewChannelPage() {
     description: "",
     diagnosisTypeSlug: "",
   });
+  const [diagnosisTypes, setDiagnosisTypes] = useState<DiagnosisType[]>([]);
+  const [isLoadingDiagnoses, setIsLoadingDiagnoses] = useState(true);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  // 診断タイプを取得
+  useEffect(() => {
+    const fetchDiagnoses = async () => {
+      try {
+        const response = await fetch("/api/dashboard/diagnoses");
+        if (response.ok) {
+          const data = await response.json();
+          setDiagnosisTypes(data.diagnoses);
+        }
+      } catch (error) {
+        console.error("Failed to fetch diagnoses:", error);
+      } finally {
+        setIsLoadingDiagnoses(false);
+      }
+    };
+    fetchDiagnoses();
+  }, []);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -163,6 +183,10 @@ export default function NewChannelPage() {
     }
   };
 
+  // 診断タイプをカテゴリ別にグループ化
+  const defaultDiagnoses = diagnosisTypes.filter((d) => d.clinicId === null);
+  const customDiagnoses = diagnosisTypes.filter((d) => d.clinicId !== null);
+
   return (
     <div className="max-w-xl mx-auto">
       <Link
@@ -210,15 +234,30 @@ export default function NewChannelPage() {
               name="diagnosisTypeSlug"
               value={formData.diagnosisTypeSlug}
               onChange={handleChange}
-              disabled={isLoading}
+              disabled={isLoading || isLoadingDiagnoses}
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <option value="">選択してください</option>
-              {DIAGNOSIS_TYPES.map((type) => (
-                <option key={type.slug} value={type.slug}>
-                  {type.name}
-                </option>
-              ))}
+              <option value="">
+                {isLoadingDiagnoses ? "読み込み中..." : "選択してください"}
+              </option>
+              {defaultDiagnoses.length > 0 && (
+                <optgroup label="デフォルト診断">
+                  {defaultDiagnoses.map((type) => (
+                    <option key={type.slug} value={type.slug}>
+                      {type.name}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              {customDiagnoses.length > 0 && (
+                <optgroup label="オリジナル診断">
+                  {customDiagnoses.map((type) => (
+                    <option key={type.slug} value={type.slug}>
+                      {type.name}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
             </select>
             <p className="text-xs text-gray-500">
               このQRコードで使用する診断を選択してください
