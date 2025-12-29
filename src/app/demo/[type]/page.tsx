@@ -80,6 +80,8 @@ export async function generateStaticParams() {
     { type: "oral-age" },
     { type: "child-orthodontics" },
     { type: "periodontal-risk" },
+    { type: "cavity-risk" },
+    { type: "whitening-check" },
   ];
 }
 
