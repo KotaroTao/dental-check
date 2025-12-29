@@ -33,13 +33,17 @@ export async function POST(request: NextRequest) {
     // 緯度経度から都道府県・市区町村を逆ジオコーディング
     const location = await reverseGeocode(latitude, longitude);
 
+    // 座標を小数点2桁に丸める（約1km精度、プライバシー保護）
+    const roundedLat = Math.round(latitude * 100) / 100;
+    const roundedLng = Math.round(longitude * 100) / 100;
+
     // セッションの位置情報を更新
-    // GPS座標も保存（マーカー表示用）
+    // 丸めた座標を保存（町丁目レベルの精度）
     await prisma.diagnosisSession.update({
       where: { id: sessionId },
       data: {
-        latitude,
-        longitude,
+        latitude: roundedLat,
+        longitude: roundedLng,
         region: location?.region || null,
         city: location?.city || null,
         town: location?.town || null,
