@@ -28,6 +28,7 @@ model Clinic {
 
   subscription     Subscription?
   clinicDiagnoses  ClinicDiagnosis[]
+  diagnosisTypes   DiagnosisType[]   // クリニック固有の診断タイプ
   sessions         DiagnosisSession[]
   accessLogs       AccessLog[]
   ctaClicks        CTAClick[]
@@ -84,6 +85,7 @@ model Subscription {
 model DiagnosisType {
   id              String   @id @default(uuid())
   slug            String   @unique
+  clinicId        String?  @map("clinic_id") // null = システム提供診断、値あり = クリニック固有診断
   name            String
   description     String?
   questions       Json
@@ -91,9 +93,11 @@ model DiagnosisType {
   isActive        Boolean  @default(true) @map("is_active")
   createdAt       DateTime @default(now()) @map("created_at")
 
+  clinic          Clinic?            @relation(fields: [clinicId], references: [id], onDelete: Cascade)
   clinicDiagnoses ClinicDiagnosis[]
   sessions        DiagnosisSession[]
 
+  @@index([clinicId])
   @@map("diagnosis_types")
 }
 

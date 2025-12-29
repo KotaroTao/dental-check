@@ -4,6 +4,7 @@ import {
   getPlan,
   canCreateQRCode,
   getRemainingQRCodes,
+  canCreateCustomDiagnosis,
   TRIAL_CONFIG,
   GRACE_PERIOD_DAYS,
 } from "./plans";
@@ -30,6 +31,7 @@ export interface SubscriptionState {
   isActive: boolean; // サービス利用可能か
   canCreateQR: boolean; // QRコード作成可能か
   canTrack: boolean; // 計測可能か
+  canCreateCustomDiagnosis: boolean; // オリジナル診断作成可能か
   trialDaysLeft: number | null;
   gracePeriodDaysLeft: number | null;
   currentPeriodEnd: Date | null;
@@ -63,6 +65,7 @@ export async function getSubscriptionState(
       isActive: false,
       canCreateQR: false,
       canTrack: false,
+      canCreateCustomDiagnosis: false,
       trialDaysLeft: null,
       gracePeriodDaysLeft: null,
       currentPeriodEnd: null,
@@ -85,6 +88,7 @@ export async function getSubscriptionState(
       isActive: true,
       canCreateQR: true,
       canTrack: true,
+      canCreateCustomDiagnosis: true,
       trialDaysLeft: null,
       gracePeriodDaysLeft: null,
       currentPeriodEnd: null,
@@ -117,6 +121,7 @@ export async function getSubscriptionState(
         isActive: true,
         canCreateQR: canCreate,
         canTrack: true,
+        canCreateCustomDiagnosis: canCreateCustomDiagnosis(trialPlanType),
         trialDaysLeft,
         gracePeriodDaysLeft: null,
         currentPeriodEnd: trialEnd,
@@ -147,6 +152,7 @@ export async function getSubscriptionState(
         isActive: true,
         canCreateQR: false,
         canTrack: false,
+        canCreateCustomDiagnosis: false,
         trialDaysLeft: 0,
         gracePeriodDaysLeft: graceDaysLeft,
         currentPeriodEnd: gracePeriodEnd,
@@ -165,6 +171,7 @@ export async function getSubscriptionState(
       isActive: true, // ログインとデータ閲覧は可能
       canCreateQR: false,
       canTrack: false,
+      canCreateCustomDiagnosis: false,
       trialDaysLeft: 0,
       gracePeriodDaysLeft: 0,
       currentPeriodEnd: null,
@@ -190,6 +197,7 @@ export async function getSubscriptionState(
         isActive: true,
         canCreateQR: canCreate,
         canTrack: true,
+        canCreateCustomDiagnosis: canCreateCustomDiagnosis(planType),
         trialDaysLeft: null,
         gracePeriodDaysLeft: null,
         currentPeriodEnd: null,
@@ -216,6 +224,7 @@ export async function getSubscriptionState(
         isActive: true,
         canCreateQR: canCreate,
         canTrack: true,
+        canCreateCustomDiagnosis: canCreateCustomDiagnosis(planType),
         trialDaysLeft: null,
         gracePeriodDaysLeft: null,
         currentPeriodEnd: periodEnd,
@@ -246,6 +255,7 @@ export async function getSubscriptionState(
         isActive: true,
         canCreateQR: false,
         canTrack: false,
+        canCreateCustomDiagnosis: false,
         trialDaysLeft: null,
         gracePeriodDaysLeft: graceDaysLeft,
         currentPeriodEnd: gracePeriodEnd,
@@ -264,6 +274,7 @@ export async function getSubscriptionState(
       isActive: true,
       canCreateQR: false,
       canTrack: false,
+      canCreateCustomDiagnosis: false,
       trialDaysLeft: null,
       gracePeriodDaysLeft: 0,
       currentPeriodEnd: null,
@@ -290,6 +301,7 @@ export async function getSubscriptionState(
         isActive: true,
         canCreateQR: canCreate,
         canTrack: true,
+        canCreateCustomDiagnosis: canCreateCustomDiagnosis(planType),
         trialDaysLeft: null,
         gracePeriodDaysLeft: null,
         currentPeriodEnd: periodEnd,
@@ -308,6 +320,7 @@ export async function getSubscriptionState(
       isActive: true,
       canCreateQR: false,
       canTrack: false,
+      canCreateCustomDiagnosis: false,
       trialDaysLeft: null,
       gracePeriodDaysLeft: null,
       currentPeriodEnd: null,
@@ -328,6 +341,7 @@ export async function getSubscriptionState(
       isActive: true,
       canCreateQR: false,
       canTrack: false,
+      canCreateCustomDiagnosis: false,
       trialDaysLeft: null,
       gracePeriodDaysLeft: null,
       currentPeriodEnd: subscription.currentPeriodEnd,
@@ -346,6 +360,7 @@ export async function getSubscriptionState(
     isActive: true,
     canCreateQR: false,
     canTrack: false,
+    canCreateCustomDiagnosis: false,
     trialDaysLeft: null,
     gracePeriodDaysLeft: null,
     currentPeriodEnd: null,

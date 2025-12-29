@@ -77,6 +77,7 @@ export const PLANS: Record<PlanType, Plan> = {
     features: [
       "QRコード無制限",
       "全機能利用可能",
+      "オリジナル診断作成（無制限）",
     ],
     isAdminOnly: true,
   },
@@ -133,4 +134,12 @@ export function formatPlanPrice(price: number): string {
     return "無料";
   }
   return `¥${price.toLocaleString()}/月（税別）`;
+}
+
+// オリジナル診断作成可能なプラン
+const CUSTOM_DIAGNOSIS_PLANS: PlanType[] = ["free", "custom", "managed"];
+
+// オリジナル診断作成可能かチェック
+export function canCreateCustomDiagnosis(planType: PlanType): boolean {
+  return CUSTOM_DIAGNOSIS_PLANS.includes(planType);
 }
