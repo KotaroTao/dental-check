@@ -66,8 +66,11 @@ const location = await reverseGeocode(lat, lng);
 const location = await reverseGeocode(lat, lng);
 // 返却: { region, city, town, country }
 
-// Nominatim APIレスポンスから町丁目を取得
-// address.neighbourhood, address.suburb, address.quarter などを使用
+// Nominatim APIレスポンスから町丁目を取得（フォールバック付き）
+const town = address.neighbourhood  // 最優先: 町丁目名
+  || address.quarter                // 代替1: 地区名
+  || address.suburb                 // 代替2: 郊外地区名
+  || null;                          // 取得できない場合はnull
 ```
 
 ### 3.3 Nominatim APIレスポンス例
@@ -96,17 +99,26 @@ const location = await reverseGeocode(lat, lng);
 ### 4.2 データ構造
 ```
 /public/geojson/
-├── prefectures/
-│   ├── 01_hokkaido/
-│   │   ├── 01100_sapporo.json      # 札幌市
-│   │   ├── 01101_chuo-ku.json      # 中央区
-│   │   └── ...
-│   ├── 13_tokyo/
-│   │   ├── 13101_chiyoda.json      # 千代田区
-│   │   ├── 13102_chuo.json         # 中央区
-│   │   └── ...
-│   └── ...
-└── index.json                       # メタデータ
+├── towns/
+│   ├── 01_hokkaido.json    # 北海道の全町丁目
+│   ├── 13_tokyo.json       # 東京都の全町丁目
+│   ├── 27_osaka.json       # 大阪府の全町丁目
+│   └── ...                 # 47都道府県分
+└── index.json              # メタデータ（都道府県コード対応表）
+```
+
+**GeoJSON Feature構造**:
+```json
+{
+  "type": "Feature",
+  "properties": {
+    "pref": "東京都",
+    "city": "渋谷区",
+    "town": "神南一丁目",
+    "town_code": "13113001001"
+  },
+  "geometry": { "type": "Polygon", "coordinates": [...] }
+}
 ```
 
 ### 4.3 ファイルサイズ目安
@@ -118,11 +130,51 @@ const location = await reverseGeocode(lat, lng);
 
 ### 4.4 動的ロード戦略
 ```typescript
-// 表示エリアに応じて必要なファイルのみロード
-async function loadTownGeoJSON(prefCode: string, cityCode: string) {
-  const url = `/geojson/prefectures/${prefCode}/${cityCode}.json`;
-  const response = await fetch(url);
-  return response.json();
+// 都道府県単位でGeoJSONをロード（エラーハンドリング付き）
+async function loadTownGeoJSON(prefCode: string): Promise<FeatureCollection | null> {
+  try {
+    const url = `/geojson/towns/${prefCode}.json`;
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      console.warn(`GeoJSON not found: ${prefCode}`);
+      return null;  // ファイルが存在しない場合はnullを返す
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error(`Failed to load GeoJSON: ${prefCode}`, error);
+    return null;  // ネットワークエラー時もnullを返す
+  }
+}
+```
+
+### 4.5 GeoJSONデータ取得・加工手順
+
+**1. データダウンロード**
+```bash
+# 国土数値情報 町丁目界データ
+# https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-N03-v3_1.html
+wget https://nlftp.mlit.go.jp/ksj/gml/data/N03/N03-2024/N03-20240101_GML.zip
+```
+
+**2. 変換・分割スクリプト**
+```bash
+# Shapefile → GeoJSON変換（ogr2ogr使用）
+ogr2ogr -f GeoJSON tokyo.json N03-20240101.shp -where "N03_001='東京都'"
+
+# 頂点数削減（mapshaper使用）
+mapshaper tokyo.json -simplify 10% -o tokyo_simplified.json
+```
+
+**3. 都道府県コード対応表** (`index.json`)
+```json
+{
+  "prefectures": {
+    "北海道": "01_hokkaido",
+    "東京都": "13_tokyo",
+    "大阪府": "27_osaka"
+  }
 }
 ```
 
@@ -177,11 +229,9 @@ export function useTownGeoJSON(regions: string[]) {
 
       for (const region of regions) {
         const prefCode = getPrefCode(region);
-        const cities = await getCitiesWithData(region);
+        const data = await loadTownGeoJSON(prefCode);
 
-        for (const city of cities) {
-          const cityCode = getCityCode(city);
-          const data = await loadTownGeoJSON(prefCode, cityCode);
+        if (data) {
           features.push(...data.features);
         }
       }
@@ -196,6 +246,70 @@ export function useTownGeoJSON(regions: string[]) {
   return { geoData, loading };
 }
 ```
+
+### 5.4 町丁目名マッチング仕様
+
+DBに保存された町丁目名とGeoJSONの`properties.town`をマッチングする際のルール:
+
+| ルール | 例 | 説明 |
+|--------|-----|------|
+| 完全一致 | `神南一丁目` = `神南一丁目` | 最優先 |
+| 数字正規化 | `神南1丁目` → `神南一丁目` | 算用数字→漢数字変換 |
+| 丁目省略対応 | `神南一` → `神南一丁目` | 「丁目」を補完 |
+
+```typescript
+// 町丁目名の正規化
+function normalizeTownName(name: string): string {
+  return name
+    .replace(/1/g, '一').replace(/2/g, '二').replace(/3/g, '三')
+    .replace(/4/g, '四').replace(/5/g, '五').replace(/6/g, '六')
+    .replace(/7/g, '七').replace(/8/g, '八').replace(/9/g, '九')
+    .replace(/([一二三四五六七八九])$/, '$1丁目');
+}
+
+// マッチング処理
+function findMatchingFeature(town: string, features: Feature[]): Feature | null {
+  const normalized = normalizeTownName(town);
+  return features.find(f =>
+    normalizeTownName(f.properties.town) === normalized
+  ) || null;
+}
+```
+
+### 5.5 UI表示仕様
+
+#### ツールチップ
+ホバー時に表示する情報:
+| 項目 | 例 |
+|------|-----|
+| 町丁目名 | 神南一丁目 |
+| 診断件数 | 12件 |
+| 全体比率 | 3.2% |
+
+```typescript
+const tooltip = `${town.name}\n${town.count}件 (${town.percentage}%)`;
+```
+
+#### 境界線スタイル
+| 状態 | 線の太さ | 色 |
+|------|---------|-----|
+| データあり | 2px | #3B82F6 (青) |
+| データなし | 1px | #9CA3AF (グレー) |
+| ホバー時 | 3px | #1D4ED8 (濃い青) |
+
+```typescript
+const getStyle = (feature: Feature, hasData: boolean, isHovered: boolean) => ({
+  stroke: true,
+  color: hasData ? (isHovered ? '#1D4ED8' : '#3B82F6') : '#9CA3AF',
+  weight: isHovered ? 3 : (hasData ? 2 : 1),
+  fill: false,  // 塗りつぶしなし
+});
+```
+
+#### モバイル対応
+- タッチ操作: タップで町丁目選択、ツールチップ表示
+- 最小タップ領域: 44x44px
+- ピンチズーム: 対応
 
 ---
 
@@ -234,14 +348,31 @@ const locationData = await prisma.diagnosisSession.groupBy({
 ### 7.1 キャッシュ戦略
 | レイヤー | 方法 | TTL |
 |---------|------|-----|
-| ブラウザ | Service Worker | 7日 |
-| CDN | Cache-Control | 30日 |
-| サーバー | Redis | 1日 |
+| ブラウザ | HTTP Cache (Cache-Control) | 7日 |
+| Next.js | メモリキャッシュ (React state) | セッション中 |
+| CDN | Cache-Control: immutable | 30日 |
 
-### 7.2 遅延ロード
-- 初期表示: 都道府県レベルのみ
-- ズームイン時: 市区町村レベルをロード
-- さらにズーム: 町丁目レベルをロード
+**HTTPヘッダー設定** (nginx):
+```nginx
+location /geojson/ {
+  add_header Cache-Control "public, max-age=604800, immutable";
+}
+```
+
+### 7.2 表示ロジック
+
+**初期表示**:
+- データがある都道府県の境界線を表示（既存機能）
+- 件数をツールチップで表示
+
+**都道府県クリック時**:
+1. クリックされた都道府県のGeoJSONをロード
+2. データがある町丁目のみ境界線を表示
+3. 地図を該当エリアにズーム
+
+**フォールバック**:
+- GeoJSONロード失敗時: 都道府県レベル表示を維持
+- 町丁目マッチング失敗時: 市区町村名で表示
 
 ### 7.3 簡略化
 ```typescript
@@ -340,3 +471,4 @@ GPS座標（緯度・経度）は保存されません。
 | バージョン | 日付 | 変更内容 |
 |-----------|------|---------|
 | 1.0 | 2025-12-29 | 初版作成 |
+| 1.1 | 2025-12-29 | 仕様改善: GeoJSON構造簡略化、フォールバック追加、UI仕様追加 |
