@@ -26,17 +26,6 @@ interface ResultPattern {
   advice: string;
 }
 
-interface DiagnosisType {
-  id: string;
-  slug: string;
-  clinicId: string | null;
-  name: string;
-  description: string | null;
-  questions: Question[];
-  resultPatterns: ResultPattern[];
-  isActive: boolean;
-}
-
 export default function EditDiagnosisPage({
   params,
 }: {
@@ -64,42 +53,67 @@ export default function EditDiagnosisPage({
         const response = await fetch(`/api/dashboard/diagnoses/${id}`);
         if (response.ok) {
           const data = await response.json();
-          const diagnosis: DiagnosisType = data.diagnosis;
+          const diagnosis = data.diagnosis;
           setFormData({
             name: diagnosis.name,
             slug: diagnosis.slug,
             description: diagnosis.description || "",
             isActive: diagnosis.isActive,
           });
-          setQuestions(
-            diagnosis.questions.length > 0
-              ? diagnosis.questions
-              : [
-                  {
-                    id: crypto.randomUUID(),
-                    text: "",
-                    options: [
+
+          // 質問データを正規化（idがない場合は生成）
+          const rawQuestions = diagnosis.questions || [];
+          const normalizedQuestions = rawQuestions.length > 0
+            ? rawQuestions.map((q: Record<string, unknown>) => ({
+                id: q.id || crypto.randomUUID(),
+                text: q.text || "",
+                options: Array.isArray(q.options)
+                  ? q.options.map((o: Record<string, unknown>) => ({
+                      id: o.id || crypto.randomUUID(),
+                      text: o.text || "",
+                      score: typeof o.score === "number" ? o.score : 0,
+                    }))
+                  : [
                       { id: crypto.randomUUID(), text: "", score: 0 },
                       { id: crypto.randomUUID(), text: "", score: 1 },
                     ],
-                  },
-                ]
-          );
-          setResultPatterns(
-            diagnosis.resultPatterns.length > 0
-              ? diagnosis.resultPatterns
-              : [
-                  {
-                    id: crypto.randomUUID(),
-                    minScore: 0,
-                    maxScore: 10,
-                    category: "good",
-                    title: "",
-                    description: "",
-                    advice: "",
-                  },
-                ]
-          );
+              }))
+            : [
+                {
+                  id: crypto.randomUUID(),
+                  text: "",
+                  options: [
+                    { id: crypto.randomUUID(), text: "", score: 0 },
+                    { id: crypto.randomUUID(), text: "", score: 1 },
+                  ],
+                },
+              ];
+          setQuestions(normalizedQuestions);
+
+          // 結果パターンを正規化（idがない場合は生成）
+          const rawPatterns = diagnosis.resultPatterns || [];
+          const normalizedPatterns = rawPatterns.length > 0
+            ? rawPatterns.map((p: Record<string, unknown>) => ({
+                id: p.id || crypto.randomUUID(),
+                minScore: typeof p.minScore === "number" ? p.minScore : 0,
+                maxScore: typeof p.maxScore === "number" ? p.maxScore : 10,
+                category: p.category || "normal",
+                title: p.title || "",
+                description: p.description || "",
+                advice: p.advice || "",
+              }))
+            : [
+                {
+                  id: crypto.randomUUID(),
+                  minScore: 0,
+                  maxScore: 10,
+                  category: "good",
+                  title: "",
+                  description: "",
+                  advice: "",
+                },
+              ];
+          setResultPatterns(normalizedPatterns);
         } else {
           const data = await response.json();
           setError(data.error || "診断の取得に失敗しました");

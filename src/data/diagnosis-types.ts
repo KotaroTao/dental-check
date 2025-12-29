@@ -454,10 +454,303 @@ export const periodontalDiseaseDiagnosis: DiagnosisType = {
   ],
 };
 
+export const cavityRiskDiagnosis: DiagnosisType = {
+  slug: "cavity-risk",
+  name: "虫歯リスク診断",
+  description:
+    "簡単な質問に答えて、あなたの虫歯リスクをチェックしましょう",
+  targetAge: "全年齢",
+  questions: [
+    {
+      id: 1,
+      text: "1日に何回歯磨きをしますか？",
+      choices: [
+        { text: "0回または不定期", score: 0 },
+        { text: "1回", score: 5 },
+        { text: "2回", score: 8 },
+        { text: "3回以上", score: 10 },
+      ],
+    },
+    {
+      id: 2,
+      text: "甘い飲み物（ジュース、炭酸飲料、スポーツドリンクなど）をどのくらい飲みますか？",
+      choices: [
+        { text: "毎日複数回", score: 0 },
+        { text: "毎日1回程度", score: 3 },
+        { text: "週に数回", score: 7 },
+        { text: "ほとんど飲まない", score: 10 },
+      ],
+    },
+    {
+      id: 3,
+      text: "間食（おやつ）をどのくらいの頻度で摂りますか？",
+      choices: [
+        { text: "1日3回以上", score: 0 },
+        { text: "1日2回程度", score: 3 },
+        { text: "1日1回程度", score: 7 },
+        { text: "ほとんど摂らない", score: 10 },
+      ],
+    },
+    {
+      id: 4,
+      text: "フッ素入りの歯磨き粉を使用していますか？",
+      choices: [
+        { text: "使っていない", score: 0 },
+        { text: "わからない", score: 5 },
+        { text: "使っている", score: 10 },
+      ],
+    },
+    {
+      id: 5,
+      text: "歯と歯の間のケア（フロス・歯間ブラシ）をしていますか？",
+      choices: [
+        { text: "していない", score: 0 },
+        { text: "たまにする", score: 5 },
+        { text: "毎日する", score: 10 },
+      ],
+    },
+    {
+      id: 6,
+      text: "冷たいものや甘いものがしみることがありますか？",
+      choices: [
+        { text: "よくある", score: 0 },
+        { text: "たまにある", score: 5 },
+        { text: "ほとんどない", score: 10 },
+      ],
+    },
+    {
+      id: 7,
+      text: "過去1年間に虫歯の治療を受けましたか？",
+      choices: [
+        { text: "複数本治療した", score: 0 },
+        { text: "1本治療した", score: 5 },
+        { text: "治療していない", score: 10 },
+      ],
+    },
+    {
+      id: 8,
+      text: "定期的に歯科検診を受けていますか？",
+      choices: [
+        { text: "受けていない", score: 0 },
+        { text: "1年に1回程度", score: 5 },
+        { text: "半年に1回以上", score: 10 },
+      ],
+    },
+    {
+      id: 9,
+      text: "口の中が乾きやすいと感じますか？",
+      choices: [
+        { text: "よく乾く", score: 0 },
+        { text: "たまに乾く", score: 5 },
+        { text: "乾かない", score: 10 },
+      ],
+    },
+    {
+      id: 10,
+      text: "寝る前に歯磨きをしていますか？",
+      choices: [
+        { text: "しないことが多い", score: 0 },
+        { text: "時々忘れる", score: 5 },
+        { text: "毎日している", score: 10 },
+      ],
+    },
+  ],
+  resultPatterns: [
+    {
+      minScore: 0,
+      maxScore: 30,
+      category: "高リスク",
+      title: "虫歯になりやすい状態です",
+      message:
+        "虫歯リスクが高い状態です。できるだけ早く歯科医院で検診を受け、虫歯がないかチェックしてもらいましょう。食生活や歯磨き習慣の改善も重要です。",
+    },
+    {
+      minScore: 31,
+      maxScore: 50,
+      category: "中リスク",
+      title: "虫歯に注意が必要です",
+      message:
+        "いくつかリスク要因があります。定期的な歯科検診を受けながら、間食の回数を減らしたり、フッ素入り歯磨き粉を使うなど、予防を心がけましょう。",
+    },
+    {
+      minScore: 51,
+      maxScore: 70,
+      category: "やや注意",
+      title: "予防を続けましょう",
+      message:
+        "比較的良い状態ですが、油断は禁物です。今のケアを続けながら、定期検診で虫歯の早期発見を心がけましょう。",
+    },
+    {
+      minScore: 71,
+      maxScore: 85,
+      category: "低リスク",
+      title: "良い習慣が身についています",
+      message:
+        "虫歯リスクは低めです。今の良い習慣を継続しながら、定期的な歯科検診で健康な歯を維持しましょう。",
+    },
+    {
+      minScore: 86,
+      maxScore: 100,
+      category: "優良",
+      title: "素晴らしい虫歯予防ができています",
+      message:
+        "虫歯リスクは非常に低いです！素晴らしいオーラルケアと生活習慣が身についています。この調子で継続してください。",
+    },
+  ],
+};
+
+export const whiteningDiagnosis: DiagnosisType = {
+  slug: "whitening-check",
+  name: "ホワイトニング適正診断",
+  description:
+    "ホワイトニングがあなたに適しているかチェックしましょう",
+  targetAge: "18歳以上",
+  questions: [
+    {
+      id: 1,
+      text: "歯の色で気になることはありますか？",
+      choices: [
+        { text: "全体的に黄ばんでいる", score: 10 },
+        { text: "部分的に気になる", score: 7 },
+        { text: "少し気になる程度", score: 5 },
+        { text: "特に気にならない", score: 0 },
+      ],
+    },
+    {
+      id: 2,
+      text: "コーヒー、紅茶、ワインなどをよく飲みますか？",
+      choices: [
+        { text: "毎日複数回飲む", score: 10 },
+        { text: "毎日1回程度", score: 7 },
+        { text: "週に数回程度", score: 3 },
+        { text: "ほとんど飲まない", score: 0 },
+      ],
+    },
+    {
+      id: 3,
+      text: "喫煙習慣はありますか？",
+      choices: [
+        { text: "現在吸っている", score: 10 },
+        { text: "以前吸っていた", score: 5 },
+        { text: "吸ったことがない", score: 0 },
+      ],
+    },
+    {
+      id: 4,
+      text: "知覚過敏（冷たいものがしみる）の症状はありますか？",
+      choices: [
+        { text: "よくしみる", score: 0 },
+        { text: "たまにしみる", score: 5 },
+        { text: "ほとんどしみない", score: 10 },
+      ],
+    },
+    {
+      id: 5,
+      text: "虫歯や歯周病の治療中ですか？",
+      choices: [
+        { text: "現在治療中", score: 0 },
+        { text: "治療予定がある", score: 3 },
+        { text: "特にない", score: 10 },
+      ],
+    },
+    {
+      id: 6,
+      text: "前歯に詰め物や被せ物はありますか？",
+      choices: [
+        { text: "複数ある", score: 3 },
+        { text: "1〜2本ある", score: 5 },
+        { text: "ない", score: 10 },
+      ],
+    },
+    {
+      id: 7,
+      text: "妊娠中または授乳中ですか？",
+      choices: [
+        { text: "はい", score: 0 },
+        { text: "いいえ", score: 10 },
+      ],
+    },
+    {
+      id: 8,
+      text: "歯の変色の原因に心当たりはありますか？",
+      choices: [
+        { text: "加齢による変色", score: 10 },
+        { text: "飲食物による着色", score: 10 },
+        { text: "薬の副作用（テトラサイクリンなど）", score: 3 },
+        { text: "わからない", score: 7 },
+      ],
+    },
+    {
+      id: 9,
+      text: "結婚式や大切なイベントの予定はありますか？",
+      choices: [
+        { text: "1ヶ月以内にある", score: 10 },
+        { text: "3ヶ月以内にある", score: 8 },
+        { text: "半年以内にある", score: 5 },
+        { text: "特にない", score: 3 },
+      ],
+    },
+    {
+      id: 10,
+      text: "白い歯への関心度はどのくらいですか？",
+      choices: [
+        { text: "とても関心がある", score: 10 },
+        { text: "まあまあ関心がある", score: 7 },
+        { text: "少し関心がある", score: 3 },
+        { text: "あまり関心がない", score: 0 },
+      ],
+    },
+  ],
+  resultPatterns: [
+    {
+      minScore: 0,
+      maxScore: 30,
+      category: "要相談",
+      title: "まずは歯科医師に相談しましょう",
+      message:
+        "現時点ではホワイトニングを行う前に、歯科医師への相談が必要です。虫歯や歯周病の治療、知覚過敏の対策など、まずはお口の健康を整えることをおすすめします。",
+    },
+    {
+      minScore: 31,
+      maxScore: 50,
+      category: "条件付き適正",
+      title: "条件が整えばホワイトニング可能です",
+      message:
+        "いくつか確認が必要な点があります。歯科医院でカウンセリングを受けて、あなたに適したホワイトニング方法を相談してみましょう。",
+    },
+    {
+      minScore: 51,
+      maxScore: 70,
+      category: "適正あり",
+      title: "ホワイトニングに適しています",
+      message:
+        "ホワイトニングを受けるのに良い条件が揃っています。オフィスホワイトニングとホームホワイトニング、どちらが合うか歯科医院で相談してみましょう。",
+    },
+    {
+      minScore: 71,
+      maxScore: 85,
+      category: "高い適正",
+      title: "ホワイトニングがおすすめです",
+      message:
+        "ホワイトニングに非常に適した状態です。効果も出やすいでしょう。ぜひ歯科医院でカウンセリングを受けて、理想の白さを手に入れましょう。",
+    },
+    {
+      minScore: 86,
+      maxScore: 100,
+      category: "最適",
+      title: "ホワイトニングで大きな効果が期待できます",
+      message:
+        "ホワイトニングの効果が最も期待できる状態です！白い歯への関心も高く、良い結果が得られるでしょう。お近くの歯科医院でカウンセリングを受けてみてください。",
+    },
+  ],
+};
+
 export const diagnosisTypes: Record<string, DiagnosisType> = {
   "oral-age": oralAgeDiagnosis,
   "child-orthodontics": childOrthodonticsDiagnosis,
   "periodontal-risk": periodontalDiseaseDiagnosis,
+  "cavity-risk": cavityRiskDiagnosis,
+  "whitening-check": whiteningDiagnosis,
 };
 
 export function getDiagnosisType(slug: string): DiagnosisType | undefined {
