@@ -53,7 +53,7 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await request.json();
-    const { name, description, isActive, imageUrl } = body;
+    const { name, description, isActive, imageUrl, expiresAt } = body;
 
     const existingChannel = await prisma.channel.findFirst({
       where: {
@@ -76,6 +76,7 @@ export async function PATCH(
         ...(description !== undefined && { description: description?.trim() || null }),
         ...(isActive !== undefined && { isActive }),
         ...(imageUrl !== undefined && { imageUrl: imageUrl || null }),
+        ...(expiresAt !== undefined && { expiresAt: expiresAt ? new Date(expiresAt) : null }),
       },
     })) as Channel;
 

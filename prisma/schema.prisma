@@ -39,17 +39,18 @@ model Clinic {
 
 // QRコード（経路別計測用）
 model Channel {
-  id                String   @id @default(uuid())
-  clinicId          String   @map("clinic_id")
-  code              String   @unique // QRコード用の短いコード
+  id                String    @id @default(uuid())
+  clinicId          String    @map("clinic_id")
+  code              String    @unique // QRコード用の短いコード
   name              String   // 例: "ポスティング用", "駅看板", "Instagram広告"
   description       String?
-  imageUrl          String?  @map("image_url") // QRコードに紐付く画像
-  diagnosisTypeSlug String   @default("oral-age") @map("diagnosis_type_slug") // 紐付ける診断タイプ
-  sortOrder         Int      @default(0) @map("sort_order") // 表示順序
-  isActive          Boolean  @default(true) @map("is_active")
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  imageUrl          String?   @map("image_url") // QRコードに紐付く画像
+  diagnosisTypeSlug String    @default("oral-age") @map("diagnosis_type_slug") // 紐付ける診断タイプ
+  sortOrder         Int       @default(0) @map("sort_order") // 表示順序
+  isActive          Boolean   @default(true) @map("is_active")
+  expiresAt         DateTime? @map("expires_at") // 有効期限（nullは無期限）
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
 
   clinic     Clinic             @relation(fields: [clinicId], references: [id], onDelete: Cascade)
   sessions   DiagnosisSession[]
