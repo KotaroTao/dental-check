@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
+import { MapContainer, TileLayer, Circle, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import {
   PREFECTURE_CENTERS,
@@ -44,10 +44,10 @@ function getMarkerColor(count: number, maxCount: number): string {
   return "#93c5fd"; // blue-300
 }
 
-// 件数に応じたマーカーのサイズを返す
+// 件数に応じたマーカーの半径を返す（メートル単位、最小500m = 直径1km）
 function getMarkerRadius(count: number, maxCount: number): number {
-  const minRadius = 6;
-  const maxRadius = 20;
+  const minRadius = 500; // 最小半径 500m（直径1km）
+  const maxRadius = 3000; // 最大半径 3km（直径6km）
 
   if (maxCount <= 1) return minRadius;
 
@@ -153,14 +153,14 @@ export default function LocationMap({ locations }: LocationMapProps) {
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       {markers.map((marker) => (
-        <CircleMarker
+        <Circle
           key={marker.key}
           center={marker.position}
           radius={getMarkerRadius(marker.count, maxCount)}
           pathOptions={{
             color: getMarkerColor(marker.count, maxCount),
             fillColor: getMarkerColor(marker.count, maxCount),
-            fillOpacity: 0.7,
+            fillOpacity: 0.5,
             weight: 2,
           }}
         >
@@ -177,7 +177,7 @@ export default function LocationMap({ locations }: LocationMapProps) {
               )}
             </div>
           </Popup>
-        </CircleMarker>
+        </Circle>
       ))}
     </MapContainer>
   );
