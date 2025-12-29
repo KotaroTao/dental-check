@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { MapContainer, TileLayer, CircleMarker, Popup, useMapEvents } from "react-leaflet";
+import { MapContainer, TileLayer, Circle, Popup, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import {
   PREFECTURE_CENTERS,
@@ -44,26 +44,30 @@ function getMarkerColor(count: number, maxCount: number): string {
   return "#93c5fd"; // blue-300
 }
 
-// ズームレベルに応じた基本マーカーサイズを返す
+// 最小半径（メートル）- 直径1km = 半径500m
+const MIN_RADIUS_METERS = 500;
+
+// ズームレベルに応じた基本マーカーサイズを返す（メートル単位）
 function getBaseRadius(zoom: number): number {
-  // ズームアウト時は大きく、ズームイン時は小さく
-  if (zoom <= 5) return 12;  // 日本全体
-  if (zoom <= 7) return 10;  // 地方レベル
-  if (zoom <= 9) return 8;   // 県レベル
-  if (zoom <= 11) return 7;  // 市レベル
-  if (zoom <= 13) return 6;  // 区レベル
-  return 5;                   // 町丁目レベル
+  // ズームアウト時は大きく、ズームイン時は最小1km（500m半径）を保証
+  if (zoom <= 5) return 50000;  // 日本全体: 100km直径
+  if (zoom <= 7) return 20000;  // 地方レベル: 40km直径
+  if (zoom <= 9) return 8000;   // 県レベル: 16km直径
+  if (zoom <= 11) return 3000;  // 市レベル: 6km直径
+  if (zoom <= 13) return 1000;  // 区レベル: 2km直径
+  return MIN_RADIUS_METERS;     // 町丁目レベル: 最小1km直径
 }
 
-// 件数に応じたマーカーの半径を返す（ピクセル単位）
+// 件数に応じたマーカーの半径を返す（メートル単位、最小500m保証）
 function getMarkerRadius(count: number, maxCount: number, zoom: number): number {
   const baseRadius = getBaseRadius(zoom);
-  const maxRadius = baseRadius * 2.5;
+  const maxRadius = baseRadius * 2;
 
-  if (maxCount <= 1) return baseRadius;
+  if (maxCount <= 1) return Math.max(baseRadius, MIN_RADIUS_METERS);
 
   const ratio = count / maxCount;
-  return baseRadius + (maxRadius - baseRadius) * Math.sqrt(ratio);
+  const radius = baseRadius + (maxRadius - baseRadius) * Math.sqrt(ratio);
+  return Math.max(radius, MIN_RADIUS_METERS);
 }
 
 // ズームレベル監視コンポーネント
@@ -89,7 +93,7 @@ function MapMarkers({
   return (
     <>
       {markers.map((marker) => (
-        <CircleMarker
+        <Circle
           key={marker.key}
           center={marker.position}
           radius={getMarkerRadius(marker.count, maxCount, zoom)}
@@ -113,7 +117,7 @@ function MapMarkers({
               )}
             </div>
           </Popup>
-        </CircleMarker>
+        </Circle>
       ))}
     </>
   );
