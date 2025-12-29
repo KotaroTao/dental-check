@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getClientIP, getLocationFromIP } from "@/lib/geolocation";
+import { canTrackSession } from "@/lib/subscription";
 
 export async function POST(request: NextRequest) {
   try {
@@ -33,6 +34,14 @@ export async function POST(request: NextRequest) {
         { error: "Channel not found" },
         { status: 404 }
       );
+    }
+
+    // 契約状態をチェック - 契約が無効な場合は計測をスキップ
+    const canTrack = await canTrackSession(channel.clinicId);
+    if (!canTrack) {
+      // 診断自体は成功として返す（ユーザー体験を損なわないため）
+      // ただし計測データは保存しない
+      return NextResponse.json({ success: true, sessionId: null, tracked: false });
     }
 
     // 診断タイプを取得

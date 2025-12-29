@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getClientIP, getLocationFromIP } from "@/lib/geolocation";
+import { canTrackSession } from "@/lib/subscription";
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,6 +16,14 @@ export async function POST(request: NextRequest) {
         select: { clinicId: true },
       });
       clinicId = channel?.clinicId || null;
+
+      // 契約状態をチェック - 契約が無効な場合は計測をスキップ
+      if (clinicId) {
+        const canTrack = await canTrackSession(clinicId);
+        if (!canTrack) {
+          return NextResponse.json({ success: true, tracked: false });
+        }
+      }
     }
 
     // IPアドレスから位置情報を取得

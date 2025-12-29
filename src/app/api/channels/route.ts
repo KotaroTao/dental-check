@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { canCreateChannel } from "@/lib/subscription";
 import type { Channel } from "@/types/clinic";
 
 // QRコード一覧を取得（アクティブ・非表示両方）
@@ -19,7 +20,17 @@ export async function GET() {
     const activeCount = channels.filter((c) => c.isActive).length;
     const hiddenCount = channels.filter((c) => !c.isActive).length;
 
-    return NextResponse.json({ channels, activeCount, hiddenCount });
+    // QRコード作成可能状態を取得
+    const canCreate = await canCreateChannel(session.clinicId);
+
+    return NextResponse.json({
+      channels,
+      activeCount,
+      hiddenCount,
+      canCreateQR: canCreate.canCreate,
+      remainingQRCodes: canCreate.remaining,
+      limitMessage: canCreate.message,
+    });
   } catch (error) {
     console.error("Get channels error:", error);
     return NextResponse.json(
@@ -35,6 +46,15 @@ export async function POST(request: NextRequest) {
     const session = await getSession();
     if (!session) {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
+    }
+
+    // QRコード作成可能かチェック
+    const canCreate = await canCreateChannel(session.clinicId);
+    if (!canCreate.canCreate) {
+      return NextResponse.json(
+        { error: canCreate.message || "QRコードを作成できません" },
+        { status: 403 }
+      );
     }
 
     const body = await request.json();

@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { payjp, PLAN_AMOUNT } from "@/lib/payjp";
+import { payjp } from "@/lib/payjp";
+import { getSubscriptionState } from "@/lib/subscription";
+import { getPlan, getPublicPlans, type PlanType } from "@/lib/plans";
 
 // サブスクリプション情報を取得
 export async function GET() {
@@ -40,26 +42,34 @@ export async function GET() {
       }
     }
 
-    // トライアル残り日数を計算
-    let trialDaysLeft = null;
-    if (subscription.status === "trial" && subscription.trialEnd) {
-      const now = new Date();
-      const diff = subscription.trialEnd.getTime() - now.getTime();
-      trialDaysLeft = Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
-    }
+    // 契約状態を取得
+    const state = await getSubscriptionState(session.clinicId);
+    const planType = ((subscription as { planType?: string }).planType as PlanType) || "starter";
+    const plan = getPlan(planType);
 
     return NextResponse.json({
       subscription: {
-        status: subscription.status,
+        status: state.status,
+        planType: state.planType,
+        planName: plan.name,
         trialEnd: subscription.trialEnd?.toISOString() || null,
-        trialDaysLeft,
+        trialDaysLeft: state.trialDaysLeft,
+        gracePeriodDaysLeft: state.gracePeriodDaysLeft,
         currentPeriodStart: subscription.currentPeriodStart?.toISOString() || null,
-        currentPeriodEnd: subscription.currentPeriodEnd?.toISOString() || null,
+        currentPeriodEnd: state.currentPeriodEnd?.toISOString() || null,
         canceledAt: subscription.canceledAt?.toISOString() || null,
         hasCard: !!card,
         card,
-        planAmount: PLAN_AMOUNT,
+        planAmount: plan.price,
+        qrCodeLimit: state.qrCodeLimit,
+        qrCodeCount: state.qrCodeCount,
+        remainingQRCodes: state.remainingQRCodes,
+        canCreateQR: state.canCreateQR,
+        canTrack: state.canTrack,
+        message: state.message,
+        alertType: state.alertType,
       },
+      availablePlans: getPublicPlans(),
     });
   } catch (error) {
     console.error("Get subscription error:", error);

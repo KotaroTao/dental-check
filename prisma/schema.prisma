@@ -65,11 +65,13 @@ model Subscription {
   clinicId             String    @unique @map("clinic_id")
   payjpCustomerId      String?   @map("payjp_customer_id")
   payjpSubscriptionId  String?   @map("payjp_subscription_id")
-  status               String    @default("trial")
+  status               String    @default("trial") // trial, active, canceled, past_due, expired
+  planType             String    @default("starter") @map("plan_type") // starter, standard, managed, free
   trialEnd             DateTime? @map("trial_end")
   currentPeriodStart   DateTime? @map("current_period_start")
   currentPeriodEnd     DateTime? @map("current_period_end")
   canceledAt           DateTime? @map("canceled_at")
+  gracePeriodEnd       DateTime? @map("grace_period_end") // 猶予期間終了日
   createdAt            DateTime  @default(now()) @map("created_at")
   updatedAt            DateTime  @updatedAt @map("updated_at")
 
