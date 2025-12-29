@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Upload, X, Loader2, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, Upload, X, Loader2, Image as ImageIcon, Calendar } from "lucide-react";
 
 // 診断タイプの表示名
 const DIAGNOSIS_TYPE_NAMES: Record<string, string> = {
@@ -21,6 +21,7 @@ interface Channel {
   imageUrl: string | null;
   diagnosisTypeSlug: string;
   isActive: boolean;
+  expiresAt: string | null;
 }
 
 export default function EditChannelPage() {
@@ -33,6 +34,7 @@ export default function EditChannelPage() {
     description: "",
     isActive: true,
     imageUrl: "" as string | null,
+    expiresAt: "",
   });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -47,11 +49,18 @@ export default function EditChannelPage() {
         if (response.ok) {
           const data = await response.json();
           setChannel(data.channel);
+          // 有効期限をdatetime-local形式に変換
+          let expiresAtValue = "";
+          if (data.channel.expiresAt) {
+            const date = new Date(data.channel.expiresAt);
+            expiresAtValue = date.toISOString().slice(0, 16);
+          }
           setFormData({
             name: data.channel.name,
             description: data.channel.description || "",
             isActive: data.channel.isActive,
             imageUrl: data.channel.imageUrl || null,
+            expiresAt: expiresAtValue,
           });
         } else {
           setError("QRコードが見つかりません");
@@ -203,7 +212,10 @@ export default function EditChannelPage() {
       const response = await fetch(`/api/channels/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          expiresAt: formData.expiresAt || null,
+        }),
       });
 
       const data = await response.json();
@@ -385,6 +397,24 @@ export default function EditChannelPage() {
               onChange={handleChange}
               disabled={isSaving}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="expiresAt" className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-gray-500" />
+              有効期限（任意）
+            </Label>
+            <Input
+              id="expiresAt"
+              name="expiresAt"
+              type="datetime-local"
+              value={formData.expiresAt}
+              onChange={handleChange}
+              disabled={isSaving}
+            />
+            <p className="text-xs text-gray-500">
+              期限を過ぎるとQRコードは無効になります。空欄の場合は無期限です。
+            </p>
           </div>
 
           <div className="flex items-center gap-2">

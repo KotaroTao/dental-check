@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import QRCode from "qrcode";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Download, Copy, ExternalLink, Edit, Image as ImageIcon, X } from "lucide-react";
+import { ArrowLeft, Download, Copy, ExternalLink, Edit, Image as ImageIcon, X, Calendar, AlertTriangle } from "lucide-react";
 
 // 診断タイプの表示名
 const DIAGNOSIS_TYPE_NAMES: Record<string, string> = {
@@ -21,6 +21,7 @@ interface Channel {
   imageUrl: string | null;
   diagnosisTypeSlug: string;
   isActive: boolean;
+  expiresAt: string | null;
 }
 
 export default function ChannelDetailPage() {
@@ -187,6 +188,37 @@ export default function ChannelDetailPage() {
             </span>
           </div>
         </div>
+
+        {/* 有効期限表示 */}
+        {channel.expiresAt && (
+          <div className="border-t pt-4 mt-4">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-gray-500" />
+              <span className="text-sm text-gray-500">有効期限:</span>
+              {(() => {
+                const expiresAt = new Date(channel.expiresAt);
+                const isExpired = new Date() > expiresAt;
+                const formatted = expiresAt.toLocaleString("ja-JP", {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                });
+                return isExpired ? (
+                  <span className="inline-flex items-center gap-1 text-sm font-medium text-red-600">
+                    <AlertTriangle className="w-4 h-4" />
+                    {formatted}（期限切れ）
+                  </span>
+                ) : (
+                  <span className="text-sm font-medium text-gray-700">
+                    {formatted}
+                  </span>
+                );
+              })()}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* QRコードセクション */}

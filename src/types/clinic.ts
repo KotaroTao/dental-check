@@ -144,6 +144,7 @@ export interface Channel {
   imageUrl: string | null;
   diagnosisTypeSlug: string;
   isActive: boolean;
+  expiresAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }

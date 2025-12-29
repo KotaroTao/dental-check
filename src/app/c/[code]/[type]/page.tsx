@@ -4,6 +4,7 @@ import { DiagnosisFlow } from "@/components/diagnosis/diagnosis-flow";
 import { prisma } from "@/lib/prisma";
 import { checkSubscription } from "@/lib/subscription";
 import type { Channel, Clinic } from "@/types/clinic";
+import { ExpiredPage } from "@/components/channel/expired-page";
 
 interface Props {
   params: Promise<{
@@ -12,11 +13,17 @@ interface Props {
   }>;
 }
 
-async function getChannelAndClinic(code: string) {
+interface ChannelResult {
+  channel: Channel;
+  clinic: Clinic;
+  isExpired: boolean;
+}
+
+async function getChannelAndClinic(code: string): Promise<ChannelResult | null> {
   // チャンネルを取得
   const channel = (await prisma.channel.findUnique({
     where: { code },
-  })) as Channel | null;
+  })) as (Channel & { expiresAt: Date | null }) | null;
 
   if (!channel || !channel.isActive) {
     return null;
@@ -37,7 +44,10 @@ async function getChannelAndClinic(code: string) {
     return null;
   }
 
-  return { channel, clinic };
+  // 有効期限チェック
+  const isExpired = channel.expiresAt ? new Date() > new Date(channel.expiresAt) : false;
+
+  return { channel, clinic, isExpired };
 }
 
 export default async function ClinicDiagnosisPage({ params }: Props) {
@@ -55,7 +65,12 @@ export default async function ClinicDiagnosisPage({ params }: Props) {
     notFound();
   }
 
-  const { channel, clinic } = data;
+  const { channel, clinic, isExpired } = data;
+
+  // 有効期限切れの場合
+  if (isExpired) {
+    return <ExpiredPage clinicName={clinic.name} logoUrl={clinic.logoUrl} />;
+  }
 
   return (
     <main

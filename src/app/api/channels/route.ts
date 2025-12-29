@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, description, diagnosisTypeSlug, imageUrl } = body;
+    const { name, description, diagnosisTypeSlug, imageUrl, expiresAt } = body;
 
     if (!name || name.trim() === "") {
       return NextResponse.json(
@@ -84,6 +84,7 @@ export async function POST(request: NextRequest) {
         description: description?.trim() || null,
         imageUrl: imageUrl || null,
         diagnosisTypeSlug: diagnosisTypeSlug.trim(),
+        expiresAt: expiresAt ? new Date(expiresAt) : null,
         code,
       },
     })) as Channel;

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, X, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, X, Image as ImageIcon, Calendar } from "lucide-react";
 
 interface DiagnosisType {
   slug: string;
@@ -21,6 +21,7 @@ export default function NewChannelPage() {
     name: "",
     description: "",
     diagnosisTypeSlug: "",
+    expiresAt: "",
   });
   const [diagnosisTypes, setDiagnosisTypes] = useState<DiagnosisType[]>([]);
   const [isLoadingDiagnoses, setIsLoadingDiagnoses] = useState(true);
@@ -162,7 +163,10 @@ export default function NewChannelPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...formData,
+          name: formData.name,
+          description: formData.description,
+          diagnosisTypeSlug: formData.diagnosisTypeSlug,
+          expiresAt: formData.expiresAt || null,
           imageUrl,
         }),
       });
@@ -275,6 +279,24 @@ export default function NewChannelPage() {
               onChange={handleChange}
               disabled={isLoading}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="expiresAt" className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-gray-500" />
+              有効期限（任意）
+            </Label>
+            <Input
+              id="expiresAt"
+              name="expiresAt"
+              type="datetime-local"
+              value={formData.expiresAt}
+              onChange={handleChange}
+              disabled={isLoading}
+            />
+            <p className="text-xs text-gray-500">
+              期限を過ぎるとQRコードは無効になります。空欄の場合は無期限です。
+            </p>
           </div>
 
           {/* 画像アップロード */}
