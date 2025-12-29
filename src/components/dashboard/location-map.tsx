@@ -20,9 +20,9 @@ interface LocationMapProps {
   locations: LocationData[];
 }
 
-// 件数に応じた色を返す（グラデーション）
-function getColor(count: number, maxCount: number): string {
-  if (count === 0) return "#f3f4f6"; // gray-100
+// 件数に応じた境界線の色を返す（グラデーション）
+function getBorderColor(count: number, maxCount: number): string {
+  if (count === 0) return "#d1d5db"; // gray-300（データなし）
 
   const ratio = count / maxCount;
 
@@ -30,8 +30,18 @@ function getColor(count: number, maxCount: number): string {
   if (ratio > 0.6) return "#2563eb"; // blue-600
   if (ratio > 0.4) return "#3b82f6"; // blue-500
   if (ratio > 0.2) return "#60a5fa"; // blue-400
-  if (ratio > 0.1) return "#93c5fd"; // blue-300
-  return "#bfdbfe"; // blue-200
+  return "#93c5fd"; // blue-300
+}
+
+// 件数に応じた境界線の太さを返す
+function getBorderWeight(count: number, maxCount: number): number {
+  if (count === 0) return 1;
+
+  const ratio = count / maxCount;
+
+  if (ratio > 0.6) return 4;
+  if (ratio > 0.3) return 3;
+  return 2;
 }
 
 export default function LocationMap({ locations }: LocationMapProps) {
@@ -71,7 +81,7 @@ export default function LocationMap({ locations }: LocationMapProps) {
   // GeoJSONデータ
   const geoJsonData = useMemo(() => getJapanGeoJSON(), []);
 
-  // 各都道府県のスタイル
+  // 各都道府県のスタイル（境界線のみ、塗りつぶしなし）
   const getStyle = (feature: Feature<Polygon, { name: string }> | undefined): PathOptions => {
     if (!feature) return {};
 
@@ -80,11 +90,11 @@ export default function LocationMap({ locations }: LocationMapProps) {
     const count = data?.count || 0;
 
     return {
-      fillColor: getColor(count, maxCount),
-      weight: 1,
+      fillColor: "transparent",
+      fillOpacity: 0,
+      weight: getBorderWeight(count, maxCount),
       opacity: 1,
-      color: "#94a3b8", // slate-400
-      fillOpacity: count > 0 ? 0.7 : 0.3,
+      color: getBorderColor(count, maxCount),
     };
   };
 
@@ -130,9 +140,9 @@ export default function LocationMap({ locations }: LocationMapProps) {
       mouseover: (e) => {
         const target = e.target;
         target.setStyle({
-          weight: 2,
-          color: "#3b82f6",
-          fillOpacity: 0.9,
+          weight: count > 0 ? 5 : 2,
+          color: count > 0 ? "#1d4ed8" : "#6b7280", // blue-700 or gray-500
+          fillOpacity: 0,
         });
         target.bringToFront();
       },
@@ -149,7 +159,7 @@ export default function LocationMap({ locations }: LocationMapProps) {
       zoom={5}
       className="h-64 rounded-lg z-0"
       scrollWheelZoom={false}
-      style={{ background: "#e5e7eb" }}
+      style={{ background: "#f9fafb" }}
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
