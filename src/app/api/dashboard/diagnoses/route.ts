@@ -40,10 +40,9 @@ export async function GET() {
       dbDiagnoses = await prisma.diagnosisType.findMany({
         where: {
           OR: [
-            { clinicId: null },
-            { clinicId: session.clinicId },
+            { clinicId: null, isActive: true }, // システム診断はisActive: trueのみ
+            { clinicId: session.clinicId }, // オリジナル診断はisActiveに関係なくすべて取得
           ],
-          isActive: true,
         },
         orderBy: [
           { clinicId: "asc" },
