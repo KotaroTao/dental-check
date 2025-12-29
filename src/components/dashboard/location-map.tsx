@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
-import { MapContainer, TileLayer, Circle, Popup } from "react-leaflet";
+import { useMemo, useState } from "react";
+import { MapContainer, TileLayer, CircleMarker, Popup, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import {
   PREFECTURE_CENTERS,
@@ -44,15 +44,79 @@ function getMarkerColor(count: number, maxCount: number): string {
   return "#93c5fd"; // blue-300
 }
 
-// 件数に応じたマーカーの半径を返す（メートル単位、最小500m = 直径1km）
-function getMarkerRadius(count: number, maxCount: number): number {
-  const minRadius = 500; // 最小半径 500m（直径1km）
-  const maxRadius = 3000; // 最大半径 3km（直径6km）
+// ズームレベルに応じた基本マーカーサイズを返す
+function getBaseRadius(zoom: number): number {
+  // ズームアウト時は大きく、ズームイン時は小さく
+  if (zoom <= 5) return 12;  // 日本全体
+  if (zoom <= 7) return 10;  // 地方レベル
+  if (zoom <= 9) return 8;   // 県レベル
+  if (zoom <= 11) return 7;  // 市レベル
+  if (zoom <= 13) return 6;  // 区レベル
+  return 5;                   // 町丁目レベル
+}
 
-  if (maxCount <= 1) return minRadius;
+// 件数に応じたマーカーの半径を返す（ピクセル単位）
+function getMarkerRadius(count: number, maxCount: number, zoom: number): number {
+  const baseRadius = getBaseRadius(zoom);
+  const maxRadius = baseRadius * 2.5;
+
+  if (maxCount <= 1) return baseRadius;
 
   const ratio = count / maxCount;
-  return minRadius + (maxRadius - minRadius) * Math.sqrt(ratio);
+  return baseRadius + (maxRadius - baseRadius) * Math.sqrt(ratio);
+}
+
+// ズームレベル監視コンポーネント
+function ZoomTracker({ onZoomChange }: { onZoomChange: (zoom: number) => void }) {
+  useMapEvents({
+    zoomend: (e) => {
+      onZoomChange(e.target.getZoom());
+    },
+  });
+  return null;
+}
+
+// マーカー描画コンポーネント
+function MapMarkers({
+  markers,
+  maxCount,
+  zoom,
+}: {
+  markers: MarkerData[];
+  maxCount: number;
+  zoom: number;
+}) {
+  return (
+    <>
+      {markers.map((marker) => (
+        <CircleMarker
+          key={marker.key}
+          center={marker.position}
+          radius={getMarkerRadius(marker.count, maxCount, zoom)}
+          pathOptions={{
+            color: getMarkerColor(marker.count, maxCount),
+            fillColor: getMarkerColor(marker.count, maxCount),
+            fillOpacity: 0.6,
+            weight: 2,
+          }}
+        >
+          <Popup>
+            <div className="text-center min-w-[120px]">
+              <div className="font-bold text-gray-800">{marker.region}</div>
+              <div className="text-sm text-gray-600">{marker.city}</div>
+              {marker.town && (
+                <div className="text-xs text-gray-500">{marker.town}</div>
+              )}
+              <div className="text-blue-600 font-bold mt-1">{marker.count}件</div>
+              {!marker.hasGPS && (
+                <div className="text-xs text-gray-400 mt-1">※位置は概算</div>
+              )}
+            </div>
+          </Popup>
+        </CircleMarker>
+      ))}
+    </>
+  );
 }
 
 export default function LocationMap({ locations }: LocationMapProps) {
@@ -125,8 +189,8 @@ export default function LocationMap({ locations }: LocationMapProps) {
     ];
   }, [bounds]);
 
-  // ズームレベルを計算
-  const zoom = useMemo(() => {
+  // 初期ズームレベルを計算
+  const initialZoom = useMemo(() => {
     if (!bounds) return 5;
     const latDiff = bounds.maxLat - bounds.minLat;
     const lngDiff = bounds.maxLng - bounds.minLng;
@@ -140,10 +204,13 @@ export default function LocationMap({ locations }: LocationMapProps) {
     return 5;
   }, [bounds]);
 
+  // 現在のズームレベル
+  const [currentZoom, setCurrentZoom] = useState(initialZoom);
+
   return (
     <MapContainer
       center={center}
-      zoom={zoom}
+      zoom={initialZoom}
       className="h-64 rounded-lg z-0"
       scrollWheelZoom={false}
       style={{ background: "#f9fafb" }}
@@ -152,33 +219,8 @@ export default function LocationMap({ locations }: LocationMapProps) {
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      {markers.map((marker) => (
-        <Circle
-          key={marker.key}
-          center={marker.position}
-          radius={getMarkerRadius(marker.count, maxCount)}
-          pathOptions={{
-            color: getMarkerColor(marker.count, maxCount),
-            fillColor: getMarkerColor(marker.count, maxCount),
-            fillOpacity: 0.5,
-            weight: 2,
-          }}
-        >
-          <Popup>
-            <div className="text-center min-w-[120px]">
-              <div className="font-bold text-gray-800">{marker.region}</div>
-              <div className="text-sm text-gray-600">{marker.city}</div>
-              {marker.town && (
-                <div className="text-xs text-gray-500">{marker.town}</div>
-              )}
-              <div className="text-blue-600 font-bold mt-1">{marker.count}件</div>
-              {!marker.hasGPS && (
-                <div className="text-xs text-gray-400 mt-1">※位置は概算</div>
-              )}
-            </div>
-          </Popup>
-        </Circle>
-      ))}
+      <ZoomTracker onZoomChange={setCurrentZoom} />
+      <MapMarkers markers={markers} maxCount={maxCount} zoom={currentZoom} />
     </MapContainer>
   );
 }
