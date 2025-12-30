@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getClientIP } from "@/lib/geolocation";
 import { canTrackSession } from "@/lib/subscription";
+import { reverseGeocode } from "@/lib/geocoding";
 
 export async function POST(request: NextRequest) {
   try {
@@ -140,68 +141,3 @@ export async function POST(request: NextRequest) {
   }
 }
 
-/**
- * 緯度経度から住所情報を取得（逆ジオコーディング）
- */
-async function reverseGeocode(lat: number, lon: number): Promise<{
-  country: string;
-  region: string;
-  city: string;
-  town: string;
-} | null> {
-  console.log(`=== Reverse Geocode ===`);
-  console.log(`Input: lat=${lat}, lon=${lon}`);
-
-  try {
-    // OpenStreetMap Nominatim API（無料、1リクエスト/秒制限）
-    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=ja`;
-    console.log(`Nominatim URL: ${url}`);
-
-    const response = await fetch(url, {
-      headers: {
-        // Nominatim Usage Policy要件: アプリ名、URL、連絡先を含むUser-Agent
-        "User-Agent": "DentalCheckApp/1.0 (https://qrqr-dental.com; mail@function-t.com)",
-      },
-    });
-
-    console.log(`Nominatim response status: ${response.status}`);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Nominatim API error: status=${response.status}, body=${errorText}`);
-      return null;
-    }
-
-    const data = await response.json();
-    console.log(`Nominatim response:`, JSON.stringify(data.address || {}, null, 2));
-
-    const address = data.address;
-
-    if (!address) {
-      console.warn("Nominatim returned no address data");
-      return null;
-    }
-
-    // 都道府県を取得（state または province）
-    const region = address.state || address.province || "";
-
-    // 市区町村を取得（city, town, village, municipality のいずれか）
-    const city = address.city || address.town || address.village || address.municipality || "";
-
-    // 町丁目を取得（フォールバック付き）
-    const town = address.neighbourhood || address.quarter || address.suburb || "";
-
-    const result = {
-      country: address.country_code?.toUpperCase() || "JP",
-      region,
-      city,
-      town,
-    };
-
-    console.log(`Geocode result:`, result);
-    return result;
-  } catch (error) {
-    console.error("Reverse geocode error:", error);
-    return null;
-  }
-}

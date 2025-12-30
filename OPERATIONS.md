@@ -282,6 +282,29 @@ certbot certificates
 | PAYJP_SECRET_KEY | Pay.jp シークレットキー |
 | PAYJP_WEBHOOK_SECRET | Pay.jp Webhookシークレット |
 | NEXT_PUBLIC_PAYJP_PUBLIC_KEY | Pay.jp 公開キー |
+| GOOGLE_MAPS_API_KEY | Google Geocoding API キー（任意） |
+
+### Google Geocoding API の設定（推奨）
+
+位置情報の逆ジオコーディングにGoogle Geocoding APIを使用できます。
+設定がない場合はNominatim API（無料・レート制限あり）にフォールバックします。
+
+**設定手順:**
+
+1. [Google Cloud Console](https://console.cloud.google.com/) でプロジェクトを作成
+2. 「APIとサービス」→「ライブラリ」で「Geocoding API」を有効化
+3. 「認証情報」→「認証情報を作成」→「APIキー」を作成
+4. APIキーの制限を設定（Geocoding APIのみ許可を推奨）
+5. 「お支払い」で請求先アカウントを設定（毎月$200分無料）
+6. `.env` に追加:
+   ```
+   GOOGLE_MAPS_API_KEY=your_api_key_here
+   ```
+7. アプリを再起動: `pm2 restart dental-app`
+
+**料金目安:**
+- 毎月$200分無料（約28,500リクエスト相当）
+- 超過分: $5.00 / 1,000リクエスト
 
 ---
 
