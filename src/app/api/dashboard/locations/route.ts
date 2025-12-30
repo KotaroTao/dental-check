@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { forwardGeocode } from "@/lib/geocoding";
+import type { ClinicPage } from "@/types/clinic";
 
 interface LocationGroupResult {
   region: string | null;
@@ -240,10 +242,37 @@ export async function GET(request: NextRequest) {
     ]);
     const total = diagnosisTotal + qrScanTotal;
 
+    // クリニックの住所から座標を取得
+    let clinicCenter: { latitude: number; longitude: number } | null = null;
+    try {
+      const clinic = await prisma.clinic.findUnique({
+        where: { id: session.clinicId },
+        select: { clinicPage: true },
+      });
+
+      if (clinic?.clinicPage) {
+        const clinicPage = clinic.clinicPage as ClinicPage;
+        const address = clinicPage.access?.address;
+        if (address) {
+          const coords = await forwardGeocode(address);
+          if (coords) {
+            clinicCenter = {
+              latitude: coords.latitude,
+              longitude: coords.longitude,
+            };
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Failed to get clinic center:", error);
+      // エラーがあってもnullのまま続行
+    }
+
     return NextResponse.json({
       locations,
       topRegions,
       total,
+      clinicCenter,
       period: {
         from: dateFrom.toISOString(),
         to: dateTo.toISOString(),
