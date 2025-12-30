@@ -96,21 +96,6 @@ export async function POST(request: NextRequest) {
         where: { id: channel.id },
         data: { scanCount: { increment: 1 } },
       });
-
-      // AccessLogも記録
-      await prisma.accessLog.create({
-        data: {
-          clinicId: channel.clinicId,
-          channelId: channel.id,
-          eventType: "qr_scan",
-          userAgent: request.headers.get("user-agent") || null,
-          referer: request.headers.get("referer") || null,
-          ipAddress: ip !== "unknown" ? ip : null,
-          country: location?.country || null,
-          region: location?.region || null,
-          city: location?.city || null,
-        },
-      });
     }
 
     return NextResponse.json({
