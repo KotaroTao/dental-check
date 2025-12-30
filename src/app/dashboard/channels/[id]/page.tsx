@@ -35,7 +35,10 @@ export default function ChannelDetailPage() {
   const [showImageModal, setShowImageModal] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+  // 本番環境では環境変数を優先、それ以外はwindow.location.originを使用
+  const baseUrl = typeof window !== "undefined"
+    ? (process.env.NEXT_PUBLIC_APP_URL || window.location.origin)
+    : "";
   // 診断タイプ: /c/{code}/{diagnosisTypeSlug}、リンクタイプ: /c/{code}
   const qrUrl = channel
     ? channel.channelType === "diagnosis"
