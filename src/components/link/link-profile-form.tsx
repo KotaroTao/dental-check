@@ -57,14 +57,19 @@ export function LinkProfileForm({ channelId, channelName, redirectUrl, mainColor
 
       const data = await response.json();
 
-      // リダイレクト
-      if (data.success && data.redirectUrl) {
-        window.location.href = data.redirectUrl;
+      // リダイレクト（APIからのURLを優先、フォールバックはpropsのURL）
+      const targetUrl = (data.success && data.redirectUrl) ? data.redirectUrl : redirectUrl;
+
+      // 安全なURLかチェック（http/httpsで始まる外部URL）
+      if (targetUrl && (targetUrl.startsWith("http://") || targetUrl.startsWith("https://"))) {
+        window.location.href = targetUrl;
       } else {
-        // フォールバック
+        console.error("Invalid redirect URL:", targetUrl);
+        // フォールバック: propsのredirectUrlを使用
         window.location.href = redirectUrl;
       }
-    } catch {
+    } catch (err) {
+      console.error("Link complete error:", err);
       // エラー時もリダイレクト
       window.location.href = redirectUrl;
     }
@@ -118,8 +123,10 @@ export function LinkProfileForm({ channelId, channelName, redirectUrl, mainColor
       });
 
       const data = await response.json();
-      if (data.success && data.redirectUrl) {
-        window.location.href = data.redirectUrl;
+      const targetUrl = (data.success && data.redirectUrl) ? data.redirectUrl : redirectUrl;
+
+      if (targetUrl && (targetUrl.startsWith("http://") || targetUrl.startsWith("https://"))) {
+        window.location.href = targetUrl;
       } else {
         window.location.href = redirectUrl;
       }
