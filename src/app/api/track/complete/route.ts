@@ -18,7 +18,20 @@ export async function POST(request: NextRequest) {
       longitude,
     } = body;
 
+    // デバッグログ: 受信データ
+    console.log("=== Track Complete Debug ===");
+    console.log("Received body:", JSON.stringify(body, null, 2));
+    console.log("channelId:", channelId);
+    console.log("diagnosisType:", diagnosisType);
+    console.log("userAge:", userAge);
+    console.log("userGender:", userGender);
+    console.log("latitude:", latitude);
+    console.log("longitude:", longitude);
+    console.log("answers count:", answers?.length);
+    console.log("============================");
+
     if (!channelId || !diagnosisType) {
+      console.log("Error: Missing required fields");
       return NextResponse.json(
         { error: "channelId and diagnosisType are required" },
         { status: 400 }
@@ -75,6 +88,19 @@ export async function POST(request: NextRequest) {
     }
 
     // 診断セッションを作成
+    console.log("Creating session with data:", {
+      clinicId: channel.clinicId,
+      channelId,
+      diagnosisTypeId: diagnosisTypeRecord.id,
+      userAge: userAge || null,
+      userGender: userGender || null,
+      latitude: roundedLat,
+      longitude: roundedLng,
+      country: location?.country || null,
+      region: location?.region || null,
+      city: location?.city || null,
+    });
+
     const session = await prisma.diagnosisSession.create({
       data: {
         clinicId: channel.clinicId,
@@ -97,6 +123,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    console.log("Session created successfully:", session.id);
     return NextResponse.json({ success: true, sessionId: session.id });
   } catch (error) {
     console.error("Track complete error:", error);

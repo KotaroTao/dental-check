@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useDiagnosisStore } from "@/lib/diagnosis-store";
 import { DiagnosisType } from "@/data/diagnosis-types";
 import { ProfileForm } from "./profile-form";
@@ -19,32 +19,31 @@ interface Props {
 }
 
 export function DiagnosisFlow({ diagnosis, isDemo, clinicSlug, ctaConfig, clinicName, mainColor, channelId }: Props) {
-  const { userAge, currentStep, resultPattern, reset, answers } =
+  const { userAge, currentStep, resultPattern, reset, answers, _hasHydrated } =
     useDiagnosisStore();
   const hasInitialized = useRef(false);
-  const [isHydrated, setIsHydrated] = useState(false);
-
-  // ハイドレーション完了を待つ
-  useEffect(() => {
-    setIsHydrated(true);
-  }, []);
 
   // コンポーネントがマウントされたらリセット（ただしプロファイル入力済みで未回答の場合はスキップ）
+  // Zustandストアのハイドレーション完了を待つ
   useEffect(() => {
-    if (!isHydrated) return;
+    if (!_hasHydrated) return;
     if (hasInitialized.current) return;
     hasInitialized.current = true;
 
+    console.log("DiagnosisFlow initialized:", { userAge, answersLength: answers.length, resultPattern: !!resultPattern });
+
     // プロファイル入力済みで回答がまだない場合はリセットしない（プロファイルページから遷移）
     if (userAge !== null && answers.length === 0 && resultPattern === null) {
+      console.log("Skipping reset - profile already entered");
       return;
     }
     // それ以外はリセット（新規開始または再診断）
+    console.log("Resetting diagnosis state");
     reset();
-  }, [isHydrated, reset, userAge, answers.length, resultPattern]);
+  }, [_hasHydrated, reset, userAge, answers.length, resultPattern]);
 
-  // ハイドレーション中はローディング表示
-  if (!isHydrated) {
+  // Zustandストアのハイドレーション中はローディング表示
+  if (!_hasHydrated) {
     return (
       <div className="container mx-auto px-4 py-8 max-w-lg">
         <div className="flex justify-center items-center h-40">
