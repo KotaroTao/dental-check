@@ -73,7 +73,8 @@ async function reverseGeocode(lat: number, lon: number): Promise<{
       `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=ja`,
       {
         headers: {
-          "User-Agent": "DentalCheckApp/1.0",
+          // Nominatim Usage Policy要件: アプリ名、URL、連絡先を含むUser-Agent
+          "User-Agent": "DentalCheckApp/1.0 (https://qrqr-dental.com; mail@function-t.com)",
         },
       }
     );
