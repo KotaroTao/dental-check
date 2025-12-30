@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, createJSONStorage } from "zustand/middleware";
 import { DiagnosisType, ResultPattern } from "@/data/diagnosis-types";
 
 interface Answer {
@@ -8,6 +8,10 @@ interface Answer {
 }
 
 interface DiagnosisState {
+  // ハイドレーション状態
+  _hasHydrated: boolean;
+  setHasHydrated: (state: boolean) => void;
+
   // プロフィール
   userAge: number | null;
   userGender: string | null;
@@ -37,6 +41,9 @@ interface DiagnosisState {
 export const useDiagnosisStore = create<DiagnosisState>()(
   persist(
     (set, get) => ({
+      _hasHydrated: false,
+      setHasHydrated: (state) => set({ _hasHydrated: state }),
+
       userAge: null,
       userGender: null,
       locationConsent: false,
@@ -102,21 +109,41 @@ export const useDiagnosisStore = create<DiagnosisState>()(
     {
       name: "diagnosis-store",
       // sessionStorageを使用（タブを閉じるとクリア）
-      storage: {
-        getItem: (name) => {
-          if (typeof window === "undefined") return null;
-          const str = sessionStorage.getItem(name);
-          return str ? JSON.parse(str) : null;
-        },
-        setItem: (name, value) => {
-          if (typeof window === "undefined") return;
-          sessionStorage.setItem(name, JSON.stringify(value));
-        },
-        removeItem: (name) => {
-          if (typeof window === "undefined") return;
-          sessionStorage.removeItem(name);
-        },
+      storage: createJSONStorage(() => {
+        if (typeof window === "undefined") {
+          // サーバーサイドではダミーストレージを返す
+          return {
+            getItem: () => null,
+            setItem: () => {},
+            removeItem: () => {},
+          };
+        }
+        return sessionStorage;
+      }),
+      // ハイドレーション完了時にフラグを立てる
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state.setHasHydrated(true);
+          console.log("Zustand store hydrated:", {
+            userAge: state.userAge,
+            latitude: state.latitude,
+            longitude: state.longitude,
+          });
+        }
       },
+      // _hasHydratedは永続化しない
+      partialize: (state) => ({
+        userAge: state.userAge,
+        userGender: state.userGender,
+        locationConsent: state.locationConsent,
+        latitude: state.latitude,
+        longitude: state.longitude,
+        currentStep: state.currentStep,
+        answers: state.answers,
+        totalScore: state.totalScore,
+        resultPattern: state.resultPattern,
+        oralAge: state.oralAge,
+      }),
     }
   )
 );

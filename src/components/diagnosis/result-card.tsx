@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useDiagnosisStore } from "@/lib/diagnosis-store";
 import { DiagnosisType } from "@/data/diagnosis-types";
@@ -22,24 +22,34 @@ interface Props {
 }
 
 export function ResultCard({ diagnosis, isDemo, clinicSlug, ctaConfig, clinicName, mainColor, channelId }: Props) {
-  const { userAge, userGender, answers, totalScore, resultPattern, oralAge, latitude, longitude, reset } =
+  const { userAge, userGender, answers, totalScore, resultPattern, oralAge, latitude, longitude, reset, _hasHydrated } =
     useDiagnosisStore();
   const hasTrackedRef = useRef(false);
-  const [isHydrated, setIsHydrated] = useState(false);
-
-  // ハイドレーション完了を待つ
-  useEffect(() => {
-    setIsHydrated(true);
-  }, []);
 
   // 診断完了をトラッキング（非デモモードのみ、1回だけ）
   // 位置情報はプロファイルページで事前に取得済み
+  // Zustandストアのハイドレーション完了を待つ
   useEffect(() => {
-    if (!isHydrated) return;
-    if (isDemo || !channelId || !resultPattern || hasTrackedRef.current) return;
+    // Zustandストアがまだハイドレーションしていない場合は待つ
+    if (!_hasHydrated) {
+      console.log("Waiting for Zustand hydration...");
+      return;
+    }
+    if (isDemo || !channelId || !resultPattern || hasTrackedRef.current) {
+      console.log("Skip tracking:", { isDemo, channelId: !!channelId, resultPattern: !!resultPattern, hasTracked: hasTrackedRef.current });
+      return;
+    }
     hasTrackedRef.current = true;
 
-    console.log("Tracking diagnosis completion:", { userAge, latitude, longitude });
+    console.log("Tracking diagnosis completion:", {
+      userAge,
+      userGender,
+      latitude,
+      longitude,
+      answers: answers?.length,
+      totalScore,
+      resultCategory: resultPattern.category,
+    });
 
     fetch("/api/track/complete", {
       method: "POST",
@@ -63,7 +73,7 @@ export function ResultCard({ diagnosis, isDemo, clinicSlug, ctaConfig, clinicNam
       .catch((err) => {
         console.error("Track complete error:", err);
       });
-  }, [isHydrated, isDemo, channelId, diagnosis.slug, resultPattern, userAge, userGender, answers, totalScore, latitude, longitude]);
+  }, [_hasHydrated, isDemo, channelId, diagnosis.slug, resultPattern, userAge, userGender, answers, totalScore, latitude, longitude]);
 
   if (!resultPattern) return null;
 
