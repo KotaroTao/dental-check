@@ -335,7 +335,7 @@ export function LocationSection({
           </button>
           {showHelp && (
             <div className="absolute left-0 top-6 z-50 w-64 p-3 bg-white rounded-lg shadow-xl border text-sm text-gray-600">
-              <p>利用者のプライバシーを保護するため、詳細な住所は記録せず、おおまかな地域（都道府県・市区町村）のみを統計データとして表示しています。</p>
+              <p>利用者のプライバシー保護のため、詳細な住所は記録せず、おおまかな地域（町丁目レベル）を統計データとして表示しています。</p>
               <button
                 onClick={() => setShowHelp(false)}
                 className="mt-2 text-xs text-blue-600 hover:underline"
