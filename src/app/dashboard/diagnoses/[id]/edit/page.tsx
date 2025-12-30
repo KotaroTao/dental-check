@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Plus, Trash2, GripVertical } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, GripVertical, Eye, EyeOff } from "lucide-react";
 
 interface Question {
   id: string;
@@ -43,6 +43,17 @@ export default function EditDiagnosisPage() {
 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [resultPatterns, setResultPatterns] = useState<ResultPattern[]>([]);
+
+  // 選択肢スコアの選択肢（0〜10）
+  const scoreOptions = Array.from({ length: 11 }, (_, i) => i);
+
+  // 質問の最大スコア合計を計算（各質問の最高スコアの合計）
+  const calculatedMaxScore = questions.reduce((total, question) => {
+    const maxOptionScore = Math.max(...question.options.map((o) => o.score), 0);
+    return total + maxOptionScore;
+  }, 0);
+  // 最低でも10は選べるようにする
+  const maxTotalScore = Math.max(calculatedMaxScore, 10);
 
   useEffect(() => {
     const fetchDiagnosis = async () => {
@@ -321,7 +332,32 @@ export default function EditDiagnosisPage() {
         </Link>
       </div>
 
-      <h1 className="text-2xl font-bold mb-6">診断を編集</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">診断を編集</h1>
+        <Button
+          type="button"
+          variant={formData.isActive ? "default" : "outline"}
+          size="lg"
+          onClick={() => setFormData({ ...formData, isActive: !formData.isActive })}
+          className={
+            formData.isActive
+              ? "bg-green-600 hover:bg-green-700 text-white"
+              : "border-gray-300 text-gray-600 hover:bg-gray-50"
+          }
+        >
+          {formData.isActive ? (
+            <>
+              <Eye className="w-5 h-5 mr-2" />
+              公開中
+            </>
+          ) : (
+            <>
+              <EyeOff className="w-5 h-5 mr-2" />
+              非公開
+            </>
+          )}
+        </Button>
+      </div>
 
       {error && (
         <div className="bg-red-50 text-red-600 p-4 rounded-lg mb-6">
@@ -377,20 +413,6 @@ export default function EditDiagnosisPage() {
                 placeholder="診断の説明を入力"
               />
             </div>
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="isActive"
-                checked={formData.isActive}
-                onChange={(e) =>
-                  setFormData({ ...formData, isActive: e.target.checked })
-                }
-                className="w-4 h-4"
-              />
-              <label htmlFor="isActive" className="text-sm font-medium">
-                公開する
-              </label>
-            </div>
           </div>
         </div>
 
@@ -435,6 +457,11 @@ export default function EditDiagnosisPage() {
                   <label className="block text-sm font-medium text-gray-600">
                     選択肢
                   </label>
+                  <div className="flex items-center gap-2 text-xs text-gray-500 mb-1">
+                    <span className="flex-1">選択肢テキスト</span>
+                    <span className="w-20 text-center">スコア</span>
+                    {question.options.length > 2 && <span className="w-8" />}
+                  </div>
                   {question.options.map((option, oIndex) => (
                     <div key={option.id} className="flex items-center gap-2">
                       <input
@@ -446,20 +473,24 @@ export default function EditDiagnosisPage() {
                         className="flex-1 border rounded-lg px-3 py-2 text-sm"
                         placeholder={`選択肢 ${oIndex + 1}`}
                       />
-                      <input
-                        type="number"
+                      <select
                         value={option.score}
                         onChange={(e) =>
                           updateOption(
                             question.id,
                             option.id,
                             "score",
-                            parseInt(e.target.value) || 0
+                            parseInt(e.target.value)
                           )
                         }
-                        className="w-20 border rounded-lg px-2 py-2 text-sm text-center"
-                        placeholder="点数"
-                      />
+                        className="w-20 border rounded-lg px-2 py-2 text-sm text-center bg-white"
+                      >
+                        {scoreOptions.map((score) => (
+                          <option key={score} value={score}>
+                            {score}
+                          </option>
+                        ))}
+                      </select>
                       {question.options.length > 2 && (
                         <Button
                           type="button"
@@ -491,7 +522,12 @@ export default function EditDiagnosisPage() {
         {/* 結果パターン */}
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">結果パターン</h2>
+            <div>
+              <h2 className="text-lg font-semibold">結果パターン</h2>
+              <p className="text-sm text-gray-500 mt-1">
+                スコア範囲: 0〜{maxTotalScore}点（質問の最大スコア合計）
+              </p>
+            </div>
             <Button
               type="button"
               variant="outline"
@@ -523,35 +559,49 @@ export default function EditDiagnosisPage() {
                     <label className="block text-sm font-medium mb-1">
                       最小スコア
                     </label>
-                    <input
-                      type="number"
+                    <select
                       value={pattern.minScore}
                       onChange={(e) =>
                         updateResultPattern(
                           pattern.id,
                           "minScore",
-                          parseInt(e.target.value) || 0
+                          parseInt(e.target.value)
                         )
                       }
-                      className="w-full border rounded-lg px-3 py-2"
-                    />
+                      className="w-full border rounded-lg px-3 py-2 bg-white"
+                    >
+                      {Array.from({ length: maxTotalScore + 1 }, (_, i) => i).map(
+                        (score) => (
+                          <option key={score} value={score}>
+                            {score}
+                          </option>
+                        )
+                      )}
+                    </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1">
                       最大スコア
                     </label>
-                    <input
-                      type="number"
+                    <select
                       value={pattern.maxScore}
                       onChange={(e) =>
                         updateResultPattern(
                           pattern.id,
                           "maxScore",
-                          parseInt(e.target.value) || 0
+                          parseInt(e.target.value)
                         )
                       }
-                      className="w-full border rounded-lg px-3 py-2"
-                    />
+                      className="w-full border rounded-lg px-3 py-2 bg-white"
+                    >
+                      {Array.from({ length: maxTotalScore + 1 }, (_, i) => i).map(
+                        (score) => (
+                          <option key={score} value={score}>
+                            {score}
+                          </option>
+                        )
+                      )}
+                    </select>
                   </div>
                 </div>
                 <div className="space-y-3">
