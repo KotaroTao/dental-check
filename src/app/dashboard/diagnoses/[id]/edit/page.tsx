@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Plus, Trash2, GripVertical } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, GripVertical, Eye, EyeOff } from "lucide-react";
 
 interface Question {
   id: string;
@@ -321,7 +321,32 @@ export default function EditDiagnosisPage() {
         </Link>
       </div>
 
-      <h1 className="text-2xl font-bold mb-6">診断を編集</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">診断を編集</h1>
+        <Button
+          type="button"
+          variant={formData.isActive ? "default" : "outline"}
+          size="lg"
+          onClick={() => setFormData({ ...formData, isActive: !formData.isActive })}
+          className={
+            formData.isActive
+              ? "bg-green-600 hover:bg-green-700 text-white"
+              : "border-gray-300 text-gray-600 hover:bg-gray-50"
+          }
+        >
+          {formData.isActive ? (
+            <>
+              <Eye className="w-5 h-5 mr-2" />
+              公開中
+            </>
+          ) : (
+            <>
+              <EyeOff className="w-5 h-5 mr-2" />
+              非公開
+            </>
+          )}
+        </Button>
+      </div>
 
       {error && (
         <div className="bg-red-50 text-red-600 p-4 rounded-lg mb-6">
@@ -377,20 +402,6 @@ export default function EditDiagnosisPage() {
                 placeholder="診断の説明を入力"
               />
             </div>
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="isActive"
-                checked={formData.isActive}
-                onChange={(e) =>
-                  setFormData({ ...formData, isActive: e.target.checked })
-                }
-                className="w-4 h-4"
-              />
-              <label htmlFor="isActive" className="text-sm font-medium">
-                公開する
-              </label>
-            </div>
           </div>
         </div>
 
@@ -435,6 +446,11 @@ export default function EditDiagnosisPage() {
                   <label className="block text-sm font-medium text-gray-600">
                     選択肢
                   </label>
+                  <div className="flex items-center gap-2 text-xs text-gray-500 mb-1">
+                    <span className="flex-1">選択肢テキスト</span>
+                    <span className="w-20 text-center">スコア</span>
+                    {question.options.length > 2 && <span className="w-8" />}
+                  </div>
                   {question.options.map((option, oIndex) => (
                     <div key={option.id} className="flex items-center gap-2">
                       <input
@@ -449,16 +465,19 @@ export default function EditDiagnosisPage() {
                       <input
                         type="number"
                         value={option.score}
-                        onChange={(e) =>
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          // 空文字の場合は0、それ以外は入力値をそのまま数値変換
+                          const numValue = value === "" ? 0 : Number(value);
                           updateOption(
                             question.id,
                             option.id,
                             "score",
-                            parseInt(e.target.value) || 0
-                          )
-                        }
+                            isNaN(numValue) ? 0 : numValue
+                          );
+                        }}
                         className="w-20 border rounded-lg px-2 py-2 text-sm text-center"
-                        placeholder="点数"
+                        min={0}
                       />
                       {question.options.length > 2 && (
                         <Button
@@ -526,14 +545,17 @@ export default function EditDiagnosisPage() {
                     <input
                       type="number"
                       value={pattern.minScore}
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        const numValue = value === "" ? 0 : Number(value);
                         updateResultPattern(
                           pattern.id,
                           "minScore",
-                          parseInt(e.target.value) || 0
-                        )
-                      }
+                          isNaN(numValue) ? 0 : numValue
+                        );
+                      }}
                       className="w-full border rounded-lg px-3 py-2"
+                      min={0}
                     />
                   </div>
                   <div>
@@ -543,14 +565,17 @@ export default function EditDiagnosisPage() {
                     <input
                       type="number"
                       value={pattern.maxScore}
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        const numValue = value === "" ? 0 : Number(value);
                         updateResultPattern(
                           pattern.id,
                           "maxScore",
-                          parseInt(e.target.value) || 0
-                        )
-                      }
+                          isNaN(numValue) ? 0 : numValue
+                        );
+                      }}
                       className="w-full border rounded-lg px-3 py-2"
+                      min={0}
                     />
                   </div>
                 </div>
