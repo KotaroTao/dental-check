@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import QRCode from "qrcode";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Download, Copy, ExternalLink, Edit, Image as ImageIcon, X, Calendar, AlertTriangle, Link2, MousePointerClick } from "lucide-react";
+import { ArrowLeft, Download, Copy, ExternalLink, Edit, Image as ImageIcon, X, Calendar, AlertTriangle, Link2, MousePointerClick, Code, Check } from "lucide-react";
 
 // 診断タイプの表示名
 const DIAGNOSIS_TYPE_NAMES: Record<string, string> = {
@@ -32,6 +32,7 @@ export default function ChannelDetailPage() {
   const [channel, setChannel] = useState<Channel | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [copiedEmbed, setCopiedEmbed] = useState<string | null>(null);
   const [showImageModal, setShowImageModal] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -115,6 +116,27 @@ export default function ChannelDetailPage() {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  const handleCopyEmbed = async (type: string, code: string) => {
+    await navigator.clipboard.writeText(code);
+    setCopiedEmbed(type);
+    setTimeout(() => setCopiedEmbed(null), 2000);
+  };
+
+  // 埋め込み用HTMLコード
+  const embedIframe = channel
+    ? `<iframe src="${qrUrl}" width="100%" height="600" style="border: none; border-radius: 8px;" title="${channel.name}"></iframe>`
+    : "";
+
+  const embedButton = channel
+    ? `<a href="${qrUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background: linear-gradient(135deg, #3b82f6, #6366f1); color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">
+  ${channel.channelType === "diagnosis" ? "診断を始める" : "詳しくはこちら"}
+</a>`
+    : "";
+
+  const embedButtonSimple = channel
+    ? `<a href="${qrUrl}" target="_blank" rel="noopener noreferrer">${channel.channelType === "diagnosis" ? "診断を始める" : "詳しくはこちら"}</a>`
+    : "";
 
   if (isLoading) {
     return <div className="text-gray-500">読み込み中...</div>;
@@ -307,6 +329,148 @@ export default function ChannelDetailPage() {
               </a>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* ホームページ埋め込みセクション */}
+      <div className="bg-white rounded-xl shadow-sm border p-6 mt-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Code className="w-5 h-5 text-blue-600" />
+          <h2 className="text-lg font-bold">ホームページに埋め込む</h2>
+        </div>
+
+        <p className="text-sm text-gray-600 mb-6">
+          以下のHTMLコードをコピーして、ホームページやブログに貼り付けてください。
+        </p>
+
+        <div className="space-y-6">
+          {/* iframe埋め込み（診断タイプのみ） */}
+          {channel.channelType === "diagnosis" && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <h3 className="font-medium text-gray-900">埋め込み診断（iframe）</h3>
+                  <p className="text-xs text-gray-500">ページ内で直接診断ができます</p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleCopyEmbed("iframe", embedIframe)}
+                  className="gap-1"
+                >
+                  {copiedEmbed === "iframe" ? (
+                    <>
+                      <Check className="w-4 h-4 text-green-600" />
+                      コピーしました
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4" />
+                      コピー
+                    </>
+                  )}
+                </Button>
+              </div>
+              <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto">
+                <code>{embedIframe}</code>
+              </pre>
+            </div>
+          )}
+
+          {/* ボタンリンク（スタイル付き） */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <h3 className="font-medium text-gray-900">リンクボタン（スタイル付き）</h3>
+                <p className="text-xs text-gray-500">装飾されたボタンとして表示されます</p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleCopyEmbed("button", embedButton)}
+                className="gap-1"
+              >
+                {copiedEmbed === "button" ? (
+                  <>
+                    <Check className="w-4 h-4 text-green-600" />
+                    コピーしました
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4" />
+                    コピー
+                  </>
+                )}
+              </Button>
+            </div>
+            <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto">
+              <code>{embedButton}</code>
+            </pre>
+            <div className="mt-3 p-4 bg-gray-50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-2">プレビュー:</p>
+              <a
+                href={qrUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: "inline-block",
+                  background: "linear-gradient(135deg, #3b82f6, #6366f1)",
+                  color: "white",
+                  padding: "12px 24px",
+                  borderRadius: "8px",
+                  textDecoration: "none",
+                  fontWeight: "bold",
+                }}
+              >
+                {channel.channelType === "diagnosis" ? "診断を始める" : "詳しくはこちら"}
+              </a>
+            </div>
+          </div>
+
+          {/* シンプルリンク */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <h3 className="font-medium text-gray-900">シンプルリンク</h3>
+                <p className="text-xs text-gray-500">テキストリンクとして表示されます</p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleCopyEmbed("simple", embedButtonSimple)}
+                className="gap-1"
+              >
+                {copiedEmbed === "simple" ? (
+                  <>
+                    <Check className="w-4 h-4 text-green-600" />
+                    コピーしました
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4" />
+                    コピー
+                  </>
+                )}
+              </Button>
+            </div>
+            <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto">
+              <code>{embedButtonSimple}</code>
+            </pre>
+          </div>
+        </div>
+
+        {/* 使い方の説明 */}
+        <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
+          <h3 className="font-medium text-blue-900 mb-2">埋め込み方法</h3>
+          <ol className="text-sm text-blue-800 space-y-2 list-decimal list-inside">
+            <li>上のコードから使用したい形式を選び「コピー」ボタンをクリック</li>
+            <li>ホームページの編集画面を開く（WordPress、Wix、ペライチなど）</li>
+            <li>HTMLを編集できるブロックまたはウィジェットを追加</li>
+            <li>コピーしたコードを貼り付けて保存</li>
+          </ol>
+          <p className="text-xs text-blue-600 mt-3">
+            ※ ホームページの作成ツールによって操作方法が異なります。詳しくは各ツールのヘルプをご確認ください。
+          </p>
         </div>
       </div>
 
