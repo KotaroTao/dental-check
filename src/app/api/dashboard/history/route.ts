@@ -143,6 +143,7 @@ export async function GET(request: NextRequest) {
       sessionType: string | null;
       region: string | null;
       city: string | null;
+      town: string | null;
       channel: { id: string; name: string } | null;
       diagnosisType: { slug: string; name: string } | null;
       ctaClicks: { ctaType: string }[];
@@ -157,14 +158,14 @@ export async function GET(request: NextRequest) {
         ctaByType[click.ctaType] = (ctaByType[click.ctaType] || 0) + 1;
       }
 
-      // エリア情報を整形（都道府県 + 市区町村）
+      // エリア情報を整形（市区町村 + 町丁目）
       let area = "-";
-      if (s.region && s.city) {
-        area = `${s.region} ${s.city}`;
-      } else if (s.region) {
-        area = s.region;
+      if (s.city && s.town) {
+        area = `${s.city} ${s.town}`;
       } else if (s.city) {
         area = s.city;
+      } else if (s.region) {
+        area = s.region;
       }
 
       const ctaClick = s.ctaClicks[0];
@@ -258,13 +259,12 @@ export async function GET(request: NextRequest) {
       }) as AccessLogWithChannel[];
 
       qrScanHistory = qrScans.map((log: AccessLogWithChannel) => {
+        // エリア情報を整形（市区町村優先）
         let area = "-";
-        if (log.region && log.city) {
-          area = `${log.region} ${log.city}`;
+        if (log.city) {
+          area = log.city;
         } else if (log.region) {
           area = log.region;
-        } else if (log.city) {
-          area = log.city;
         }
 
         return {
