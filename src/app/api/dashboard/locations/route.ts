@@ -268,11 +268,59 @@ export async function GET(request: NextRequest) {
       // エラーがあってもnullのまま続行
     }
 
+    // 最多読み込み地域（hotspot）を計算
+    // locations は既に count 降順でソート済み
+    let hotspot: {
+      latitude: number;
+      longitude: number;
+      region: string;
+      city: string;
+      town: string | null;
+      count: number;
+    } | null = null;
+
+    if (locations.length > 0) {
+      // 最も読み込み回数が多い地域を探す
+      const topLocation = locations.reduce((max, loc) =>
+        loc.count > max.count ? loc : max
+      , locations[0]);
+
+      if (topLocation.region && topLocation.city) {
+        // GPS座標があればそれを使用
+        if (topLocation.latitude !== null && topLocation.longitude !== null) {
+          hotspot = {
+            latitude: topLocation.latitude,
+            longitude: topLocation.longitude,
+            region: topLocation.region,
+            city: topLocation.city,
+            town: topLocation.town,
+            count: topLocation.count,
+          };
+        } else {
+          // GPS座標がない場合は都道府県中心座標を使用
+          const { PREFECTURE_CENTERS, normalizePrefectureName } = await import("@/data/japan-prefectures");
+          const prefName = normalizePrefectureName(topLocation.region);
+          const prefCenter = PREFECTURE_CENTERS[prefName];
+          if (prefCenter) {
+            hotspot = {
+              latitude: prefCenter[0],
+              longitude: prefCenter[1],
+              region: topLocation.region,
+              city: topLocation.city,
+              town: topLocation.town,
+              count: topLocation.count,
+            };
+          }
+        }
+      }
+    }
+
     return NextResponse.json({
       locations,
       topRegions,
       total,
       clinicCenter,
+      hotspot,
       period: {
         from: dateFrom.toISOString(),
         to: dateTo.toISOString(),

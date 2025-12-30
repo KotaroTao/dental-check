@@ -61,6 +61,14 @@ export function LocationSection({
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [clinicCenter, setClinicCenter] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [hotspot, setHotspot] = useState<{
+    latitude: number;
+    longitude: number;
+    region: string;
+    city: string;
+    town: string | null;
+    count: number;
+  } | null>(null);
 
   // 選択されたチャンネルID（初期値は全てのアクティブチャンネル）
   const activeChannels = channels.filter((c) => c.isActive);
@@ -132,6 +140,7 @@ export function LocationSection({
           setLocations(data.locations || []);
           setTotal(data.total || 0);
           setClinicCenter(data.clinicCenter || null);
+          setHotspot(data.hotspot || null);
         }
       } catch (error) {
         console.error("Failed to fetch locations:", error);
@@ -291,7 +300,7 @@ export function LocationSection({
         {/* 地図（都道府県ポリゴン表示） */}
         <div>
           {validLocations.length > 0 ? (
-            <LocationMap locations={validLocations} clinicCenter={clinicCenter} />
+            <LocationMap locations={validLocations} clinicCenter={clinicCenter} hotspot={hotspot} />
           ) : (
             <div className="h-64 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">
               位置データなし
