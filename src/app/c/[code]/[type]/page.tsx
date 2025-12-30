@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { diagnosisTypes } from "@/data/diagnosis-types";
 import { DiagnosisFlow } from "@/components/diagnosis/diagnosis-flow";
 import { prisma } from "@/lib/prisma";
@@ -11,12 +11,20 @@ interface Props {
     code: string;
     type: string;
   }>;
+  searchParams: Promise<{
+    sessionId?: string;
+  }>;
 }
 
 interface ChannelResult {
   channel: Channel;
   clinic: Clinic;
   isExpired: boolean;
+}
+
+interface SessionData {
+  userAge: number;
+  userGender: string;
 }
 
 async function getChannelAndClinic(code: string): Promise<ChannelResult | null> {
@@ -50,8 +58,34 @@ async function getChannelAndClinic(code: string): Promise<ChannelResult | null> 
   return { channel, clinic, isExpired };
 }
 
-export default async function ClinicDiagnosisPage({ params }: Props) {
+async function getSessionData(sessionId: string): Promise<SessionData | null> {
+  const session = await prisma.diagnosisSession.findUnique({
+    where: { id: sessionId },
+    select: {
+      userAge: true,
+      userGender: true,
+      completedAt: true,
+    },
+  });
+
+  if (!session || session.userAge === null || session.userGender === null) {
+    return null;
+  }
+
+  // 既に完了しているセッションは無効
+  if (session.completedAt) {
+    return null;
+  }
+
+  return {
+    userAge: session.userAge,
+    userGender: session.userGender,
+  };
+}
+
+export default async function ClinicDiagnosisPage({ params, searchParams }: Props) {
   const { code, type } = await params;
+  const { sessionId } = await searchParams;
 
   // 診断タイプを取得
   const diagnosis = diagnosisTypes[type];
@@ -70,6 +104,18 @@ export default async function ClinicDiagnosisPage({ params }: Props) {
   // 有効期限切れの場合
   if (isExpired) {
     return <ExpiredPage clinicName={clinic.name} logoUrl={clinic.logoUrl} />;
+  }
+
+  // sessionIdがない場合はプロフィールページへリダイレクト
+  if (!sessionId) {
+    redirect(`/c/${code}/profile`);
+  }
+
+  // セッションデータを取得
+  const sessionData = await getSessionData(sessionId);
+  if (!sessionData) {
+    // 無効なsessionIdの場合もプロフィールページへ
+    redirect(`/c/${code}/profile`);
   }
 
   return (
@@ -102,7 +148,8 @@ export default async function ClinicDiagnosisPage({ params }: Props) {
         ctaConfig={clinic.ctaConfig}
         clinicName={clinic.name}
         mainColor={clinic.mainColor}
-        channelId={channel.id}
+        sessionId={sessionId}
+        userAge={sessionData.userAge}
       />
 
       {/* アクセストラッキング用の非表示コンポーネント */}

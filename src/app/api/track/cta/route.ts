@@ -5,21 +5,33 @@ import { canTrackSession } from "@/lib/subscription";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { channelId, ctaType } = body;
+    const { sessionId, ctaType } = body;
 
-    if (!channelId || !ctaType) {
+    if (!sessionId || !ctaType) {
       return NextResponse.json(
-        { error: "channelId and ctaType are required" },
+        { error: "sessionId and ctaType are required" },
         { status: 400 }
       );
     }
 
-    // チャンネルから医院IDを取得
-    const channel = await prisma.channel.findUnique({
-      where: { id: channelId },
-      select: { clinicId: true },
+    // セッションからチャンネルと医院IDを取得
+    const session = await prisma.diagnosisSession.findUnique({
+      where: { id: sessionId },
+      select: {
+        clinicId: true,
+        channelId: true,
+      },
     });
-    const clinicId = channel?.clinicId || null;
+
+    if (!session) {
+      return NextResponse.json(
+        { error: "Session not found" },
+        { status: 404 }
+      );
+    }
+
+    const clinicId = session.clinicId;
+    const channelId = session.channelId;
 
     // 契約状態をチェック - 契約が無効な場合は計測をスキップ
     if (clinicId) {
@@ -32,9 +44,10 @@ export async function POST(request: NextRequest) {
     // CTAクリックを記録
     await prisma.cTAClick.create({
       data: {
+        sessionId,
         clinicId,
         channelId,
-        ctaType, // booking, phone, line, instagram
+        ctaType,
       },
     });
 

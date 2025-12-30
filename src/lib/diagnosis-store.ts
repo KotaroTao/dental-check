@@ -12,13 +12,6 @@ interface DiagnosisState {
   _hasHydrated: boolean;
   setHasHydrated: (state: boolean) => void;
 
-  // プロフィール
-  userAge: number | null;
-  userGender: string | null;
-  locationConsent: boolean;
-  latitude: number | null;
-  longitude: number | null;
-
   // 診断進行状態
   currentStep: number;
   answers: Answer[];
@@ -29,12 +22,10 @@ interface DiagnosisState {
   oralAge: number | null;
 
   // アクション
-  setProfile: (age: number, gender: string | null, locationConsent: boolean) => void;
-  setLocation: (latitude: number | null, longitude: number | null) => void;
   setAnswer: (step: number, choiceIndex: number, score: number) => void;
   nextStep: () => void;
   prevStep: () => void;
-  calculateResult: (diagnosis: DiagnosisType) => void;
+  calculateResult: (diagnosis: DiagnosisType, userAge?: number) => void;
   reset: () => void;
 }
 
@@ -44,19 +35,11 @@ export const useDiagnosisStore = create<DiagnosisState>()(
       _hasHydrated: false,
       setHasHydrated: (state) => set({ _hasHydrated: state }),
 
-      userAge: null,
-      userGender: null,
-      locationConsent: false,
-      latitude: null,
-      longitude: null,
       currentStep: 0,
       answers: [],
       totalScore: null,
       resultPattern: null,
       oralAge: null,
-
-      setProfile: (age, gender, locationConsent) => set({ userAge: age, userGender: gender, locationConsent }),
-      setLocation: (latitude, longitude) => set({ latitude, longitude }),
 
       setAnswer: (step, choiceIndex, score) => {
         const answers = [...get().answers];
@@ -71,8 +54,8 @@ export const useDiagnosisStore = create<DiagnosisState>()(
           currentStep: Math.max(0, state.currentStep - 1),
         })),
 
-      calculateResult: (diagnosis) => {
-        const { answers, userAge } = get();
+      calculateResult: (diagnosis, userAge) => {
+        const { answers } = get();
         const totalScore = answers.reduce((sum, answer) => sum + answer.score, 0);
 
         const resultPattern =
@@ -94,11 +77,6 @@ export const useDiagnosisStore = create<DiagnosisState>()(
 
       reset: () =>
         set({
-          userAge: null,
-          userGender: null,
-          locationConsent: false,
-          latitude: null,
-          longitude: null,
           currentStep: 0,
           answers: [],
           totalScore: null,
@@ -124,20 +102,10 @@ export const useDiagnosisStore = create<DiagnosisState>()(
       onRehydrateStorage: () => (state) => {
         if (state) {
           state.setHasHydrated(true);
-          console.log("Zustand store hydrated:", {
-            userAge: state.userAge,
-            latitude: state.latitude,
-            longitude: state.longitude,
-          });
         }
       },
       // _hasHydratedは永続化しない
       partialize: (state) => ({
-        userAge: state.userAge,
-        userGender: state.userGender,
-        locationConsent: state.locationConsent,
-        latitude: state.latitude,
-        longitude: state.longitude,
         currentStep: state.currentStep,
         answers: state.answers,
         totalScore: state.totalScore,

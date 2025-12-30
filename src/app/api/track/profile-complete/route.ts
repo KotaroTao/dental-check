@@ -4,8 +4,10 @@ import { getClientIP } from "@/lib/geolocation";
 import { canTrackSession } from "@/lib/subscription";
 
 /**
- * リンクタイプQRコードのセッション完了を記録
- * プロファイル情報と位置情報を取得してセッションを作成
+ * プロフィール完了API（診断あり・なし共通）
+ * - セッションを作成
+ * - 診断ありの場合は診断ページへのパスを返す
+ * - 診断なしの場合は外部URLを返す
  */
 export async function POST(request: NextRequest) {
   try {
@@ -19,13 +21,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!userAge || !userGender) {
+      return NextResponse.json(
+        { error: "userAge and userGender are required" },
+        { status: 400 }
+      );
+    }
+
     // チャンネル情報を取得
     const channel = await prisma.channel.findUnique({
       where: { id: channelId },
       select: {
         id: true,
+        code: true,
         clinicId: true,
         channelType: true,
+        diagnosisTypeSlug: true,
         redirectUrl: true,
       },
     });
@@ -34,14 +45,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "Channel not found" },
         { status: 404 }
-      );
-    }
-
-    // linkタイプでない場合はエラー
-    if (channel.channelType !== "link" || !channel.redirectUrl) {
-      return NextResponse.json(
-        { error: "Channel is not a link type" },
-        { status: 400 }
       );
     }
 
@@ -67,19 +70,27 @@ export async function POST(request: NextRequest) {
     let sessionId: string | null = null;
 
     if (canTrack) {
+      // 診断タイプIDを取得（診断ありの場合）
+      let diagnosisTypeId: string | null = null;
+      if (channel.channelType === "diagnosis" && channel.diagnosisTypeSlug) {
+        const diagnosisType = await prisma.diagnosisType.findUnique({
+          where: { slug: channel.diagnosisTypeSlug },
+          select: { id: true },
+        });
+        diagnosisTypeId = diagnosisType?.id || null;
+      }
+
       const session = await prisma.diagnosisSession.create({
         data: {
           clinicId: channel.clinicId,
           channelId: channel.id,
-          diagnosisTypeId: null, // linkタイプは診断なし
-          sessionType: "link",
+          diagnosisTypeId,
+          sessionType: channel.channelType === "link" ? "link" : "diagnosis",
           isDemo: false,
-          userAge: userAge || null,
-          userGender: userGender || null,
-          answers: null,
-          totalScore: null,
-          resultCategory: null,
-          completedAt: new Date(),
+          userAge: userAge,
+          userGender: userGender,
+          // 診断なしの場合は即座に完了
+          completedAt: channel.channelType === "link" ? new Date() : null,
           ipAddress: ip !== "unknown" ? ip : null,
           latitude: roundedLat,
           longitude: roundedLng,
@@ -91,21 +102,46 @@ export async function POST(request: NextRequest) {
       });
       sessionId = session.id;
 
-      // スキャン回数をインクリメント
-      await prisma.channel.update({
-        where: { id: channel.id },
-        data: { scanCount: { increment: 1 } },
+      // linkタイプの場合はスキャン回数をインクリメント
+      if (channel.channelType === "link") {
+        await prisma.channel.update({
+          where: { id: channel.id },
+          data: { scanCount: { increment: 1 } },
+        });
+      }
+    }
+
+    // 次のアクションを決定
+    if (channel.channelType === "link" && channel.redirectUrl) {
+      // 診断なし → 外部URLへリダイレクト
+      return NextResponse.json({
+        success: true,
+        sessionId,
+        nextAction: "redirect",
+        redirectUrl: channel.redirectUrl,
+        diagnosisPath: null,
+        tracked: canTrack,
+      });
+    } else if (channel.channelType === "diagnosis" && channel.diagnosisTypeSlug) {
+      // 診断あり → 診断ページへ遷移
+      const diagnosisPath = `/c/${channel.code}/${channel.diagnosisTypeSlug}${sessionId ? `?sessionId=${sessionId}` : ""}`;
+      return NextResponse.json({
+        success: true,
+        sessionId,
+        nextAction: "diagnosis",
+        redirectUrl: null,
+        diagnosisPath,
+        tracked: canTrack,
       });
     }
 
-    return NextResponse.json({
-      success: true,
-      sessionId,
-      redirectUrl: channel.redirectUrl,
-      tracked: canTrack,
-    });
+    // どちらでもない場合はエラー
+    return NextResponse.json(
+      { error: "Invalid channel configuration" },
+      { status: 400 }
+    );
   } catch (error) {
-    console.error("Link complete error:", error);
+    console.error("Profile complete error:", error);
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 }

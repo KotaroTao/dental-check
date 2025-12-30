@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { checkSubscription } from "@/lib/subscription";
-import { DiagnosisProfileForm } from "@/components/diagnosis/diagnosis-profile-form";
+import { ProfileForm } from "@/components/common/profile-form";
 import { ExpiredPage } from "@/components/channel/expired-page";
-import type { Channel, Clinic } from "@/types/clinic";
+import type { Clinic } from "@/types/clinic";
 
 interface Props {
   params: Promise<{
@@ -11,24 +11,48 @@ interface Props {
   }>;
 }
 
-interface ChannelResult {
-  channel: Channel & { diagnosisTypeSlug: string };
+interface ChannelData {
+  id: string;
+  code: string;
+  name: string;
+  channelType: string;
+  diagnosisTypeSlug: string | null;
+  redirectUrl: string | null;
+  expiresAt: Date | null;
+}
+
+interface PageData {
+  channel: ChannelData;
   clinic: Clinic;
   isExpired: boolean;
 }
 
-async function getChannelAndClinic(code: string): Promise<ChannelResult | null> {
+async function getChannelAndClinic(code: string): Promise<PageData | null> {
   // チャンネルを取得
   const channel = await prisma.channel.findUnique({
     where: { code },
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      channelType: true,
+      diagnosisTypeSlug: true,
+      redirectUrl: true,
+      expiresAt: true,
+      isActive: true,
+      clinicId: true,
+    },
   });
 
   if (!channel || !channel.isActive) {
     return null;
   }
 
-  // diagnosisタイプでない場合はnull
-  if (channel.channelType !== "diagnosis" || !channel.diagnosisTypeSlug) {
+  // チャンネルタイプの検証
+  if (channel.channelType === "diagnosis" && !channel.diagnosisTypeSlug) {
+    return null;
+  }
+  if (channel.channelType === "link" && !channel.redirectUrl) {
     return null;
   }
 
@@ -51,13 +75,21 @@ async function getChannelAndClinic(code: string): Promise<ChannelResult | null> 
   const isExpired = channel.expiresAt ? new Date() > new Date(channel.expiresAt) : false;
 
   return {
-    channel: channel as Channel & { diagnosisTypeSlug: string },
+    channel: {
+      id: channel.id,
+      code: channel.code,
+      name: channel.name,
+      channelType: channel.channelType,
+      diagnosisTypeSlug: channel.diagnosisTypeSlug,
+      redirectUrl: channel.redirectUrl,
+      expiresAt: channel.expiresAt,
+    },
     clinic: clinic as Clinic,
     isExpired,
   };
 }
 
-export default async function DiagnosisProfilePage({ params }: Props) {
+export default async function ProfilePage({ params }: Props) {
   const { code } = await params;
 
   // チャンネルと医院情報を取得
@@ -95,12 +127,12 @@ export default async function DiagnosisProfilePage({ params }: Props) {
         </div>
       </header>
 
-      {/* プロファイル入力フォーム */}
+      {/* プロファイル入力フォーム（診断あり・なし共通） */}
       <div className="container mx-auto px-4 py-8 max-w-md">
-        <DiagnosisProfileForm
-          channelCode={code}
+        <ProfileForm
+          channelId={channel.id}
           channelName={channel.name}
-          diagnosisTypeSlug={channel.diagnosisTypeSlug}
+          channelType={channel.channelType as "diagnosis" | "link"}
           mainColor={clinic.mainColor}
         />
       </div>

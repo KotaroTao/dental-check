@@ -36,14 +36,12 @@ export async function GET(
       return NextResponse.redirect(`${baseUrl}/c/${code}/expired`);
     }
 
-    // diagnosisタイプの場合 → プロファイル入力ページへ
-    if (channel.channelType === "diagnosis" && channel.diagnosisTypeSlug) {
+    // diagnosisタイプまたはlinkタイプの場合 → 共通プロファイル入力ページへ
+    if (
+      (channel.channelType === "diagnosis" && channel.diagnosisTypeSlug) ||
+      (channel.channelType === "link" && channel.redirectUrl)
+    ) {
       return NextResponse.redirect(`${baseUrl}/c/${code}/profile`);
-    }
-
-    // linkタイプの場合 → プロファイル入力ページへ
-    if (channel.channelType === "link" && channel.redirectUrl) {
-      return NextResponse.redirect(`${baseUrl}/c/${code}/link`);
     }
 
     // どちらでもない場合はトップへ

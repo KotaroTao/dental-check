@@ -3,7 +3,6 @@
 import { useEffect, useRef } from "react";
 import { useDiagnosisStore } from "@/lib/diagnosis-store";
 import { DiagnosisType } from "@/data/diagnosis-types";
-import { ProfileForm } from "./profile-form";
 import { QuestionCard } from "./question-card";
 import { ResultCard } from "./result-card";
 import type { CTAConfig } from "@/types/clinic";
@@ -15,32 +14,36 @@ interface Props {
   ctaConfig?: CTAConfig;
   clinicName?: string;
   mainColor?: string;
-  channelId?: string;
+  sessionId?: string;
+  userAge?: number;
 }
 
-export function DiagnosisFlow({ diagnosis, isDemo, clinicSlug, ctaConfig, clinicName, mainColor, channelId }: Props) {
-  const { userAge, currentStep, resultPattern, reset, answers, _hasHydrated } =
+export function DiagnosisFlow({
+  diagnosis,
+  isDemo,
+  clinicSlug,
+  ctaConfig,
+  clinicName,
+  mainColor,
+  sessionId,
+  userAge,
+}: Props) {
+  const { currentStep, resultPattern, reset, answers, _hasHydrated } =
     useDiagnosisStore();
   const hasInitialized = useRef(false);
 
-  // コンポーネントがマウントされたらリセット（ただしプロファイル入力済みで未回答の場合はスキップ）
-  // Zustandストアのハイドレーション完了を待つ
+  // コンポーネントがマウントされたらリセット
   useEffect(() => {
     if (!_hasHydrated) return;
     if (hasInitialized.current) return;
     hasInitialized.current = true;
 
-    console.log("DiagnosisFlow initialized:", { userAge, answersLength: answers.length, resultPattern: !!resultPattern });
-
-    // プロファイル入力済みで回答がまだない場合はリセットしない（プロファイルページから遷移）
-    if (userAge !== null && answers.length === 0 && resultPattern === null) {
-      console.log("Skipping reset - profile already entered");
+    // 新しいセッションの場合はリセット
+    if (answers.length === 0 && resultPattern === null) {
       return;
     }
-    // それ以外はリセット（新規開始または再診断）
-    console.log("Resetting diagnosis state");
     reset();
-  }, [_hasHydrated, reset, userAge, answers.length, resultPattern]);
+  }, [_hasHydrated, reset, answers.length, resultPattern]);
 
   // Zustandストアのハイドレーション中はローディング表示
   if (!_hasHydrated) {
@@ -49,15 +52,6 @@ export function DiagnosisFlow({ diagnosis, isDemo, clinicSlug, ctaConfig, clinic
         <div className="flex justify-center items-center h-40">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
         </div>
-      </div>
-    );
-  }
-
-  // プロフィール未入力の場合
-  if (userAge === null) {
-    return (
-      <div className="container mx-auto px-4 py-8 max-w-lg">
-        <ProfileForm diagnosisName={diagnosis.name} />
       </div>
     );
   }
@@ -73,7 +67,8 @@ export function DiagnosisFlow({ diagnosis, isDemo, clinicSlug, ctaConfig, clinic
           ctaConfig={ctaConfig}
           clinicName={clinicName}
           mainColor={mainColor}
-          channelId={channelId}
+          sessionId={sessionId}
+          userAge={userAge}
         />
       </div>
     );
@@ -86,6 +81,7 @@ export function DiagnosisFlow({ diagnosis, isDemo, clinicSlug, ctaConfig, clinic
         diagnosis={diagnosis}
         questionIndex={currentStep}
         totalQuestions={diagnosis.questions.length}
+        userAge={userAge}
       />
     </div>
   );

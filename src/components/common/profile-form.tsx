@@ -1,23 +1,25 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
-import { MapPin, Loader2, ChevronRight, Gift } from "lucide-react";
+import { MapPin, Loader2, ChevronRight, Stethoscope, Gift } from "lucide-react";
 import Link from "next/link";
 
 interface Props {
   channelId: string;
   channelName: string;
-  redirectUrl: string;
+  channelType: "diagnosis" | "link";
   mainColor?: string;
 }
 
-export function LinkProfileForm({ channelId, channelName, redirectUrl, mainColor = "#2563eb" }: Props) {
+export function ProfileForm({ channelId, channelName, channelType, mainColor = "#2563eb" }: Props) {
+  const router = useRouter();
   const [age, setAge] = useState("");
   const [gender, setGender] = useState<string | null>(null);
   const [agreed, setAgreed] = useState(false);
@@ -38,49 +40,49 @@ export function LinkProfileForm({ channelId, channelName, redirectUrl, mainColor
     return ageNum > 0 && ageNum < 120 && gender && agreed;
   };
 
-  // セッション作成してリダイレクト
-  const completeAndRedirect = async (latitude: number | null, longitude: number | null) => {
+  // プロファイル完了APIを呼び出し
+  const completeProfile = async (latitude: number | null, longitude: number | null) => {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("/api/track/link-complete", {
+      const response = await fetch("/api/track/profile-complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           channelId,
-          userAge: parseInt(age, 10) || null,
+          userAge: parseInt(age, 10),
           userGender: gender,
           latitude,
           longitude,
         }),
       });
 
-      // APIレスポンスをデバッグ
-      console.log("API response status:", response.status);
       const data = await response.json();
-      console.log("API response data:", data);
-      console.log("Props redirectUrl:", redirectUrl);
 
-      // リダイレクト（APIからのURLを優先、フォールバックはpropsのURL）
-      const targetUrl = (data.success && data.redirectUrl) ? data.redirectUrl : redirectUrl;
-      console.log("Target URL:", targetUrl);
+      if (!data.success) {
+        console.error("Profile complete error:", data.error);
+        setIsSubmitting(false);
+        return;
+      }
 
-      // 安全なURLかチェック（http/httpsで始まる外部URL）
-      if (targetUrl && (targetUrl.startsWith("http://") || targetUrl.startsWith("https://"))) {
-        window.location.href = targetUrl;
+      // 次のアクションに応じて遷移
+      if (data.nextAction === "redirect" && data.redirectUrl) {
+        // 外部URLへリダイレクト
+        window.location.href = data.redirectUrl;
+      } else if (data.nextAction === "diagnosis" && data.diagnosisPath) {
+        // 診断ページへ遷移
+        router.push(data.diagnosisPath);
       } else {
-        console.error("Invalid redirect URL:", targetUrl);
-        // フォールバック: propsのredirectUrlを使用
-        window.location.href = redirectUrl;
+        console.error("Invalid next action:", data);
+        setIsSubmitting(false);
       }
     } catch (err) {
-      console.error("Link complete error:", err);
-      // エラー時もリダイレクト
-      window.location.href = redirectUrl;
+      console.error("Profile complete error:", err);
+      setIsSubmitting(false);
     }
   };
 
-  // 位置情報を許可してリダイレクト
+  // 位置情報を許可して進む
   const handleAllowLocation = async () => {
     setIsRequestingLocation(true);
     let latitude: number | null = null;
@@ -103,46 +105,25 @@ export function LinkProfileForm({ channelId, channelName, redirectUrl, mainColor
     }
 
     setIsRequestingLocation(false);
-    await completeAndRedirect(latitude, longitude);
+    await completeProfile(latitude, longitude);
   };
 
-  // 位置情報をスキップしてリダイレクト
+  // 位置情報をスキップして進む
   const handleSkipLocation = async () => {
-    await completeAndRedirect(null, null);
+    await completeProfile(null, null);
   };
 
-  // 入力全体をスキップ
-  const handleSkipAll = async () => {
-    setIsSubmitting(true);
-    try {
-      const response = await fetch("/api/track/link-complete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          channelId,
-          userAge: null,
-          userGender: null,
-          latitude: null,
-          longitude: null,
-        }),
-      });
-
-      console.log("Skip API response status:", response.status);
-      const data = await response.json();
-      console.log("Skip API response data:", data);
-      const targetUrl = (data.success && data.redirectUrl) ? data.redirectUrl : redirectUrl;
-      console.log("Skip Target URL:", targetUrl);
-
-      if (targetUrl && (targetUrl.startsWith("http://") || targetUrl.startsWith("https://"))) {
-        window.location.href = targetUrl;
-      } else {
-        window.location.href = redirectUrl;
-      }
-    } catch (err) {
-      console.error("Skip error:", err);
-      window.location.href = redirectUrl;
-    }
-  };
+  // アイコンとテキストの決定
+  const Icon = channelType === "diagnosis" ? Stethoscope : Gift;
+  const description = channelType === "diagnosis"
+    ? "診断を始める前に、簡単なアンケートにご協力ください"
+    : "簡単なアンケートにご協力ください";
+  const locationButtonText = channelType === "diagnosis"
+    ? "位置情報を許可して診断を開始"
+    : "位置情報を許可して進む";
+  const skipLocationText = channelType === "diagnosis"
+    ? "位置情報なしで診断を開始"
+    : "位置情報なしで進む";
 
   // 位置情報許可ステップ
   if (showLocationStep) {
@@ -196,12 +177,12 @@ export function LinkProfileForm({ channelId, channelName, redirectUrl, mainColor
             ) : isSubmitting ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
-                移動中...
+                {channelType === "diagnosis" ? "診断ページへ移動中..." : "移動中..."}
               </>
             ) : (
               <>
                 <MapPin className="w-5 h-5" />
-                位置情報を許可して進む
+                {locationButtonText}
                 <ChevronRight className="w-5 h-5" />
               </>
             )}
@@ -213,7 +194,7 @@ export function LinkProfileForm({ channelId, channelName, redirectUrl, mainColor
               disabled={isRequestingLocation || isSubmitting}
               className="text-sm text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
             >
-              位置情報なしで進む &rarr;
+              {skipLocationText} &rarr;
             </button>
           </div>
 
@@ -233,17 +214,15 @@ export function LinkProfileForm({ channelId, channelName, redirectUrl, mainColor
           className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
           style={{ backgroundColor: mainColor + "20" }}
         >
-          <Gift className="w-8 h-8" style={{ color: mainColor }} />
+          <Icon className="w-8 h-8" style={{ color: mainColor }} />
         </div>
         <CardTitle className="text-xl">{channelName}</CardTitle>
-        <CardDescription>
-          簡単なアンケートにご協力ください
-        </CardDescription>
+        <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="age">年齢</Label>
+            <Label htmlFor="age">年齢 <span className="text-red-500">*</span></Label>
             <Input
               id="age"
               type="number"
@@ -253,11 +232,12 @@ export function LinkProfileForm({ channelId, channelName, redirectUrl, mainColor
               min={1}
               max={120}
               className="text-lg"
+              required
             />
           </div>
 
           <div className="space-y-2">
-            <Label>性別</Label>
+            <Label>性別 <span className="text-red-500">*</span></Label>
             <RadioGroup
               value={gender || ""}
               onValueChange={(value) => setGender(value || null)}
@@ -319,17 +299,6 @@ export function LinkProfileForm({ channelId, channelName, redirectUrl, mainColor
               "次へ"
             )}
           </Button>
-
-          <div className="text-center">
-            <button
-              type="button"
-              onClick={handleSkipAll}
-              disabled={isSubmitting}
-              className="text-sm text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
-            >
-              スキップして進む &rarr;
-            </button>
-          </div>
         </form>
       </CardContent>
     </Card>

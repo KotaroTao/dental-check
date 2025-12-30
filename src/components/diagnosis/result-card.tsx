@@ -18,62 +18,50 @@ interface Props {
   ctaConfig?: CTAConfig;
   clinicName?: string;
   mainColor?: string;
-  channelId?: string;
+  sessionId?: string;
+  userAge?: number;
 }
 
-export function ResultCard({ diagnosis, isDemo, clinicSlug, ctaConfig, clinicName, mainColor, channelId }: Props) {
-  const { userAge, userGender, answers, totalScore, resultPattern, oralAge, latitude, longitude, reset, _hasHydrated } =
+export function ResultCard({
+  diagnosis,
+  isDemo,
+  clinicSlug,
+  ctaConfig,
+  clinicName,
+  mainColor,
+  sessionId,
+  userAge,
+}: Props) {
+  const { answers, totalScore, resultPattern, oralAge, reset, _hasHydrated } =
     useDiagnosisStore();
   const hasTrackedRef = useRef(false);
 
   // 診断完了をトラッキング（非デモモードのみ、1回だけ）
-  // 位置情報はプロファイルページで事前に取得済み
-  // Zustandストアのハイドレーション完了を待つ
   useEffect(() => {
-    // Zustandストアがまだハイドレーションしていない場合は待つ
-    if (!_hasHydrated) {
-      console.log("Waiting for Zustand hydration...");
-      return;
-    }
-    if (isDemo || !channelId || !resultPattern || hasTrackedRef.current) {
-      console.log("Skip tracking:", { isDemo, channelId: !!channelId, resultPattern: !!resultPattern, hasTracked: hasTrackedRef.current });
-      return;
-    }
+    if (!_hasHydrated) return;
+    if (isDemo || !sessionId || !resultPattern || hasTrackedRef.current) return;
     hasTrackedRef.current = true;
 
-    console.log("Tracking diagnosis completion:", {
-      userAge,
-      userGender,
-      latitude,
-      longitude,
-      answers: answers?.length,
-      totalScore,
-      resultCategory: resultPattern.category,
-    });
-
-    fetch("/api/track/complete", {
+    // sessionIdベースで診断完了を送信
+    fetch("/api/track/diagnosis-complete", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        channelId,
-        diagnosisType: diagnosis.slug,
-        userAge,
-        userGender,
+        sessionId,
         answers,
         totalScore,
         resultCategory: resultPattern.category,
-        latitude,
-        longitude,
+        oralAge,
       }),
     })
       .then((res) => res.json())
       .then((data) => {
-        console.log("Track complete response:", data);
+        console.log("Diagnosis complete response:", data);
       })
       .catch((err) => {
-        console.error("Track complete error:", err);
+        console.error("Diagnosis complete error:", err);
       });
-  }, [_hasHydrated, isDemo, channelId, diagnosis.slug, resultPattern, userAge, userGender, answers, totalScore, latitude, longitude]);
+  }, [_hasHydrated, isDemo, sessionId, resultPattern, answers, totalScore, oralAge]);
 
   if (!resultPattern) return null;
 
@@ -194,7 +182,7 @@ export function ResultCard({ diagnosis, isDemo, clinicSlug, ctaConfig, clinicNam
               clinicName={clinicName}
               clinicSlug={clinicSlug}
               mainColor={mainColor}
-              channelId={channelId}
+              sessionId={sessionId}
               diagnosisType={diagnosis.slug}
             />
           )}
@@ -240,14 +228,14 @@ function ClinicCTA({
   clinicName,
   clinicSlug,
   mainColor,
-  channelId,
+  sessionId,
   diagnosisType,
 }: {
   ctaConfig?: CTAConfig;
   clinicName?: string;
   clinicSlug?: string;
   mainColor?: string;
-  channelId?: string;
+  sessionId?: string;
   diagnosisType?: string;
 }) {
   const buttonStyle = mainColor
@@ -255,11 +243,11 @@ function ClinicCTA({
     : {};
 
   const trackClick = (ctaType: string) => {
-    if (!channelId) return;
+    if (!sessionId) return;
     fetch("/api/track/cta", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ channelId, ctaType, diagnosisType }),
+      body: JSON.stringify({ sessionId, ctaType, diagnosisType }),
     }).catch(() => {});
   };
 

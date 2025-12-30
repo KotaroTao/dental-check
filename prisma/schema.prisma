@@ -133,7 +133,9 @@ model DiagnosisSession {
   answers         Json?
   totalScore      Int?      @map("total_score")
   resultCategory  String?   @map("result_category")
-  completedAt     DateTime? @map("completed_at")
+  oralAge         Int?      @map("oral_age")  // お口年齢診断の結果
+  startedAt       DateTime  @default(now()) @map("started_at")  // プロフィール完了時
+  completedAt     DateTime? @map("completed_at")  // 診断完了時
   createdAt       DateTime  @default(now()) @map("created_at")
 
   // 位置情報（GPSベース、小数点2桁に丸めて保存）

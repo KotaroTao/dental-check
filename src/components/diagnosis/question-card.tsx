@@ -13,9 +13,10 @@ interface Props {
   diagnosis: DiagnosisType;
   questionIndex: number;
   totalQuestions: number;
+  userAge?: number;
 }
 
-export function QuestionCard({ diagnosis, questionIndex, totalQuestions }: Props) {
+export function QuestionCard({ diagnosis, questionIndex, totalQuestions, userAge }: Props) {
   const question = diagnosis.questions[questionIndex];
   const { answers, setAnswer, nextStep, prevStep, calculateResult } =
     useDiagnosisStore();
@@ -40,7 +41,7 @@ export function QuestionCard({ diagnosis, questionIndex, totalQuestions }: Props
       nextStep();
     } else {
       // 最後の質問の場合は結果を計算
-      calculateResult(diagnosis);
+      calculateResult(diagnosis, userAge);
     }
   };
 
