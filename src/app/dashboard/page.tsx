@@ -971,7 +971,36 @@ export default function DashboardPage() {
         <div className="p-6 border-b">
           <div className="flex flex-wrap items-center gap-4">
             <h2 className="text-lg font-bold">QR読み込み履歴</h2>
-            <div className="flex gap-2 ml-auto">
+            <div className="flex flex-wrap gap-2 ml-auto">
+              {/* 期間指定 */}
+              <select
+                value={period}
+                onChange={(e) => setPeriod(e.target.value)}
+                className="px-3 py-1.5 border rounded-md text-sm bg-white"
+              >
+                {PERIOD_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              {period === "custom" && (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="date"
+                    value={customStartDate}
+                    onChange={(e) => setCustomStartDate(e.target.value)}
+                    className="px-2 py-1.5 border rounded-md text-sm bg-white"
+                  />
+                  <span className="text-gray-500">〜</span>
+                  <input
+                    type="date"
+                    value={customEndDate}
+                    onChange={(e) => setCustomEndDate(e.target.value)}
+                    className="px-2 py-1.5 border rounded-md text-sm bg-white"
+                  />
+                </div>
+              )}
               <select
                 value={selectedDiagnosisType}
                 onChange={(e) => setSelectedDiagnosisType(e.target.value)}
