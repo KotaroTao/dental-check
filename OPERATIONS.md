@@ -15,31 +15,71 @@
 
 ```
 [GitHub]
-    ↓ git push (mainブランチ)
-[GitHub Actions]
+├── develop ブランチ ────────────────────┐
+│                                        │
+│   ↓ git push                           │
+│   [GitHub Actions: deploy-staging.yml] │
+│   ↓ SSH自動デプロイ                    │
+│   [ステージング環境]                   │
+│   ├── staging.qrqr-dental.com          │
+│   ├── PM2 (ポート3001)                 │
+│   └── DB: dental_staging               │
+│                                        │
+│   ↓ テスト完了後                       │
+│   ↓ develop → main にマージ            │
+│                                        │
+└── main ブランチ ───────────────────────┘
+    ↓ git push
+    [GitHub Actions: deploy.yml]
     ↓ SSH自動デプロイ
-[Xserver VPS]
-├── Nginx ← SSL終端 + リバースプロキシ + 静的ファイル
-├── PM2 + Node.js 20 ← Next.jsアプリ (ポート3000)
-└── PostgreSQL 17 ← データベース (ポート5432)
+    [本番環境]
+    ├── qrqr-dental.com
+    ├── PM2 (ポート3000)
+    └── DB: dental_check
 ```
+
+### 環境一覧
+
+| 項目 | ステージング | 本番 |
+|------|-------------|------|
+| URL | https://staging.qrqr-dental.com | https://qrqr-dental.com |
+| ブランチ | develop | main |
+| ポート | 3001 | 3000 |
+| PM2アプリ名 | dental-staging | dental-app |
+| データベース | dental_staging | dental_check |
+| プロジェクトパス | /var/www/dental-staging | /var/www/dental-check |
 
 ### デプロイ方法
 
-**自動デプロイ（推奨）:**
+**ステージング環境へのデプロイ（自動）:**
 ```bash
+git push origin develop
+# → GitHub Actionsが自動でステージング環境にデプロイ
+# → https://staging.qrqr-dental.com でテスト
+```
+
+**本番環境へのデプロイ（自動・推奨）:**
+```bash
+# ステージングでのテスト完了後、PRをマージ
+git checkout main
+git merge develop
 git push origin main
-# → GitHub Actionsが自動でデプロイ実行
+# → GitHub Actionsが自動で本番環境にデプロイ
 ```
 
 **手動デプロイ（緊急時のみ）:**
 ```bash
 ssh -i ~/Downloads/dental-check-key.pem root@210.131.223.161
+
+# ステージング
+cd /var/www/dental-staging
+git pull origin develop
+npm install && npm run build && pm2 restart dental-staging
+
+# 本番
 cd /var/www/dental-check
 git pull origin main
-npm install
-npm run build
-pm2 restart dental-app
+npm install && npm run build && pm2 restart dental-app
 ```
 
 ---
@@ -75,11 +115,11 @@ pm2 status
 
 ### ログ確認
 ```bash
-# 全ログ
-pm2 logs dental-app
-
-# 直近100行
+# 本番環境
 pm2 logs dental-app --lines 100
+
+# ステージング環境
+pm2 logs dental-staging --lines 100
 
 # リアルタイム監視
 pm2 monit
@@ -87,13 +127,25 @@ pm2 monit
 
 ### アプリ再起動
 ```bash
+# 本番
 pm2 restart dental-app
+
+# ステージング
+pm2 restart dental-staging
+
+# 両方同時
+pm2 restart all
 ```
 
 ### アプリ停止・起動
 ```bash
+# 本番
 pm2 stop dental-app
 pm2 start dental-app
+
+# ステージング
+pm2 stop dental-staging
+pm2 start dental-staging
 ```
 
 ---
@@ -431,23 +483,41 @@ npm run dev -- -p 3001
 
 ## Git ブランチ
 
-- 本番ブランチ: `main`
-- リポジトリ: `https://github.com/KotaroTao/dental-check`
+| ブランチ | 用途 | デプロイ先 |
+|----------|------|-----------|
+| feature/xxx | 機能開発 | - |
+| develop | ステージング | staging.qrqr-dental.com |
+| main | 本番 | qrqr-dental.com |
 
-### 開発→本番 反映手順
+リポジトリ: `https://github.com/KotaroTao/dental-check`
+
+### 開発→ステージング→本番 反映手順
 
 ```bash
-# 1. 開発ブランチで作業
+# 1. feature ブランチで作業
+git checkout develop
+git pull origin develop
 git checkout -b feature/xxx
 
-# 2. コミット＆プッシュ
+# 2. 開発・コミット
 git add .
 git commit -m "修正内容"
 git push origin feature/xxx
 
-# 3. PRを作成してmainにマージ
-# → マージ後、自動でデプロイされる
+# 3. PR作成: feature/xxx → develop
+# → マージ後、自動でステージング環境にデプロイ
+
+# 4. ステージング環境でテスト
+# https://staging.qrqr-dental.com
+
+# 5. テスト完了後、PR作成: develop → main
+# → マージ後、自動で本番環境にデプロイ
 ```
+
+### iPad での確認方法
+
+1. **ステージング**: Safari で `https://staging.qrqr-dental.com` にアクセス
+2. **本番**: Safari で `https://qrqr-dental.com` にアクセス
 
 ---
 

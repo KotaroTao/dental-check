@@ -1,0 +1,59 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Staging Environment
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          script: |
+            echo "=========================================="
+            echo "Deploying to STAGING environment..."
+            echo "=========================================="
+
+            cd /var/www/dental-staging
+
+            # 最新コード取得
+            git fetch origin
+            git reset --hard origin/develop
+
+            # 依存関係インストール
+            npm install
+
+            # Prismaクライアント生成
+            npx prisma generate
+
+            # データベースマイグレーション（ステージングDBに適用）
+            npx prisma db push
+
+            # ビルド
+            npm run build
+
+            # アプリ再起動
+            pm2 restart dental-staging || pm2 start npm --name "dental-staging" -- start -- -p 3001
+
+            # 状態確認
+            pm2 status
+
+            # ヘルスチェック
+            sleep 5
+            curl -f http://localhost:3001/api/health || echo "Health check endpoint not available"
+
+            echo "=========================================="
+            echo "Staging deployment completed!"
+            echo "URL: https://staging.qrqr-dental.com"
+            echo "=========================================="
