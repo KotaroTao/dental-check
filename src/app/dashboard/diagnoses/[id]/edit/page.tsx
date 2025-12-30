@@ -44,6 +44,17 @@ export default function EditDiagnosisPage() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [resultPatterns, setResultPatterns] = useState<ResultPattern[]>([]);
 
+  // 選択肢スコアの選択肢（0〜10）
+  const scoreOptions = Array.from({ length: 11 }, (_, i) => i);
+
+  // 質問の最大スコア合計を計算（各質問の最高スコアの合計）
+  const calculatedMaxScore = questions.reduce((total, question) => {
+    const maxOptionScore = Math.max(...question.options.map((o) => o.score), 0);
+    return total + maxOptionScore;
+  }, 0);
+  // 最低でも10は選べるようにする
+  const maxTotalScore = Math.max(calculatedMaxScore, 10);
+
   useEffect(() => {
     const fetchDiagnosis = async () => {
       try {
@@ -462,23 +473,24 @@ export default function EditDiagnosisPage() {
                         className="flex-1 border rounded-lg px-3 py-2 text-sm"
                         placeholder={`選択肢 ${oIndex + 1}`}
                       />
-                      <input
-                        type="number"
+                      <select
                         value={option.score}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          // 空文字の場合は0、それ以外は入力値をそのまま数値変換
-                          const numValue = value === "" ? 0 : Number(value);
+                        onChange={(e) =>
                           updateOption(
                             question.id,
                             option.id,
                             "score",
-                            isNaN(numValue) ? 0 : numValue
-                          );
-                        }}
-                        className="w-20 border rounded-lg px-2 py-2 text-sm text-center"
-                        min={0}
-                      />
+                            parseInt(e.target.value)
+                          )
+                        }
+                        className="w-20 border rounded-lg px-2 py-2 text-sm text-center bg-white"
+                      >
+                        {scoreOptions.map((score) => (
+                          <option key={score} value={score}>
+                            {score}
+                          </option>
+                        ))}
+                      </select>
                       {question.options.length > 2 && (
                         <Button
                           type="button"
@@ -510,7 +522,12 @@ export default function EditDiagnosisPage() {
         {/* 結果パターン */}
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">結果パターン</h2>
+            <div>
+              <h2 className="text-lg font-semibold">結果パターン</h2>
+              <p className="text-sm text-gray-500 mt-1">
+                スコア範囲: 0〜{maxTotalScore}点（質問の最大スコア合計）
+              </p>
+            </div>
             <Button
               type="button"
               variant="outline"
@@ -542,41 +559,49 @@ export default function EditDiagnosisPage() {
                     <label className="block text-sm font-medium mb-1">
                       最小スコア
                     </label>
-                    <input
-                      type="number"
+                    <select
                       value={pattern.minScore}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        const numValue = value === "" ? 0 : Number(value);
+                      onChange={(e) =>
                         updateResultPattern(
                           pattern.id,
                           "minScore",
-                          isNaN(numValue) ? 0 : numValue
-                        );
-                      }}
-                      className="w-full border rounded-lg px-3 py-2"
-                      min={0}
-                    />
+                          parseInt(e.target.value)
+                        )
+                      }
+                      className="w-full border rounded-lg px-3 py-2 bg-white"
+                    >
+                      {Array.from({ length: maxTotalScore + 1 }, (_, i) => i).map(
+                        (score) => (
+                          <option key={score} value={score}>
+                            {score}
+                          </option>
+                        )
+                      )}
+                    </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1">
                       最大スコア
                     </label>
-                    <input
-                      type="number"
+                    <select
                       value={pattern.maxScore}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        const numValue = value === "" ? 0 : Number(value);
+                      onChange={(e) =>
                         updateResultPattern(
                           pattern.id,
                           "maxScore",
-                          isNaN(numValue) ? 0 : numValue
-                        );
-                      }}
-                      className="w-full border rounded-lg px-3 py-2"
-                      min={0}
-                    />
+                          parseInt(e.target.value)
+                        )
+                      }
+                      className="w-full border rounded-lg px-3 py-2 bg-white"
+                    >
+                      {Array.from({ length: maxTotalScore + 1 }, (_, i) => i).map(
+                        (score) => (
+                          <option key={score} value={score}>
+                            {score}
+                          </option>
+                        )
+                      )}
+                    </select>
                   </div>
                 </div>
                 <div className="space-y-3">
