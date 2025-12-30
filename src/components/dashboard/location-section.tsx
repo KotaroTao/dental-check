@@ -2,7 +2,14 @@
 
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { MapPin, Check, SquareCheck, Square, HelpCircle } from "lucide-react";
+import { MapPin, Check, SquareCheck, Square, HelpCircle, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  PREFECTURE_CENTERS,
+  normalizePrefectureName,
+} from "@/data/japan-prefectures";
+
+// 初期表示件数
+const INITIAL_DISPLAY_COUNT = 10;
 
 // Leafletはクライアントサイドのみで読み込む
 const LocationMap = dynamic(() => import("./location-map"), {
@@ -69,6 +76,15 @@ export function LocationSection({
     town: string | null;
     count: number;
   } | null>(null);
+
+  // 地図でフォーカスする地域
+  const [selectedLocation, setSelectedLocation] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+
+  // リスト展開状態
+  const [isExpanded, setIsExpanded] = useState(false);
 
   // 選択されたチャンネルID（初期値は全てのアクティブチャンネル）
   const activeChannels = channels.filter((c) => c.isActive);
@@ -141,6 +157,9 @@ export function LocationSection({
           setTotal(data.total || 0);
           setClinicCenter(data.clinicCenter || null);
           setHotspot(data.hotspot || null);
+          // データ変更時は展開状態と選択をリセット
+          setIsExpanded(false);
+          setSelectedLocation(null);
         }
       } catch (error) {
         console.error("Failed to fetch locations:", error);
@@ -263,6 +282,40 @@ export function LocationSection({
   }
   const aggregatedLocations = Object.values(townAggregated).sort((a, b) => b.count - a.count);
 
+  // 表示する地域（展開状態に応じて制限）
+  const displayedLocations = isExpanded
+    ? aggregatedLocations
+    : aggregatedLocations.slice(0, INITIAL_DISPLAY_COUNT);
+
+  const remainingCount = aggregatedLocations.length - INITIAL_DISPLAY_COUNT;
+  const hasMore = remainingCount > 0;
+
+  // 地域クリック時のハンドラー
+  const handleLocationClick = (loc: { region: string | null; city: string | null; town: string | null }) => {
+    if (!loc.region || !loc.city) return;
+
+    // 元のlocationsからGPS座標を探す
+    const original = locations.find(
+      (l) => l.region === loc.region && l.city === loc.city && l.town === loc.town
+    );
+
+    if (original?.latitude && original?.longitude) {
+      setSelectedLocation({
+        latitude: original.latitude,
+        longitude: original.longitude,
+      });
+    } else {
+      // GPS座標がない場合は都道府県中心座標を使用
+      const prefCenter = PREFECTURE_CENTERS[normalizePrefectureName(loc.region)];
+      if (prefCenter) {
+        setSelectedLocation({
+          latitude: prefCenter[0],
+          longitude: prefCenter[1],
+        });
+      }
+    }
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-sm border p-6">
       <div className="flex items-center gap-2 mb-4">
@@ -300,7 +353,12 @@ export function LocationSection({
         {/* 地図（都道府県ポリゴン表示） */}
         <div>
           {validLocations.length > 0 ? (
-            <LocationMap locations={validLocations} clinicCenter={clinicCenter} hotspot={hotspot} />
+            <LocationMap
+              locations={validLocations}
+              clinicCenter={clinicCenter}
+              hotspot={hotspot}
+              selectedLocation={selectedLocation}
+            />
           ) : (
             <div className="h-64 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">
               位置データなし
@@ -309,9 +367,9 @@ export function LocationSection({
         </div>
 
         {/* リスト */}
-        <div className="max-h-64 overflow-y-auto">
+        <div className="max-h-80 overflow-y-auto">
           <div className="space-y-2">
-            {aggregatedLocations.map((loc, index) => {
+            {displayedLocations.map((loc, index) => {
               const maxCount = aggregatedLocations[0]?.count || 1;
               const percentage = (loc.count / maxCount) * 100;
 
@@ -325,9 +383,13 @@ export function LocationSection({
                   <span className="text-sm text-gray-400 w-5">{index + 1}.</span>
                   <div className="flex-1">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium truncate" title={displayName}>
+                      <button
+                        onClick={() => handleLocationClick(loc)}
+                        className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline truncate text-left"
+                        title={`${displayName}を地図で表示`}
+                      >
                         {displayName}
-                      </span>
+                      </button>
                       <span className="text-sm text-gray-500 ml-2 whitespace-nowrap">{loc.count}件</span>
                     </div>
                     <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
@@ -341,6 +403,26 @@ export function LocationSection({
               );
             })}
           </div>
+
+          {/* もっと見る/折りたたむボタン */}
+          {hasMore && (
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="w-full py-2 mt-2 text-sm text-blue-600 hover:text-blue-800 flex items-center justify-center gap-1 border-t"
+            >
+              {isExpanded ? (
+                <>
+                  <ChevronUp className="w-4 h-4" />
+                  折りたたむ
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="w-4 h-4" />
+                  残り {remainingCount}件を表示
+                </>
+              )}
+            </button>
+          )}
 
           {aggregatedLocations.length === 0 && (
             <p className="text-gray-400 text-sm text-center py-4">

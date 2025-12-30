@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { MapContainer, TileLayer, Circle, Popup, useMapEvents } from "react-leaflet";
+import { useEffect, useMemo, useState } from "react";
+import { MapContainer, TileLayer, Circle, Popup, useMapEvents, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import {
   PREFECTURE_CENTERS,
@@ -26,10 +26,16 @@ interface HotspotData {
   count: number;
 }
 
+interface SelectedLocation {
+  latitude: number;
+  longitude: number;
+}
+
 interface LocationMapProps {
   locations: LocationData[];
   clinicCenter?: { latitude: number; longitude: number } | null;
   hotspot?: HotspotData | null;
+  selectedLocation?: SelectedLocation | null;
 }
 
 interface MarkerData {
@@ -91,6 +97,27 @@ function ZoomTracker({ onZoomChange }: { onZoomChange: (zoom: number) => void })
   return null;
 }
 
+// 地図の中心を動的に変更するコンポーネント
+function MapController({
+  selectedLocation,
+}: {
+  selectedLocation: SelectedLocation | null;
+}) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (selectedLocation) {
+      map.flyTo(
+        [selectedLocation.latitude, selectedLocation.longitude],
+        13, // ズームレベル13（区・町レベル）
+        { duration: 0.5 } // アニメーション0.5秒
+      );
+    }
+  }, [selectedLocation, map]);
+
+  return null;
+}
+
 // マーカー描画コンポーネント
 function MapMarkers({
   markers,
@@ -134,7 +161,7 @@ function MapMarkers({
   );
 }
 
-export default function LocationMap({ locations, clinicCenter, hotspot }: LocationMapProps) {
+export default function LocationMap({ locations, clinicCenter, hotspot, selectedLocation }: LocationMapProps) {
   // 優先順位: 1. 最多読み込み地域 2. クリニック住所 3. 日本の中心
   const defaultCenter: [number, number] = useMemo(() => {
     if (hotspot) return [hotspot.latitude, hotspot.longitude];
@@ -247,6 +274,7 @@ export default function LocationMap({ locations, clinicCenter, hotspot }: Locati
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       <ZoomTracker onZoomChange={setCurrentZoom} />
+      <MapController selectedLocation={selectedLocation || null} />
       <MapMarkers markers={markers} maxCount={maxCount} zoom={currentZoom} />
     </MapContainer>
   );
