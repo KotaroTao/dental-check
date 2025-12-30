@@ -136,7 +136,14 @@ export default function EditDiagnosisPage() {
     fetchDiagnosis();
   }, [id]);
 
+  // 質問の上限
+  const MAX_QUESTIONS = 200;
+
   const addQuestion = () => {
+    if (questions.length >= MAX_QUESTIONS) {
+      setError(`質問は最大${MAX_QUESTIONS}件までです`);
+      return;
+    }
     setQuestions([
       ...questions,
       {
@@ -419,8 +426,19 @@ export default function EditDiagnosisPage() {
         {/* 質問 */}
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">質問</h2>
-            <Button type="button" variant="outline" size="sm" onClick={addQuestion}>
+            <div>
+              <h2 className="text-lg font-semibold">質問</h2>
+              <p className="text-sm text-gray-500 mt-1">
+                {questions.length} / {MAX_QUESTIONS} 件
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={addQuestion}
+              disabled={questions.length >= MAX_QUESTIONS}
+            >
               <Plus className="w-4 h-4 mr-1" />
               質問を追加
             </Button>
