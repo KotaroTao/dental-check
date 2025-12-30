@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { checkSubscription } from "@/lib/subscription";
-import { getClientIP, getLocationFromIP } from "@/lib/geolocation";
 
 export async function GET(
   request: NextRequest,
@@ -38,37 +37,9 @@ export async function GET(
       );
     }
 
-    // linkタイプの場合
+    // linkタイプの場合 → プロファイル入力ページへ
     if (channel.channelType === "link" && channel.redirectUrl) {
-      // スキャン回数をインクリメント（非同期で並行実行）
-      const updatePromise = prisma.channel.update({
-        where: { id: channel.id },
-        data: { scanCount: { increment: 1 } },
-      });
-
-      // AccessLogに記録（位置情報付き）
-      const ip = getClientIP(request);
-      const location = await getLocationFromIP(ip);
-
-      const accessLogPromise = prisma.accessLog.create({
-        data: {
-          clinicId: channel.clinicId,
-          channelId: channel.id,
-          eventType: "qr_scan",
-          userAgent: request.headers.get("user-agent") || null,
-          referer: request.headers.get("referer") || null,
-          ipAddress: ip !== "unknown" ? ip : null,
-          country: location?.countryCode || null,
-          region: location?.regionName || null,
-          city: location?.city || null,
-        },
-      });
-
-      // 両方の処理を並行実行（エラーは無視してリダイレクトを優先）
-      await Promise.allSettled([updatePromise, accessLogPromise]);
-
-      // リダイレクト先URLへ
-      return NextResponse.redirect(channel.redirectUrl);
+      return NextResponse.redirect(new URL(`/c/${code}/link`, request.url));
     }
 
     // どちらでもない場合はトップへ

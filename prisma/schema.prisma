@@ -125,7 +125,8 @@ model DiagnosisSession {
   id              String    @id @default(uuid())
   clinicId        String?   @map("clinic_id")
   channelId       String?   @map("channel_id")
-  diagnosisTypeId String    @map("diagnosis_type_id")
+  diagnosisTypeId String?   @map("diagnosis_type_id")  // linkタイプはnull
+  sessionType     String    @default("diagnosis") @map("session_type")  // "diagnosis" | "link"
   isDemo          Boolean   @default(false) @map("is_demo")
   userAge         Int?      @map("user_age")
   userGender      String?   @map("user_gender")
@@ -144,15 +145,16 @@ model DiagnosisSession {
   latitude        Float?    // 緯度（小数点2桁、約1km精度）
   longitude       Float?    // 経度（小数点2桁、約1km精度）
 
-  clinic        Clinic?       @relation(fields: [clinicId], references: [id], onDelete: SetNull)
-  channel       Channel?      @relation(fields: [channelId], references: [id], onDelete: SetNull)
-  diagnosisType DiagnosisType @relation(fields: [diagnosisTypeId], references: [id])
+  clinic        Clinic?        @relation(fields: [clinicId], references: [id], onDelete: SetNull)
+  channel       Channel?       @relation(fields: [channelId], references: [id], onDelete: SetNull)
+  diagnosisType DiagnosisType? @relation(fields: [diagnosisTypeId], references: [id])  // linkタイプはnull
   ctaClicks     CTAClick[]
 
   @@index([channelId])
   @@index([clinicId, region])
   @@index([clinicId, createdAt]) // 期間検索の高速化
   @@index([clinicId, completedAt, isDemo, createdAt]) // ダッシュボード集計の高速化
+  @@index([clinicId, sessionType]) // セッションタイプ別集計
   @@map("diagnosis_sessions")
 }
 
