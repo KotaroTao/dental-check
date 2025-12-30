@@ -140,6 +140,7 @@ export async function GET(request: NextRequest) {
       userAge: number | null;
       userGender: string | null;
       resultCategory: string | null;
+      sessionType: string | null;
       region: string | null;
       city: string | null;
       channel: { id: string; name: string } | null;
@@ -167,14 +168,23 @@ export async function GET(request: NextRequest) {
       }
 
       const ctaClick = s.ctaClicks[0];
+
+      // セッションタイプに応じた表示名を決定
+      let diagnosisTypeName: string;
+      if (s.sessionType === "link") {
+        diagnosisTypeName = "リンクQR";
+      } else {
+        diagnosisTypeName = s.diagnosisType?.name || DIAGNOSIS_TYPE_NAMES[s.diagnosisType?.slug || ""] || "不明";
+      }
+
       return {
         id: s.id,
-        type: "diagnosis" as const,
+        type: s.sessionType === "link" ? "link" as const : "diagnosis" as const,
         createdAt: s.createdAt,
         userAge: s.userAge,
         userGender: s.userGender ? GENDER_NAMES[s.userGender] || s.userGender : null,
-        diagnosisType: s.diagnosisType?.name || DIAGNOSIS_TYPE_NAMES[s.diagnosisType?.slug || ""] || "不明",
-        diagnosisTypeSlug: s.diagnosisType?.slug,
+        diagnosisType: diagnosisTypeName,
+        diagnosisTypeSlug: s.diagnosisType?.slug || null,
         channelName: s.channel?.name || "不明",
         channelId: s.channel?.id,
         area,
