@@ -19,6 +19,7 @@ interface LocationData {
 
 interface LocationMapProps {
   locations: LocationData[];
+  clinicCenter?: { latitude: number; longitude: number } | null;
 }
 
 interface MarkerData {
@@ -123,9 +124,11 @@ function MapMarkers({
   );
 }
 
-export default function LocationMap({ locations }: LocationMapProps) {
-  // 日本の中心付近
-  const defaultCenter: [number, number] = [36.5, 138.0];
+export default function LocationMap({ locations, clinicCenter }: LocationMapProps) {
+  // クリニックの住所座標があればそれを使用、なければ日本の中心付近
+  const defaultCenter: [number, number] = clinicCenter
+    ? [clinicCenter.latitude, clinicCenter.longitude]
+    : [36.5, 138.0];
 
   // マーカーデータを生成
   const markers = useMemo(() => {
@@ -195,7 +198,10 @@ export default function LocationMap({ locations }: LocationMapProps) {
 
   // 初期ズームレベルを計算
   const initialZoom = useMemo(() => {
-    if (!bounds) return 5;
+    if (!bounds) {
+      // マーカーがない場合、クリニック座標があれば市レベル（11）、なければ日本全体（5）
+      return clinicCenter ? 11 : 5;
+    }
     const latDiff = bounds.maxLat - bounds.minLat;
     const lngDiff = bounds.maxLng - bounds.minLng;
     const maxDiff = Math.max(latDiff, lngDiff);
@@ -206,7 +212,7 @@ export default function LocationMap({ locations }: LocationMapProps) {
     if (maxDiff < 2) return 9;
     if (maxDiff < 5) return 7;
     return 5;
-  }, [bounds]);
+  }, [bounds, clinicCenter]);
 
   // 現在のズームレベル
   const [currentZoom, setCurrentZoom] = useState(initialZoom);
