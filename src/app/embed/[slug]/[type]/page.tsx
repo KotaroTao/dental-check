@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { diagnosisTypes } from "@/data/diagnosis-types";
+import { getDiagnosisType } from "@/data/diagnosis-types";
 import { DiagnosisFlow } from "@/components/diagnosis/diagnosis-flow";
 import { prisma } from "@/lib/prisma";
 import { checkSubscription } from "@/lib/subscription";
@@ -39,9 +39,49 @@ async function getClinic(slug: string) {
   return clinic;
 }
 
+// 診断タイプをDBから取得（フォールバック: 静的データ）
+async function getDiagnosis(slug: string) {
+  // まずデータベースから取得を試みる
+  try {
+    const dbDiagnosis = await prisma.diagnosisType.findUnique({
+      where: { slug, isActive: true },
+    });
+
+    if (dbDiagnosis) {
+      // DBの診断データをDiagnosisFlow用の形式に変換
+      const questions = dbDiagnosis.questions as Array<{
+        id: number;
+        text: string;
+        choices: Array<{ text: string; score: number }>;
+      }>;
+      const resultPatterns = dbDiagnosis.resultPatterns as Array<{
+        minScore: number;
+        maxScore: number;
+        category: string;
+        title: string;
+        message: string;
+        ageModifier?: number;
+      }>;
+
+      return {
+        slug: dbDiagnosis.slug,
+        name: dbDiagnosis.name,
+        description: dbDiagnosis.description || "",
+        questions,
+        resultPatterns,
+      };
+    }
+  } catch (error) {
+    console.error("Failed to fetch diagnosis from DB:", error);
+  }
+
+  // DBになければハードコードされたデータを使用（フォールバック）
+  return getDiagnosisType(slug);
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug, type } = await params;
-  const diagnosis = diagnosisTypes[type];
+  const diagnosis = await getDiagnosis(type);
   const clinic = await getClinic(slug);
 
   return {
@@ -53,8 +93,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function EmbedDiagnosisPage({ params }: Props) {
   const { slug, type } = await params;
 
-  // 診断タイプを取得
-  const diagnosis = diagnosisTypes[type];
+  // 診断タイプを取得（DB優先、フォールバック: 静的データ）
+  const diagnosis = await getDiagnosis(type);
   if (!diagnosis) {
     notFound();
   }
