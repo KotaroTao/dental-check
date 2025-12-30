@@ -36,9 +36,9 @@ export async function GET(
       return NextResponse.redirect(`${baseUrl}/c/${code}/expired`);
     }
 
-    // diagnosisタイプの場合は従来のルートへリダイレクト
+    // diagnosisタイプの場合 → プロファイル入力ページへ
     if (channel.channelType === "diagnosis" && channel.diagnosisTypeSlug) {
-      return NextResponse.redirect(`${baseUrl}/c/${code}/${channel.diagnosisTypeSlug}`);
+      return NextResponse.redirect(`${baseUrl}/c/${code}/profile`);
     }
 
     // linkタイプの場合 → プロファイル入力ページへ

@@ -22,12 +22,12 @@ interface Props {
 }
 
 export function ResultCard({ diagnosis, isDemo, clinicSlug, ctaConfig, clinicName, mainColor, channelId }: Props) {
-  const { userAge, userGender, answers, totalScore, resultPattern, oralAge, locationConsent, reset } =
+  const { userAge, userGender, answers, totalScore, resultPattern, oralAge, latitude, longitude, reset } =
     useDiagnosisStore();
   const hasTrackedRef = useRef(false);
-  const hasLocationRequestedRef = useRef(false);
 
   // 診断完了をトラッキング（非デモモードのみ、1回だけ）
+  // 位置情報はプロファイルページで事前に取得済み
   useEffect(() => {
     if (isDemo || !channelId || !resultPattern || hasTrackedRef.current) return;
     hasTrackedRef.current = true;
@@ -43,50 +43,11 @@ export function ResultCard({ diagnosis, isDemo, clinicSlug, ctaConfig, clinicNam
         answers,
         totalScore,
         resultCategory: resultPattern.category,
+        latitude,
+        longitude,
       }),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.sessionId && locationConsent && !hasLocationRequestedRef.current) {
-          hasLocationRequestedRef.current = true;
-          // 位置情報取得を非同期で実行（ユーザーの同意済み）
-          requestLocationAndUpdate(data.sessionId);
-        }
-      })
-      .catch(() => {});
-  }, [isDemo, channelId, diagnosis.slug, resultPattern, userAge, userGender, answers, totalScore, locationConsent]);
-
-  // 位置情報を取得してサーバーに送信
-  const requestLocationAndUpdate = async (sessionId: string) => {
-    // SSR時はスキップ
-    if (typeof window === "undefined") return;
-
-    // Geolocation APIが利用可能かチェック
-    if (!navigator.geolocation) return;
-
-    try {
-      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0,
-        });
-      });
-
-      // 位置情報をサーバーに送信
-      await fetch("/api/track/update-location", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId,
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-        }),
-      });
-    } catch {
-      // ユーザーが拒否した場合やエラーの場合は何もしない
-    }
-  };
+    }).catch(() => {});
+  }, [isDemo, channelId, diagnosis.slug, resultPattern, userAge, userGender, answers, totalScore, latitude, longitude]);
 
   if (!resultPattern) return null;
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useDiagnosisStore } from "@/lib/diagnosis-store";
 import { DiagnosisType } from "@/data/diagnosis-types";
 import { ProfileForm } from "./profile-form";
@@ -19,13 +19,22 @@ interface Props {
 }
 
 export function DiagnosisFlow({ diagnosis, isDemo, clinicSlug, ctaConfig, clinicName, mainColor, channelId }: Props) {
-  const { userAge, currentStep, resultPattern, reset } =
+  const { userAge, currentStep, resultPattern, reset, answers } =
     useDiagnosisStore();
+  const hasInitialized = useRef(false);
 
-  // コンポーネントがマウントされたらリセット
+  // コンポーネントがマウントされたらリセット（ただしプロファイル入力済みで未回答の場合はスキップ）
   useEffect(() => {
+    if (hasInitialized.current) return;
+    hasInitialized.current = true;
+
+    // プロファイル入力済みで回答がまだない場合はリセットしない（プロファイルページから遷移）
+    if (userAge !== null && answers.length === 0 && resultPattern === null) {
+      return;
+    }
+    // それ以外はリセット（新規開始または再診断）
     reset();
-  }, [reset]);
+  }, [reset, userAge, answers.length, resultPattern]);
 
   // プロフィール未入力の場合
   if (userAge === null) {
