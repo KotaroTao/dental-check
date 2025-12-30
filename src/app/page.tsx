@@ -20,6 +20,12 @@ import {
   Shield,
   Clock,
   Award,
+  CheckCircle2,
+  HeartPulse,
+  Users,
+  MousePointerClick,
+  PieChart,
+  Settings,
 } from "lucide-react";
 
 export default function Home() {
@@ -118,6 +124,170 @@ export default function Home() {
               <div className="flex items-center gap-2">
                 <Award className="w-4 h-4 text-purple-500" />
                 <span>解約いつでもOK</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* どんなことができるの？セクション */}
+      <section id="what-can-do" className="py-24 bg-white">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <span className="inline-block px-4 py-2 bg-gradient-to-r from-blue-100 to-purple-100 text-blue-700 rounded-full text-sm font-medium mb-4">
+              WHAT WE OFFER
+            </span>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              どんなことができるの？
+            </h2>
+            <p className="text-gray-600 max-w-2xl mx-auto">
+              くるくる診断DXは、QRコードを活用した診断コンテンツで
+              <br className="hidden sm:block" />
+              歯科医院の集患をサポートする便利なツールです
+            </p>
+          </div>
+
+          <div className="max-w-6xl mx-auto">
+            {/* 主な機能カード */}
+            <div className="grid md:grid-cols-3 gap-8 mb-16">
+              {/* 機能1: 診断コンテンツ作成 */}
+              <div className="group relative bg-gradient-to-br from-blue-50 to-indigo-50 rounded-3xl p-8 border border-blue-100 hover:shadow-xl hover:shadow-blue-100/50 transition-all duration-300 hover:-translate-y-2">
+                <div className="absolute top-4 right-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                  <HeartPulse className="w-24 h-24 text-blue-600" />
+                </div>
+                <div className="relative">
+                  <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-blue-500/30 group-hover:scale-110 transition-transform duration-300">
+                    <HeartPulse className="w-8 h-8 text-white" />
+                  </div>
+                  <h3 className="font-bold text-xl text-gray-900 mb-3">お口の健康診断コンテンツ</h3>
+                  <p className="text-gray-600 leading-relaxed mb-4">
+                    「お口年齢診断」や「矯正タイミングチェック」など、患者さんが気軽に試せる診断を提供。
+                  </p>
+                  <ul className="space-y-2">
+                    <li className="flex items-center gap-2 text-sm text-gray-600">
+                      <CheckCircle2 className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                      約2分で完了するカンタン診断
+                    </li>
+                    <li className="flex items-center gap-2 text-sm text-gray-600">
+                      <CheckCircle2 className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                      スマホで手軽にアクセス
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* 機能2: QRコード発行 */}
+              <div className="group relative bg-gradient-to-br from-green-50 to-emerald-50 rounded-3xl p-8 border border-green-100 hover:shadow-xl hover:shadow-green-100/50 transition-all duration-300 hover:-translate-y-2">
+                <div className="absolute top-4 right-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                  <QrCode className="w-24 h-24 text-green-600" />
+                </div>
+                <div className="relative">
+                  <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-green-500/30 group-hover:scale-110 transition-transform duration-300">
+                    <QrCode className="w-8 h-8 text-white" />
+                  </div>
+                  <h3 className="font-bold text-xl text-gray-900 mb-3">経路別QRコード発行</h3>
+                  <p className="text-gray-600 leading-relaxed mb-4">
+                    チラシ・看板・SNS広告など、設置場所ごとに別々のQRコードを発行できます。
+                  </p>
+                  <ul className="space-y-2">
+                    <li className="flex items-center gap-2 text-sm text-gray-600">
+                      <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
+                      何個でも無制限に作成
+                    </li>
+                    <li className="flex items-center gap-2 text-sm text-gray-600">
+                      <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
+                      自由なタグ名で管理
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* 機能3: 効果計測 */}
+              <div className="group relative bg-gradient-to-br from-purple-50 to-violet-50 rounded-3xl p-8 border border-purple-100 hover:shadow-xl hover:shadow-purple-100/50 transition-all duration-300 hover:-translate-y-2">
+                <div className="absolute top-4 right-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                  <PieChart className="w-24 h-24 text-purple-600" />
+                </div>
+                <div className="relative">
+                  <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-violet-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-purple-500/30 group-hover:scale-110 transition-transform duration-300">
+                    <PieChart className="w-8 h-8 text-white" />
+                  </div>
+                  <h3 className="font-bold text-xl text-gray-900 mb-3">広告効果をデータで可視化</h3>
+                  <p className="text-gray-600 leading-relaxed mb-4">
+                    どの経路からの診断が多いか、どこから予約につながったかを一目で把握。
+                  </p>
+                  <ul className="space-y-2">
+                    <li className="flex items-center gap-2 text-sm text-gray-600">
+                      <CheckCircle2 className="w-4 h-4 text-purple-500 flex-shrink-0" />
+                      経路別のアクセス数を表示
+                    </li>
+                    <li className="flex items-center gap-2 text-sm text-gray-600">
+                      <CheckCircle2 className="w-4 h-4 text-purple-500 flex-shrink-0" />
+                      効果の高い施策がわかる
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* 歯科医院にとってのメリット */}
+            <div className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 rounded-3xl p-8 md:p-12 relative overflow-hidden">
+              {/* 装飾 */}
+              <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl" />
+              <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl" />
+
+              <div className="relative">
+                <h3 className="text-2xl md:text-3xl font-bold text-white text-center mb-4">
+                  歯科医院にとってのメリット
+                </h3>
+                <p className="text-gray-400 text-center max-w-xl mx-auto mb-10">
+                  くるくる診断DXを導入することで、こんな効果が期待できます
+                </p>
+
+                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {/* メリット1 */}
+                  <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10 hover:bg-white/10 transition-colors">
+                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mb-4">
+                      <Users className="w-6 h-6 text-white" />
+                    </div>
+                    <h4 className="font-bold text-white mb-2">潜在患者を獲得</h4>
+                    <p className="text-gray-400 text-sm leading-relaxed">
+                      「歯医者に行くほどではない」と思っている人にも診断で気づきを与え、来院のきっかけを作ります。
+                    </p>
+                  </div>
+
+                  {/* メリット2 */}
+                  <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10 hover:bg-white/10 transition-colors">
+                    <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center mb-4">
+                      <MousePointerClick className="w-6 h-6 text-white" />
+                    </div>
+                    <h4 className="font-bold text-white mb-2">予約へ直接誘導</h4>
+                    <p className="text-gray-400 text-sm leading-relaxed">
+                      診断結果画面に予約ボタンを表示。興味を持ったその瞬間に行動につなげます。
+                    </p>
+                  </div>
+
+                  {/* メリット3 */}
+                  <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10 hover:bg-white/10 transition-colors">
+                    <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center mb-4">
+                      <BarChart3 className="w-6 h-6 text-white" />
+                    </div>
+                    <h4 className="font-bold text-white mb-2">広告費を最適化</h4>
+                    <p className="text-gray-400 text-sm leading-relaxed">
+                      どの広告が効果的かデータでわかるので、無駄な広告費を削減できます。
+                    </p>
+                  </div>
+
+                  {/* メリット4 */}
+                  <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10 hover:bg-white/10 transition-colors">
+                    <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center mb-4">
+                      <Settings className="w-6 h-6 text-white" />
+                    </div>
+                    <h4 className="font-bold text-white mb-2">手間なく簡単導入</h4>
+                    <p className="text-gray-400 text-sm leading-relaxed">
+                      技術的な知識は一切不要。登録後すぐにQRコードを発行して使い始められます。
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
