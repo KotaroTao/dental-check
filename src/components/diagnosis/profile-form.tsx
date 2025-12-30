@@ -21,7 +21,7 @@ export function ProfileForm({ diagnosisName }: Props) {
   const [agreed, setAgreed] = useState(false);
   const [showLocationStep, setShowLocationStep] = useState(false);
   const [isRequestingLocation, setIsRequestingLocation] = useState(false);
-  const { setProfile } = useDiagnosisStore();
+  const { setProfile, setLocation } = useDiagnosisStore();
 
   // フォーム送信 → 位置情報ステップへ
   const handleSubmit = (e: React.FormEvent) => {
@@ -35,33 +35,36 @@ export function ProfileForm({ diagnosisName }: Props) {
   // 位置情報を許可して診断開始
   const handleAllowLocation = async () => {
     setIsRequestingLocation(true);
-    let locationGranted = false;
+    let latitude: number | null = null;
+    let longitude: number | null = null;
 
     if (typeof window !== "undefined" && navigator.geolocation) {
       try {
-        await new Promise<GeolocationPosition>((resolve, reject) => {
+        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
           navigator.geolocation.getCurrentPosition(resolve, reject, {
             enableHighAccuracy: true,
             timeout: 10000,
             maximumAge: 0,
           });
         });
-        locationGranted = true;
+        latitude = position.coords.latitude;
+        longitude = position.coords.longitude;
       } catch {
         // GPS拒否またはエラー → 続行
-        locationGranted = false;
       }
     }
 
     setIsRequestingLocation(false);
     const ageNum = parseInt(age, 10);
-    setProfile(ageNum, gender!, locationGranted);
+    setProfile(ageNum, gender!, latitude !== null);
+    setLocation(latitude, longitude);
   };
 
   // 位置情報をスキップして診断開始
   const handleSkipLocation = () => {
     const ageNum = parseInt(age, 10);
     setProfile(ageNum, gender!, false);
+    setLocation(null, null);
   };
 
   const isValid = age && parseInt(age, 10) > 0 && parseInt(age, 10) < 120 && gender && agreed;
