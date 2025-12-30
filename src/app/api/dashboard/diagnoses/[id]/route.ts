@@ -106,6 +106,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       }
     }
 
+    const oldSlug = existingDiagnosis.slug;
+    const newSlug = slug || oldSlug;
+
     const diagnosis = await prisma.diagnosisType.update({
       where: { id },
       data: {
@@ -117,6 +120,19 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         ...(isActive !== undefined && { isActive }),
       },
     });
+
+    // スラッグが変更された場合、関連するチャンネルも更新
+    if (slug && slug !== oldSlug) {
+      await prisma.channel.updateMany({
+        where: {
+          clinicId: session.clinicId,
+          diagnosisTypeSlug: oldSlug,
+        },
+        data: {
+          diagnosisTypeSlug: newSlug,
+        },
+      });
+    }
 
     return NextResponse.json({ diagnosis });
   } catch (error) {
