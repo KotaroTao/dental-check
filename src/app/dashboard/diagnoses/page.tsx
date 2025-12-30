@@ -87,46 +87,8 @@ export default function DiagnosesPage() {
         )}
       </div>
 
-      {/* デフォルト診断 */}
-      <div className="mb-8">
-        <h2 className="text-lg font-semibold mb-4 text-gray-700">デフォルト診断</h2>
-        <div className="bg-white rounded-lg shadow divide-y">
-          {systemDiagnoses.length === 0 ? (
-            <div className="p-6 text-center text-gray-500">
-              デフォルト診断がありません
-            </div>
-          ) : (
-            systemDiagnoses.map((diagnosis) => (
-              <div key={diagnosis.id} className="p-4 flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-medium">{diagnosis.name}</h3>
-                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
-                      デフォルト
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {diagnosis.description || "説明なし"}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    スラッグ: {diagnosis.slug}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Link href={`/demo/${diagnosis.slug}`} target="_blank">
-                    <Button variant="outline" size="sm">
-                      <Eye className="w-4 h-4" />
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-
       {/* オリジナル診断 */}
-      <div>
+      <div className="mb-8">
         <h2 className="text-lg font-semibold mb-4 text-gray-700">オリジナル診断</h2>
         <div className="bg-white rounded-lg shadow divide-y">
           {customDiagnoses.length === 0 ? (
@@ -205,6 +167,44 @@ export default function DiagnosesPage() {
                       )}
                     </>
                   )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* デフォルト診断 */}
+      <div>
+        <h2 className="text-lg font-semibold mb-4 text-gray-700">デフォルト診断</h2>
+        <div className="bg-white rounded-lg shadow divide-y">
+          {systemDiagnoses.length === 0 ? (
+            <div className="p-6 text-center text-gray-500">
+              デフォルト診断がありません
+            </div>
+          ) : (
+            systemDiagnoses.map((diagnosis) => (
+              <div key={diagnosis.id} className="p-4 flex items-center justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-medium">{diagnosis.name}</h3>
+                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
+                      デフォルト
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {diagnosis.description || "説明なし"}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    スラッグ: {diagnosis.slug}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Link href={`/demo/${diagnosis.slug}`} target="_blank">
+                    <Button variant="outline" size="sm">
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                  </Link>
                 </div>
               </div>
             ))
