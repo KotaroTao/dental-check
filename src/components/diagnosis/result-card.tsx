@@ -35,13 +35,31 @@ export function ResultCard({ diagnosis, isDemo, clinicSlug, ctaConfig, clinicNam
       console.log("Waiting for Zustand hydration...");
       return;
     }
-    if (isDemo || !channelId || !resultPattern || hasTrackedRef.current) {
-      console.log("Skip tracking:", { isDemo, channelId: !!channelId, resultPattern: !!resultPattern, hasTracked: hasTrackedRef.current });
+
+    // トラッキングをスキップする条件をチェック
+    if (isDemo) {
+      console.log("Skip tracking: demo mode");
       return;
     }
+    if (!channelId) {
+      console.log("Skip tracking: no channelId");
+      return;
+    }
+    if (!resultPattern) {
+      console.log("Skip tracking: no resultPattern");
+      return;
+    }
+    if (hasTrackedRef.current) {
+      console.log("Skip tracking: already tracked");
+      return;
+    }
+
+    // トラッキング済みフラグを設定
     hasTrackedRef.current = true;
 
     console.log("Tracking diagnosis completion:", {
+      channelId,
+      diagnosisType: diagnosis.slug,
       userAge,
       userGender,
       latitude,
@@ -51,6 +69,7 @@ export function ResultCard({ diagnosis, isDemo, clinicSlug, ctaConfig, clinicNam
       resultCategory: resultPattern.category,
     });
 
+    // 診断完了をAPIに送信
     fetch("/api/track/complete", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -66,12 +85,23 @@ export function ResultCard({ diagnosis, isDemo, clinicSlug, ctaConfig, clinicNam
         longitude,
       }),
     })
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        return res.json();
+      })
       .then((data) => {
-        console.log("Track complete response:", data);
+        if (data.success) {
+          console.log("Track complete success:", { sessionId: data.sessionId, tracked: data.tracked });
+        } else {
+          console.error("Track complete failed:", data);
+        }
       })
       .catch((err) => {
         console.error("Track complete error:", err);
+        // エラー時はフラグをリセットしてリトライ可能に
+        hasTrackedRef.current = false;
       });
   }, [_hasHydrated, isDemo, channelId, diagnosis.slug, resultPattern, userAge, userGender, answers, totalScore, latitude, longitude]);
 

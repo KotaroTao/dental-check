@@ -23,7 +23,7 @@ export function DiagnosisFlow({ diagnosis, isDemo, clinicSlug, ctaConfig, clinic
     useDiagnosisStore();
   const hasInitialized = useRef(false);
 
-  // コンポーネントがマウントされたらリセット（ただしプロファイル入力済みで未回答の場合はスキップ）
+  // コンポーネントがマウントされたらリセット（特定の条件ではスキップ）
   // Zustandストアのハイドレーション完了を待つ
   useEffect(() => {
     if (!_hasHydrated) return;
@@ -32,12 +32,19 @@ export function DiagnosisFlow({ diagnosis, isDemo, clinicSlug, ctaConfig, clinic
 
     console.log("DiagnosisFlow initialized:", { userAge, answersLength: answers.length, resultPattern: !!resultPattern });
 
+    // 結果が既にある場合はリセットしない（診断完了後のリロードなど）
+    if (resultPattern !== null) {
+      console.log("Skipping reset - result already exists");
+      return;
+    }
+
     // プロファイル入力済みで回答がまだない場合はリセットしない（プロファイルページから遷移）
-    if (userAge !== null && answers.length === 0 && resultPattern === null) {
+    if (userAge !== null && answers.length === 0) {
       console.log("Skipping reset - profile already entered");
       return;
     }
-    // それ以外はリセット（新規開始または再診断）
+
+    // それ以外はリセット（新規開始）
     console.log("Resetting diagnosis state");
     reset();
   }, [_hasHydrated, reset, userAge, answers.length, resultPattern]);
