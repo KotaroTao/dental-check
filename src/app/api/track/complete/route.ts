@@ -142,6 +142,7 @@ export async function POST(request: NextRequest) {
 
 /**
  * 緯度経度から住所情報を取得（逆ジオコーディング）
+ * タイムアウトとリトライ機能付き
  */
 async function reverseGeocode(lat: number, lon: number): Promise<{
   country: string;
@@ -152,56 +153,91 @@ async function reverseGeocode(lat: number, lon: number): Promise<{
   console.log(`=== Reverse Geocode ===`);
   console.log(`Input: lat=${lat}, lon=${lon}`);
 
-  try {
-    // OpenStreetMap Nominatim API（無料、1リクエスト/秒制限）
-    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=ja`;
-    console.log(`Nominatim URL: ${url}`);
+  const maxRetries = 3;
+  const timeoutMs = 10000; // 10秒タイムアウト
 
-    const response = await fetch(url, {
-      headers: {
-        // Nominatim Usage Policy要件: アプリ名、URL、連絡先を含むUser-Agent
-        "User-Agent": "DentalCheckApp/1.0 (https://qrqr-dental.com; mail@function-t.com)",
-      },
-    });
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      // OpenStreetMap Nominatim API（無料、1リクエスト/秒制限）
+      const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=ja`;
+      console.log(`Nominatim attempt ${attempt}/${maxRetries}: ${url}`);
 
-    console.log(`Nominatim response status: ${response.status}`);
+      // AbortControllerでタイムアウトを実装
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Nominatim API error: status=${response.status}, body=${errorText}`);
+      const response = await fetch(url, {
+        headers: {
+          // Nominatim Usage Policy要件: アプリ名、URL、連絡先を含むUser-Agent
+          "User-Agent": "DentalCheckApp/1.0 (https://qrqr-dental.com; mail@function-t.com)",
+        },
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      console.log(`Nominatim response status: ${response.status}`);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Nominatim API error: status=${response.status}, body=${errorText}`);
+        // 429 (Too Many Requests) の場合はリトライ
+        if (response.status === 429 && attempt < maxRetries) {
+          const waitTime = attempt * 2000; // 2秒, 4秒, 6秒
+          console.log(`Rate limited, waiting ${waitTime}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+          continue;
+        }
+        return null;
+      }
+
+      const data = await response.json();
+      console.log(`Nominatim response:`, JSON.stringify(data.address || {}, null, 2));
+
+      const address = data.address;
+
+      if (!address) {
+        console.warn("Nominatim returned no address data");
+        return null;
+      }
+
+      // 都道府県を取得（state または province）
+      const region = address.state || address.province || "";
+
+      // 市区町村を取得（city, town, village, municipality のいずれか）
+      const city = address.city || address.town || address.village || address.municipality || "";
+
+      // 町丁目を取得（フォールバック付き）
+      const town = address.neighbourhood || address.quarter || address.suburb || "";
+
+      const result = {
+        country: address.country_code?.toUpperCase() || "JP",
+        region,
+        city,
+        town,
+      };
+
+      console.log(`Geocode result:`, result);
+      return result;
+    } catch (error) {
+      const isTimeout = error instanceof Error && error.name === "AbortError";
+      const isNetworkError = error instanceof Error && error.message.includes("fetch failed");
+
+      console.error(`Reverse geocode error (attempt ${attempt}/${maxRetries}):`,
+        isTimeout ? "Request timed out" : error);
+
+      // タイムアウトまたはネットワークエラーの場合はリトライ
+      if ((isTimeout || isNetworkError) && attempt < maxRetries) {
+        const waitTime = attempt * 1000; // 1秒, 2秒, 3秒
+        console.log(`Waiting ${waitTime}ms before retry...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+        continue;
+      }
+
       return null;
     }
-
-    const data = await response.json();
-    console.log(`Nominatim response:`, JSON.stringify(data.address || {}, null, 2));
-
-    const address = data.address;
-
-    if (!address) {
-      console.warn("Nominatim returned no address data");
-      return null;
-    }
-
-    // 都道府県を取得（state または province）
-    const region = address.state || address.province || "";
-
-    // 市区町村を取得（city, town, village, municipality のいずれか）
-    const city = address.city || address.town || address.village || address.municipality || "";
-
-    // 町丁目を取得（フォールバック付き）
-    const town = address.neighbourhood || address.quarter || address.suburb || "";
-
-    const result = {
-      country: address.country_code?.toUpperCase() || "JP",
-      region,
-      city,
-      town,
-    };
-
-    console.log(`Geocode result:`, result);
-    return result;
-  } catch (error) {
-    console.error("Reverse geocode error:", error);
-    return null;
   }
+
+  console.error("All geocode attempts failed");
+  return null;
 }
