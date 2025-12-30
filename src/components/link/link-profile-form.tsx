@@ -55,10 +55,15 @@ export function LinkProfileForm({ channelId, channelName, redirectUrl, mainColor
         }),
       });
 
+      // APIレスポンスをデバッグ
+      console.log("API response status:", response.status);
       const data = await response.json();
+      console.log("API response data:", data);
+      console.log("Props redirectUrl:", redirectUrl);
 
       // リダイレクト（APIからのURLを優先、フォールバックはpropsのURL）
       const targetUrl = (data.success && data.redirectUrl) ? data.redirectUrl : redirectUrl;
+      console.log("Target URL:", targetUrl);
 
       // 安全なURLかチェック（http/httpsで始まる外部URL）
       if (targetUrl && (targetUrl.startsWith("http://") || targetUrl.startsWith("https://"))) {
@@ -122,15 +127,19 @@ export function LinkProfileForm({ channelId, channelName, redirectUrl, mainColor
         }),
       });
 
+      console.log("Skip API response status:", response.status);
       const data = await response.json();
+      console.log("Skip API response data:", data);
       const targetUrl = (data.success && data.redirectUrl) ? data.redirectUrl : redirectUrl;
+      console.log("Skip Target URL:", targetUrl);
 
       if (targetUrl && (targetUrl.startsWith("http://") || targetUrl.startsWith("https://"))) {
         window.location.href = targetUrl;
       } else {
         window.location.href = redirectUrl;
       }
-    } catch {
+    } catch (err) {
+      console.error("Skip error:", err);
       window.location.href = redirectUrl;
     }
   };
