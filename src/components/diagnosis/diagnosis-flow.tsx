@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDiagnosisStore } from "@/lib/diagnosis-store";
 import { DiagnosisType } from "@/data/diagnosis-types";
 import { ProfileForm } from "./profile-form";
@@ -22,9 +22,16 @@ export function DiagnosisFlow({ diagnosis, isDemo, clinicSlug, ctaConfig, clinic
   const { userAge, currentStep, resultPattern, reset, answers } =
     useDiagnosisStore();
   const hasInitialized = useRef(false);
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  // ハイドレーション完了を待つ
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
 
   // コンポーネントがマウントされたらリセット（ただしプロファイル入力済みで未回答の場合はスキップ）
   useEffect(() => {
+    if (!isHydrated) return;
     if (hasInitialized.current) return;
     hasInitialized.current = true;
 
@@ -34,7 +41,18 @@ export function DiagnosisFlow({ diagnosis, isDemo, clinicSlug, ctaConfig, clinic
     }
     // それ以外はリセット（新規開始または再診断）
     reset();
-  }, [reset, userAge, answers.length, resultPattern]);
+  }, [isHydrated, reset, userAge, answers.length, resultPattern]);
+
+  // ハイドレーション中はローディング表示
+  if (!isHydrated) {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-lg">
+        <div className="flex justify-center items-center h-40">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+        </div>
+      </div>
+    );
+  }
 
   // プロフィール未入力の場合
   if (userAge === null) {
