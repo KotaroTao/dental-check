@@ -124,10 +124,6 @@ export default function ChannelDetailPage() {
   };
 
   // 埋め込み用HTMLコード
-  const embedIframe = channel
-    ? `<iframe src="${qrUrl}" width="100%" height="600" style="border: none; border-radius: 8px;" title="${channel.name}"></iframe>`
-    : "";
-
   const embedButton = channel
     ? `<a href="${qrUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background: linear-gradient(135deg, #3b82f6, #6366f1); color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">
   ${channel.channelType === "diagnosis" ? "診断を始める" : "詳しくはこちら"}
@@ -344,39 +340,6 @@ export default function ChannelDetailPage() {
         </p>
 
         <div className="space-y-6">
-          {/* iframe埋め込み（診断タイプのみ） */}
-          {channel.channelType === "diagnosis" && (
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <div>
-                  <h3 className="font-medium text-gray-900">埋め込み診断（iframe）</h3>
-                  <p className="text-xs text-gray-500">ページ内で直接診断ができます</p>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleCopyEmbed("iframe", embedIframe)}
-                  className="gap-1"
-                >
-                  {copiedEmbed === "iframe" ? (
-                    <>
-                      <Check className="w-4 h-4 text-green-600" />
-                      コピーしました
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-4 h-4" />
-                      コピー
-                    </>
-                  )}
-                </Button>
-              </div>
-              <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto">
-                <code>{embedIframe}</code>
-              </pre>
-            </div>
-          )}
-
           {/* ボタンリンク（スタイル付き） */}
           <div>
             <div className="flex items-center justify-between mb-2">
