@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { MapContainer, TileLayer, Circle, Popup, useMapEvents } from "react-leaflet";
+import { useEffect, useMemo, useState } from "react";
+import { MapContainer, TileLayer, Circle, Popup, useMapEvents, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import {
   PREFECTURE_CENTERS,
@@ -17,9 +17,25 @@ interface LocationData {
   count: number;
 }
 
+interface HotspotData {
+  latitude: number;
+  longitude: number;
+  region: string;
+  city: string;
+  town?: string | null;
+  count: number;
+}
+
+interface SelectedLocation {
+  latitude: number;
+  longitude: number;
+}
+
 interface LocationMapProps {
   locations: LocationData[];
   clinicCenter?: { latitude: number; longitude: number } | null;
+  hotspot?: HotspotData | null;
+  selectedLocation?: SelectedLocation | null;
 }
 
 interface MarkerData {
@@ -81,6 +97,27 @@ function ZoomTracker({ onZoomChange }: { onZoomChange: (zoom: number) => void })
   return null;
 }
 
+// 地図の中心を動的に変更するコンポーネント
+function MapController({
+  selectedLocation,
+}: {
+  selectedLocation: SelectedLocation | null;
+}) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (selectedLocation) {
+      map.flyTo(
+        [selectedLocation.latitude, selectedLocation.longitude],
+        13, // ズームレベル13（区・町レベル）
+        { duration: 0.5 } // アニメーション0.5秒
+      );
+    }
+  }, [selectedLocation, map]);
+
+  return null;
+}
+
 // マーカー描画コンポーネント
 function MapMarkers({
   markers,
@@ -124,11 +161,13 @@ function MapMarkers({
   );
 }
 
-export default function LocationMap({ locations, clinicCenter }: LocationMapProps) {
-  // クリニックの住所座標があればそれを使用、なければ日本の中心付近
-  const defaultCenter: [number, number] = clinicCenter
-    ? [clinicCenter.latitude, clinicCenter.longitude]
-    : [36.5, 138.0];
+export default function LocationMap({ locations, clinicCenter, hotspot, selectedLocation }: LocationMapProps) {
+  // 優先順位: 1. 最多読み込み地域 2. クリニック住所 3. 日本の中心
+  const defaultCenter: [number, number] = useMemo(() => {
+    if (hotspot) return [hotspot.latitude, hotspot.longitude];
+    if (clinicCenter) return [clinicCenter.latitude, clinicCenter.longitude];
+    return [36.5, 138.0];
+  }, [hotspot, clinicCenter]);
 
   // マーカーデータを生成
   const markers = useMemo(() => {
@@ -189,15 +228,20 @@ export default function LocationMap({ locations, clinicCenter }: LocationMapProp
 
   // 中心座標を計算
   const center: [number, number] = useMemo(() => {
+    // hotspotがある場合は最多読み込み地域を中心に
+    if (hotspot) return [hotspot.latitude, hotspot.longitude];
     if (!bounds) return defaultCenter;
     return [
       (bounds.minLat + bounds.maxLat) / 2,
       (bounds.minLng + bounds.maxLng) / 2,
     ];
-  }, [bounds]);
+  }, [bounds, hotspot, defaultCenter]);
 
   // 初期ズームレベルを計算
   const initialZoom = useMemo(() => {
+    // hotspotがある場合は市レベル（11）で表示
+    if (hotspot) return 11;
+
     if (!bounds) {
       // マーカーがない場合、クリニック座標があれば市レベル（11）、なければ日本全体（5）
       return clinicCenter ? 11 : 5;
@@ -212,7 +256,7 @@ export default function LocationMap({ locations, clinicCenter }: LocationMapProp
     if (maxDiff < 2) return 9;
     if (maxDiff < 5) return 7;
     return 5;
-  }, [bounds, clinicCenter]);
+  }, [bounds, clinicCenter, hotspot]);
 
   // 現在のズームレベル
   const [currentZoom, setCurrentZoom] = useState(initialZoom);
@@ -230,6 +274,7 @@ export default function LocationMap({ locations, clinicCenter }: LocationMapProp
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       <ZoomTracker onZoomChange={setCurrentZoom} />
+      <MapController selectedLocation={selectedLocation || null} />
       <MapMarkers markers={markers} maxCount={maxCount} zoom={currentZoom} />
     </MapContainer>
   );
