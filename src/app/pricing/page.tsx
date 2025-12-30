@@ -10,7 +10,6 @@ import {
   Award,
   HelpCircle,
   Wand2,
-  Video,
 } from "lucide-react";
 
 export default function PricingPage() {
@@ -126,7 +125,13 @@ export default function PricingPage() {
                   <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
                     <Check className="w-3 h-3 text-green-600" />
                   </div>
-                  <span className="text-gray-700">基本的な分析機能</span>
+                  <span className="text-gray-700">詳細な分析機能</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Check className="w-3 h-3 text-green-600" />
+                  </div>
+                  <span className="text-gray-700">CSVエクスポート</span>
                 </li>
               </ul>
 
@@ -162,7 +167,7 @@ export default function PricingPage() {
                   <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
                     <Check className="w-3 h-3 text-blue-600" />
                   </div>
-                  <span className="text-gray-700">QRコード<strong className="text-blue-600">無制限</strong></span>
+                  <span className="text-gray-700">QRコード<strong className="text-blue-600">10枚まで</strong>作成可能</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -212,7 +217,7 @@ export default function PricingPage() {
                 <p className="text-gray-500 text-sm mb-4">オリジナル診断を作成したい医院様向け</p>
                 <div className="flex items-baseline justify-center gap-1">
                   <span className="text-lg text-orange-500">¥</span>
-                  <span className="text-5xl font-bold text-orange-600">13,800</span>
+                  <span className="text-5xl font-bold text-orange-600">12,800</span>
                   <span className="text-gray-500">/月</span>
                 </div>
                 <p className="text-sm text-gray-400 mt-1">（税別）</p>
@@ -235,7 +240,19 @@ export default function PricingPage() {
                   <div className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
                     <Check className="w-3 h-3 text-orange-600" />
                   </div>
-                  <span className="text-gray-700">詳細な分析機能・CSVエクスポート</span>
+                  <span className="text-gray-700">診断結果の閲覧</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <div className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Check className="w-3 h-3 text-orange-600" />
+                  </div>
+                  <span className="text-gray-700">詳細な分析機能</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <div className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Check className="w-3 h-3 text-orange-600" />
+                  </div>
+                  <span className="text-gray-700">CSVエクスポート</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <div className="w-5 h-5 bg-orange-200 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -256,13 +273,13 @@ export default function PricingPage() {
             <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-8 shadow-lg relative text-white">
               <div className="text-center mb-8">
                 <h3 className="text-xl font-bold mb-2">マネージドプラン</h3>
-                <p className="text-gray-300 text-sm mb-4">カスタムプラン+専任サポート付き</p>
+                <p className="text-gray-300 text-sm mb-4">マーケティング業務を丸ごとお任せ</p>
                 <div className="flex items-baseline justify-center gap-1">
                   <span className="text-lg text-blue-300">¥</span>
-                  <span className="text-5xl font-bold">24,800</span>
-                  <span className="text-gray-300">/月</span>
+                  <span className="text-5xl font-bold">39,800</span>
+                  <span className="text-gray-300">〜/月</span>
                 </div>
-                <p className="text-sm text-gray-400 mt-1">（税別）</p>
+                <p className="text-sm text-gray-400 mt-1">（税別・お見積もり）</p>
               </div>
 
               <ul className="space-y-4 mb-8">
@@ -270,37 +287,36 @@ export default function PricingPage() {
                   <div className="w-5 h-5 bg-purple-500/30 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
                     <Check className="w-3 h-3 text-purple-300" />
                   </div>
-                  <span className="text-gray-200">QRコード<strong className="text-white">無制限</strong></span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <div className="w-5 h-5 bg-purple-500/30 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <Check className="w-3 h-3 text-purple-300" />
-                  </div>
-                  <span className="text-gray-200">詳細な分析機能・CSVエクスポート</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <div className="w-5 h-5 bg-orange-500/30 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <Wand2 className="w-3 h-3 text-orange-300" />
-                  </div>
-                  <span className="text-gray-200"><strong className="text-orange-300">オリジナル診断作成</strong>（無制限）</span>
+                  <span className="text-gray-200"><strong className="text-white">カスタムプラン</strong>の内容全て</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <div className="w-5 h-5 bg-yellow-500/30 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
                     <Star className="w-3 h-3 text-yellow-300" />
                   </div>
-                  <span className="text-gray-200"><strong className="text-yellow-300">専任担当者</strong>によるサポートとアドバイス</span>
+                  <span className="text-gray-200"><strong className="text-yellow-300">マーケティング業務を全て代行</strong></span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <div className="w-5 h-5 bg-blue-500/30 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Check className="w-3 h-3 text-blue-300" />
+                  </div>
+                  <span className="text-gray-200 text-sm">チラシ作成・ポスティング地域の提案・オリジナル診断作成・業者やりとり・戦略立案など</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <div className="w-5 h-5 bg-green-500/30 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <Video className="w-3 h-3 text-green-300" />
+                    <Check className="w-3 h-3 text-green-300" />
                   </div>
-                  <span className="text-gray-200"><strong className="text-green-300">毎月30分</strong>の戦略ミーティング（Zoom）</span>
+                  <span className="text-gray-200 text-sm">貴院の<strong className="text-green-300">マーケティング担当</strong>として伴走</span>
                 </li>
               </ul>
 
+              <p className="text-xs text-gray-400 mb-4">
+                ※サポート内容・料金はお見積もり<br />
+                ※チラシ制作・ポスティング等の実費は別途
+              </p>
+
               <Link href="/signup">
                 <Button size="lg" variant="white" className="w-full">
-                  14日間無料で試す
+                  お問い合わせ
                 </Button>
               </Link>
             </div>
@@ -335,13 +351,13 @@ export default function PricingPage() {
                   <td className="p-4 text-gray-700">月額料金（税別）</td>
                   <td className="p-4 text-center font-medium">¥4,980</td>
                   <td className="p-4 text-center font-medium text-blue-600 bg-blue-50">¥8,800</td>
-                  <td className="p-4 text-center font-medium text-orange-600 bg-orange-50">¥13,800</td>
-                  <td className="p-4 text-center font-medium">¥24,800</td>
+                  <td className="p-4 text-center font-medium text-orange-600 bg-orange-50">¥12,800</td>
+                  <td className="p-4 text-center font-medium">¥39,800〜</td>
                 </tr>
                 <tr className="border-b border-gray-100">
                   <td className="p-4 text-gray-700">QRコード作成数</td>
                   <td className="p-4 text-center">2枚まで</td>
-                  <td className="p-4 text-center font-medium text-blue-600 bg-blue-50">無制限</td>
+                  <td className="p-4 text-center font-medium text-blue-600 bg-blue-50">10枚まで</td>
                   <td className="p-4 text-center font-medium text-orange-600 bg-orange-50">無制限</td>
                   <td className="p-4 text-center">無制限</td>
                 </tr>
@@ -353,7 +369,7 @@ export default function PricingPage() {
                   <td className="p-4 text-center"><Check className="w-5 h-5 text-green-500 mx-auto" /></td>
                 </tr>
                 <tr className="border-b border-gray-100">
-                  <td className="p-4 text-gray-700">結果画面カスタマイズ</td>
+                  <td className="p-4 text-gray-700">詳細な分析機能</td>
                   <td className="p-4 text-center"><Check className="w-5 h-5 text-green-500 mx-auto" /></td>
                   <td className="p-4 text-center bg-blue-50"><Check className="w-5 h-5 text-green-500 mx-auto" /></td>
                   <td className="p-4 text-center bg-orange-50"><Check className="w-5 h-5 text-green-500 mx-auto" /></td>
@@ -361,7 +377,7 @@ export default function PricingPage() {
                 </tr>
                 <tr className="border-b border-gray-100">
                   <td className="p-4 text-gray-700">CSVエクスポート</td>
-                  <td className="p-4 text-center text-gray-400">—</td>
+                  <td className="p-4 text-center"><Check className="w-5 h-5 text-green-500 mx-auto" /></td>
                   <td className="p-4 text-center bg-blue-50"><Check className="w-5 h-5 text-green-500 mx-auto" /></td>
                   <td className="p-4 text-center bg-orange-50"><Check className="w-5 h-5 text-green-500 mx-auto" /></td>
                   <td className="p-4 text-center"><Check className="w-5 h-5 text-green-500 mx-auto" /></td>
@@ -373,15 +389,8 @@ export default function PricingPage() {
                   <td className="p-4 text-center bg-orange-50"><Check className="w-5 h-5 text-green-500 mx-auto" /></td>
                   <td className="p-4 text-center"><Check className="w-5 h-5 text-green-500 mx-auto" /></td>
                 </tr>
-                <tr className="border-b border-gray-100">
-                  <td className="p-4 text-gray-700">専任担当者サポート</td>
-                  <td className="p-4 text-center text-gray-400">—</td>
-                  <td className="p-4 text-center text-gray-400 bg-blue-50">—</td>
-                  <td className="p-4 text-center text-gray-400 bg-orange-50">—</td>
-                  <td className="p-4 text-center"><Check className="w-5 h-5 text-green-500 mx-auto" /></td>
-                </tr>
                 <tr>
-                  <td className="p-4 text-gray-700">戦略ミーティング（Zoom）</td>
+                  <td className="p-4 text-gray-700">マーケティング業務代行</td>
                   <td className="p-4 text-center text-gray-400">—</td>
                   <td className="p-4 text-center text-gray-400 bg-blue-50">—</td>
                   <td className="p-4 text-center text-gray-400 bg-orange-50">—</td>
