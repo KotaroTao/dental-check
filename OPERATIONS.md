@@ -154,6 +154,16 @@ cd /var/www/dental-check
 npx prisma db push
 ```
 
+### シードデータ投入
+診断タイプなどの初期データをデータベースに投入します。
+```bash
+cd /var/www/dental-check
+npm install --include=dev   # devDependencies（tsx）をインストール
+npm run db:seed             # シードを実行
+```
+
+**注意**: 本番環境では通常devDependenciesがインストールされないため、`--include=dev`オプションが必要です。
+
 ### 手動バックアップ
 ```bash
 sudo -u postgres pg_dump dental_check > /var/backups/dental-check/dental_$(date +%Y%m%d_%H%M%S).sql

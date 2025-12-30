@@ -80,12 +80,21 @@ export async function POST(request: NextRequest) {
     let roundedLat: number | null = null;
     let roundedLng: number | null = null;
 
+    console.log("=== Location Processing ===");
+    console.log("Raw latitude:", latitude, "type:", typeof latitude);
+    console.log("Raw longitude:", longitude, "type:", typeof longitude);
+
     if (latitude !== null && latitude !== undefined && longitude !== null && longitude !== undefined) {
+      console.log("GPS coordinates available, starting reverse geocode...");
       location = await reverseGeocode(latitude, longitude);
+      console.log("Geocode result:", location);
       // 座標を小数点2桁に丸める（約1km精度、プライバシー保護）
       roundedLat = Math.round(latitude * 100) / 100;
       roundedLng = Math.round(longitude * 100) / 100;
+    } else {
+      console.log("No GPS coordinates provided - skipping geocode");
     }
+    console.log("=== Location Processing End ===")
 
     // 診断セッションを作成
     console.log("Creating session with data:", {
@@ -140,26 +149,36 @@ async function reverseGeocode(lat: number, lon: number): Promise<{
   city: string;
   town: string;
 } | null> {
+  console.log(`=== Reverse Geocode ===`);
+  console.log(`Input: lat=${lat}, lon=${lon}`);
+
   try {
     // OpenStreetMap Nominatim API（無料、1リクエスト/秒制限）
-    const response = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=ja`,
-      {
-        headers: {
-          "User-Agent": "DentalCheckApp/1.0",
-        },
-      }
-    );
+    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=ja`;
+    console.log(`Nominatim URL: ${url}`);
+
+    const response = await fetch(url, {
+      headers: {
+        // Nominatim Usage Policy要件: アプリ名、URL、連絡先を含むUser-Agent
+        "User-Agent": "DentalCheckApp/1.0 (https://qrqr-dental.com; mail@function-t.com)",
+      },
+    });
+
+    console.log(`Nominatim response status: ${response.status}`);
 
     if (!response.ok) {
-      console.error("Nominatim API error:", response.status);
+      const errorText = await response.text();
+      console.error(`Nominatim API error: status=${response.status}, body=${errorText}`);
       return null;
     }
 
     const data = await response.json();
+    console.log(`Nominatim response:`, JSON.stringify(data.address || {}, null, 2));
+
     const address = data.address;
 
     if (!address) {
+      console.warn("Nominatim returned no address data");
       return null;
     }
 
@@ -172,12 +191,15 @@ async function reverseGeocode(lat: number, lon: number): Promise<{
     // 町丁目を取得（フォールバック付き）
     const town = address.neighbourhood || address.quarter || address.suburb || "";
 
-    return {
+    const result = {
       country: address.country_code?.toUpperCase() || "JP",
       region,
       city,
       town,
     };
+
+    console.log(`Geocode result:`, result);
+    return result;
   } catch (error) {
     console.error("Reverse geocode error:", error);
     return null;
