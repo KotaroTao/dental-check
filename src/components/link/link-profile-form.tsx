@@ -55,16 +55,26 @@ export function LinkProfileForm({ channelId, channelName, redirectUrl, mainColor
         }),
       });
 
+      // APIレスポンスをデバッグ
+      console.log("API response status:", response.status);
       const data = await response.json();
+      console.log("API response data:", data);
+      console.log("Props redirectUrl:", redirectUrl);
 
-      // リダイレクト
-      if (data.success && data.redirectUrl) {
-        window.location.href = data.redirectUrl;
+      // リダイレクト（APIからのURLを優先、フォールバックはpropsのURL）
+      const targetUrl = (data.success && data.redirectUrl) ? data.redirectUrl : redirectUrl;
+      console.log("Target URL:", targetUrl);
+
+      // 安全なURLかチェック（http/httpsで始まる外部URL）
+      if (targetUrl && (targetUrl.startsWith("http://") || targetUrl.startsWith("https://"))) {
+        window.location.href = targetUrl;
       } else {
-        // フォールバック
+        console.error("Invalid redirect URL:", targetUrl);
+        // フォールバック: propsのredirectUrlを使用
         window.location.href = redirectUrl;
       }
-    } catch {
+    } catch (err) {
+      console.error("Link complete error:", err);
       // エラー時もリダイレクト
       window.location.href = redirectUrl;
     }
@@ -117,13 +127,19 @@ export function LinkProfileForm({ channelId, channelName, redirectUrl, mainColor
         }),
       });
 
+      console.log("Skip API response status:", response.status);
       const data = await response.json();
-      if (data.success && data.redirectUrl) {
-        window.location.href = data.redirectUrl;
+      console.log("Skip API response data:", data);
+      const targetUrl = (data.success && data.redirectUrl) ? data.redirectUrl : redirectUrl;
+      console.log("Skip Target URL:", targetUrl);
+
+      if (targetUrl && (targetUrl.startsWith("http://") || targetUrl.startsWith("https://"))) {
+        window.location.href = targetUrl;
       } else {
         window.location.href = redirectUrl;
       }
-    } catch {
+    } catch (err) {
+      console.error("Skip error:", err);
       window.location.href = redirectUrl;
     }
   };
