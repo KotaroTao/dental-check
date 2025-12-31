@@ -94,11 +94,11 @@ export default function DashboardLayout({
     <div className="min-h-screen bg-gray-50">
       {/* ヘッダー */}
       <header className="bg-white border-b sticky top-0 z-20">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-8">
-            <Link href="/dashboard" className="font-bold text-xl">
-              <span className="hidden sm:inline">くるくる診断DX</span>
-              <span className="sm:hidden">くるくる</span>
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between min-w-0">
+          <div className="flex items-center gap-4 xl:gap-8 min-w-0 flex-shrink-0">
+            <Link href="/dashboard" className="font-bold text-xl flex-shrink-0">
+              <span className="hidden md:inline">くるくる診断DX</span>
+              <span className="md:hidden">くるくる</span>
               <span className="text-[0.5em]"> for Dental</span>
             </Link>
             {/* PC用ナビゲーション */}
@@ -107,7 +107,7 @@ export default function DashboardLayout({
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`text-sm ${
+                  className={`text-sm whitespace-nowrap ${
                     pathname === link.href
                       ? "text-blue-600 font-medium"
                       : "text-gray-600 hover:text-gray-900"
@@ -118,9 +118,9 @@ export default function DashboardLayout({
               ))}
             </nav>
           </div>
-          <div className="flex items-center gap-2 xl:gap-4">
+          <div className="flex items-center gap-2 flex-shrink-0">
             {clinic?.subscription?.status === "trial" && trialDaysLeft !== null && (
-              <span className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded-full whitespace-nowrap">
+              <span className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded-full whitespace-nowrap hidden sm:inline-block xl:inline-block">
                 残り{trialDaysLeft}日
               </span>
             )}
@@ -133,7 +133,7 @@ export default function DashboardLayout({
             {/* ハンバーガーメニューボタン */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="xl:hidden p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md"
+              className="xl:hidden p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md flex-shrink-0"
               aria-label="メニュー"
             >
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
