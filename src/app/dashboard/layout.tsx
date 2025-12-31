@@ -5,7 +5,6 @@ import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { SubscriptionAlert } from "@/components/dashboard/subscription-alert";
-import { ClinicInfoAlert } from "@/components/dashboard/clinic-info-alert";
 import { CTAAlert } from "@/components/dashboard/cta-alert";
 
 interface Clinic {
@@ -86,7 +85,6 @@ export default function DashboardLayout({
     { href: "/dashboard", label: "ダッシュボード" },
     { href: "/dashboard/channels/new", label: "QRコード作成" },
     { href: "/dashboard/diagnoses", label: "診断管理" },
-    { href: "/dashboard/clinic", label: "医院紹介" },
     { href: "/dashboard/settings", label: "設定" },
     { href: "/dashboard/billing", label: "契約・お支払い" },
   ];
@@ -157,7 +155,6 @@ export default function DashboardLayout({
       {/* メインコンテンツ */}
       <main className="container mx-auto px-4 py-4 sm:py-8">
         <SubscriptionAlert />
-        <ClinicInfoAlert />
         <CTAAlert />
         {children}
       </main>

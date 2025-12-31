@@ -16,6 +16,7 @@ export interface CTAConfig {
   threadsUrl?: string;
   xUrl?: string;           // X (Twitter)
   googleMapsUrl?: string;  // Googleマップ
+  clinicHomepageUrl?: string;  // 医院ホームページURL
   phone?: string;
   directorMessage?: string;
   customCTAs?: CustomCTA[];  // カスタムCTAボタン

@@ -158,7 +158,6 @@ export default async function ClinicDiagnosisPage({ params }: Props) {
       <DiagnosisFlow
         diagnosis={diagnosis}
         isDemo={false}
-        clinicSlug={clinic.slug}
         ctaConfig={clinic.ctaConfig}
         clinicName={clinic.name}
         mainColor={clinic.mainColor}
