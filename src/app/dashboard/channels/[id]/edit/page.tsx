@@ -54,6 +54,21 @@ export default function EditChannelPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
 
+  // ハッシュアンカーへのスクロール対応
+  useEffect(() => {
+    if (!isLoading && channel && typeof window !== "undefined") {
+      const hash = window.location.hash;
+      if (hash) {
+        setTimeout(() => {
+          const element = document.querySelector(hash);
+          if (element) {
+            element.scrollIntoView({ behavior: "smooth", block: "start" });
+          }
+        }, 100);
+      }
+    }
+  }, [isLoading, channel]);
+
   useEffect(() => {
     const fetchChannel = async () => {
       try {
@@ -509,7 +524,7 @@ export default function EditChannelPage() {
           </div>
 
           {/* 効果測定セクション */}
-          <div className="border-t pt-6 mt-6">
+          <div id="effectiveness" className="border-t pt-6 mt-6 scroll-mt-4">
             <div className="flex items-center gap-2 mb-4">
               <BarChart3 className="w-5 h-5 text-blue-600" />
               <h2 className="text-lg font-semibold">効果測定</h2>

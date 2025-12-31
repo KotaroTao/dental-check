@@ -890,7 +890,7 @@ export default function DashboardPage() {
                             </div>
                           </Link>
                         ) : (
-                          <Link href={`/dashboard/channels/${channel.id}/edit`}>
+                          <Link href={`/dashboard/channels/${channel.id}/edit#effectiveness`}>
                             <div className="bg-gray-50 rounded-lg py-2 px-3 hover:bg-gray-100 transition-colors h-full flex flex-col justify-center">
                               <div className="text-xs text-gray-500 mb-0.5">効果測定</div>
                               <div className="text-sm font-medium text-blue-600 hover:underline">設定する</div>
@@ -926,7 +926,7 @@ export default function DashboardPage() {
                               </div>
                             </Link>
                           ) : (
-                            <Link href={`/dashboard/channels/${channel.id}/edit`} className="bg-gray-50 rounded-lg py-2 px-1">
+                            <Link href={`/dashboard/channels/${channel.id}/edit#effectiveness`} className="bg-gray-50 rounded-lg py-2 px-1">
                               <div className="text-[10px] text-gray-500">効果測定</div>
                               <div className="text-[10px] font-medium text-blue-600">設定</div>
                             </Link>
