@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Upload, X, Loader2, Image as ImageIcon, Calendar, Link2 } from "lucide-react";
+import { ArrowLeft, Upload, X, Loader2, Image as ImageIcon, Calendar, Link2, CircleDollarSign, MapPin } from "lucide-react";
 
 // 診断タイプの表示名
 const DIAGNOSIS_TYPE_NAMES: Record<string, string> = {
@@ -24,6 +24,10 @@ interface Channel {
   redirectUrl: string | null;
   isActive: boolean;
   expiresAt: string | null;
+  adBudget: number | null;
+  adStartDate: string | null;
+  adEndDate: string | null;
+  adPlacement: string | null;
 }
 
 export default function EditChannelPage() {
@@ -38,6 +42,11 @@ export default function EditChannelPage() {
     imageUrl: "" as string | null,
     redirectUrl: "",
     expiresAt: "",
+    // 広告効果測定用
+    adBudget: "" as string,
+    adStartDate: "",
+    adEndDate: "",
+    adPlacement: "",
   });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -58,6 +67,16 @@ export default function EditChannelPage() {
             const date = new Date(data.channel.expiresAt);
             expiresAtValue = date.toISOString().slice(0, 16);
           }
+          // 広告日付のフォーマット
+          let adStartDateValue = "";
+          let adEndDateValue = "";
+          if (data.channel.adStartDate) {
+            adStartDateValue = new Date(data.channel.adStartDate).toISOString().slice(0, 10);
+          }
+          if (data.channel.adEndDate) {
+            adEndDateValue = new Date(data.channel.adEndDate).toISOString().slice(0, 10);
+          }
+
           setFormData({
             name: data.channel.name,
             description: data.channel.description || "",
@@ -65,6 +84,11 @@ export default function EditChannelPage() {
             imageUrl: data.channel.imageUrl || null,
             redirectUrl: data.channel.redirectUrl || "",
             expiresAt: expiresAtValue,
+            // 広告効果測定用
+            adBudget: data.channel.adBudget?.toString() || "",
+            adStartDate: adStartDateValue,
+            adEndDate: adEndDateValue,
+            adPlacement: data.channel.adPlacement || "",
           });
         } else {
           setError("QRコードが見つかりません");
@@ -231,9 +255,17 @@ export default function EditChannelPage() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...formData,
+          name: formData.name,
+          description: formData.description,
+          isActive: formData.isActive,
+          imageUrl: formData.imageUrl,
           expiresAt: formData.expiresAt || null,
           redirectUrl: channel?.channelType === "link" ? formData.redirectUrl : null,
+          // 広告効果測定用
+          adBudget: formData.adBudget ? parseInt(formData.adBudget, 10) : null,
+          adStartDate: formData.adStartDate || null,
+          adEndDate: formData.adEndDate || null,
+          adPlacement: formData.adPlacement || null,
         }),
       });
 
@@ -474,6 +506,74 @@ export default function EditChannelPage() {
             <p className="text-xs text-gray-500">
               期限を過ぎるとQRコードは無効になります。空欄の場合は無期限です。
             </p>
+          </div>
+
+          {/* 広告効果測定セクション */}
+          <div className="border-t pt-6 mt-6">
+            <div className="flex items-center gap-2 mb-4">
+              <CircleDollarSign className="w-5 h-5 text-blue-600" />
+              <h2 className="text-lg font-semibold">広告効果測定</h2>
+            </div>
+            <p className="text-sm text-gray-500 mb-4">
+              広告費用と掲載期間を設定すると、CPA・CPD・CPCなどの効果指標を確認できます。
+            </p>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="adBudget">広告費用（円）</Label>
+                <Input
+                  id="adBudget"
+                  name="adBudget"
+                  type="number"
+                  min="0"
+                  placeholder="例: 50000"
+                  value={formData.adBudget}
+                  onChange={handleChange}
+                  disabled={isSaving}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="adStartDate">掲載開始日</Label>
+                  <Input
+                    id="adStartDate"
+                    name="adStartDate"
+                    type="date"
+                    value={formData.adStartDate}
+                    onChange={handleChange}
+                    disabled={isSaving}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="adEndDate">掲載終了日</Label>
+                  <Input
+                    id="adEndDate"
+                    name="adEndDate"
+                    type="date"
+                    value={formData.adEndDate}
+                    onChange={handleChange}
+                    disabled={isSaving}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="adPlacement" className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-gray-500" />
+                  掲載場所メモ
+                </Label>
+                <Input
+                  id="adPlacement"
+                  name="adPlacement"
+                  type="text"
+                  placeholder="例: 駅前看板、電車内広告、チラシ配布"
+                  value={formData.adPlacement}
+                  onChange={handleChange}
+                  disabled={isSaving}
+                />
+              </div>
+            </div>
           </div>
 
           <div className="flex items-center gap-2">

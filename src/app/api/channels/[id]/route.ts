@@ -53,7 +53,19 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await request.json();
-    const { name, description, isActive, imageUrl, expiresAt, redirectUrl } = body;
+    const {
+      name,
+      description,
+      isActive,
+      imageUrl,
+      expiresAt,
+      redirectUrl,
+      // 広告効果測定用フィールド
+      adBudget,
+      adStartDate,
+      adEndDate,
+      adPlacement,
+    } = body;
 
     const existingChannel = await prisma.channel.findFirst({
       where: {
@@ -96,6 +108,11 @@ export async function PATCH(
         ...(imageUrl !== undefined && { imageUrl: imageUrl || null }),
         ...(expiresAt !== undefined && { expiresAt: expiresAt ? new Date(expiresAt) : null }),
         ...(redirectUrl !== undefined && existingChannel.channelType === "link" && { redirectUrl: redirectUrl.trim() }),
+        // 広告効果測定用フィールド
+        ...(adBudget !== undefined && { adBudget: adBudget || null }),
+        ...(adStartDate !== undefined && { adStartDate: adStartDate ? new Date(adStartDate) : null }),
+        ...(adEndDate !== undefined && { adEndDate: adEndDate ? new Date(adEndDate) : null }),
+        ...(adPlacement !== undefined && { adPlacement: adPlacement?.trim() || null }),
       },
     })) as Channel;
 
