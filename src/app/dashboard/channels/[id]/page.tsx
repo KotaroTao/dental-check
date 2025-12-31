@@ -367,7 +367,7 @@ export default function ChannelDetailPage() {
 
       {/* 効果測定セクション */}
       {(stats?.adBudget || channel?.adBudget) && (
-        <div className="bg-white rounded-xl shadow-sm border p-6 mt-6">
+        <div id="effectiveness" className="bg-white rounded-xl shadow-sm border p-6 mt-6 scroll-mt-4">
           <div className="flex items-center gap-2 mb-4">
             <BarChart3 className="w-5 h-5 text-blue-600" />
             <h2 className="text-lg font-bold">効果測定</h2>
