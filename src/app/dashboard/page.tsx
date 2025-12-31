@@ -21,6 +21,7 @@ import {
   AlertTriangle,
   Link2,
   MousePointerClick,
+  CircleDollarSign,
 } from "lucide-react";
 import { LocationSection } from "@/components/dashboard/location-section";
 
@@ -90,10 +91,17 @@ interface ChannelStats {
   completedCount: number;
   completionRate: number;
   ctaCount: number;
+  ctaRate: number;
   ctaByType: Record<string, number>;
   genderByType: Record<string, number>;
   ageRanges: Record<string, number>;
   accessByDate: { date: string; count: number }[];
+  // 広告効果測定
+  adBudget: number | null;
+  adPlacement: string | null;
+  cpa: number | null;
+  cpd: number | null;
+  cpc: number | null;
 }
 
 interface HistoryItem {
@@ -697,6 +705,14 @@ export default function DashboardPage() {
                             有効期限切れ
                           </span>
                         )}
+                        {stats?.adBudget && (
+                          <Link href={`/dashboard/channels/${channel.id}`} className="shrink-0">
+                            <span className="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded flex items-center gap-0.5 hover:bg-blue-200 transition-colors">
+                              <CircleDollarSign className="w-3 h-3" />
+                              広告効果
+                            </span>
+                          </Link>
+                        )}
                       </div>
                       <div className="text-sm text-gray-500 flex items-center gap-2 flex-wrap">
                         <span>
@@ -768,7 +784,7 @@ export default function DashboardPage() {
                   {channel.isActive && channel.channelType === "diagnosis" && stats && (
                     <>
                       {/* PC版: ホバーでポップオーバー */}
-                      <div className="hidden md:grid grid-cols-4 gap-2 text-center">
+                      <div className={`hidden md:grid gap-2 text-center ${stats.adBudget ? 'grid-cols-5' : 'grid-cols-4'}`}>
                         <Popover
                           trigger={
                             <div className="bg-gray-50 rounded-lg py-2 px-3 hover:bg-blue-50 transition-colors">
@@ -864,11 +880,24 @@ export default function DashboardPage() {
                             </div>
                           </div>
                         </Popover>
+                        {stats.adBudget && (
+                          <Link href={`/dashboard/channels/${channel.id}`}>
+                            <div className="bg-blue-50 rounded-lg py-2 px-3 hover:bg-blue-100 transition-colors h-full flex flex-col justify-center">
+                              <div className="text-xs text-blue-600 mb-0.5 flex items-center justify-center gap-1">
+                                <CircleDollarSign className="w-3 h-3" />
+                                CPA
+                              </div>
+                              <div className="text-lg font-bold text-blue-600">
+                                {stats.cpa ? `¥${stats.cpa.toLocaleString()}` : "-"}
+                              </div>
+                            </div>
+                          </Link>
+                        )}
                       </div>
 
                       {/* モバイル版: タップで展開 */}
                       <div className="md:hidden">
-                        <div className="grid grid-cols-4 gap-2 text-center">
+                        <div className={`grid gap-2 text-center ${stats.adBudget ? 'grid-cols-5' : 'grid-cols-4'}`}>
                           <div className="bg-gray-50 rounded-lg py-2 px-1">
                             <div className="text-[10px] text-gray-500">QR読み込み</div>
                             <div className="text-base font-bold text-gray-800">{stats.accessCount}</div>
@@ -885,6 +914,14 @@ export default function DashboardPage() {
                             <div className="text-[10px] text-gray-500">CTA</div>
                             <div className="text-base font-bold text-purple-600">{stats.ctaCount}</div>
                           </div>
+                          {stats.adBudget && (
+                            <Link href={`/dashboard/channels/${channel.id}`} className="bg-blue-50 rounded-lg py-2 px-1">
+                              <div className="text-[10px] text-blue-600">CPA</div>
+                              <div className="text-base font-bold text-blue-600">
+                                {stats.cpa ? `¥${(stats.cpa / 1000).toFixed(1)}k` : "-"}
+                              </div>
+                            </Link>
+                          )}
                         </div>
                         <button
                           onClick={() => setExpandedChannelId(isExpanded ? null : channel.id)}
