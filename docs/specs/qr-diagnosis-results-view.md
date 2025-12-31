@@ -5,11 +5,53 @@
 各QRコード（チャンネル）に紐づく診断結果を一覧表示し、詳細を確認できる機能。
 歯科医院が患者の診断傾向を把握し、マーケティングやサービス改善に活用できる。
 
-## 現状
+## 現状分析
 
-- ダッシュボードには全体統計（アクセス数、完了数、エリア分布等）が表示される
-- 診断履歴APIは存在するが、QRコード別の結果詳細画面は未実装
-- 個々の診断結果（スコア、結果カテゴリ等）の閲覧手段がない
+### 既存データモデル（DiagnosisSession）
+
+```prisma
+model DiagnosisSession {
+  id              String    @id
+  clinicId        String?
+  channelId       String?
+  diagnosisTypeId String?
+
+  // ユーザー情報 ✅ 既存
+  userAge         Int?
+  userGender      String?   // male/female/other
+
+  // 位置情報 ✅ 既存
+  region          String?   // 都道府県
+  city            String?   // 市区町村
+  town            String?   // 町丁目
+
+  // 診断結果 ✅ 既存
+  answers         Json?     // 回答データ
+  totalScore      Int?      // スコア合計
+  resultCategory  String?   // 結果カテゴリ（要注意/注意/良好 等）
+
+  // タイムスタンプ ✅ 既存
+  createdAt       DateTime
+  completedAt     DateTime?
+}
+```
+
+**✅ 必要なフィールドは全て存在** - マイグレーション不要
+
+### 既存API（/api/dashboard/history）
+
+既に以下を実装済み：
+- `channelId` フィルター
+- 期間フィルター（today/week/month/custom）
+- ページネーション
+- CTAクリック情報
+- 地域情報（region/city/town）
+
+**不足している項目**:
+- `totalScore` がレスポンスに含まれていない
+- `resultCategory` がレスポンスに含まれていない（DBには保存済み）
+- 性別・年齢層フィルターなし
+- 集計サマリーなし
 
 ## 機能要件
 
@@ -19,30 +61,30 @@
 
 | タブ | 内容 |
 |------|------|
-| QRコード | 既存のQRコード表示・ダウンロード |
-| 診断結果 | 新規追加 - 診断結果一覧 |
+| QRコード | 既存のQRコード表示・ダウンロード・埋め込みHTML |
+| 診断結果 | **新規追加** - 診断結果一覧 |
 
 ### 2. 診断結果一覧の表示項目
 
-| 項目 | 説明 | ソート |
-|------|------|--------|
-| 日時 | 診断完了日時 | ✅ |
-| 年齢 | 利用者の年齢 | ✅ |
-| 性別 | 男性/女性/その他 | ✅ |
-| 地域 | 都道府県・市区町村・町名 | - |
-| スコア | 診断の合計スコア | ✅ |
-| 結果 | 診断結果カテゴリ（例: お口年齢+5歳） | ✅ |
-| CTAクリック | 予約ボタン等をクリックしたか | ✅ |
+| 項目 | DBフィールド | 既存 | ソート |
+|------|-------------|------|--------|
+| 日時 | `completedAt` | ✅ | ✅ |
+| 年齢 | `userAge` | ✅ | ✅ |
+| 性別 | `userGender` | ✅ | ✅ |
+| 地域 | `region` + `city` + `town` | ✅ | - |
+| スコア | `totalScore` | ✅ 保存済 | ✅ |
+| 結果 | `resultCategory` | ✅ 保存済 | ✅ |
+| CTAクリック | `ctaClicks` リレーション | ✅ | ✅ |
 
 ### 3. フィルター機能
 
-| フィルター | 選択肢 |
-|------------|--------|
-| 期間 | 今日 / 1週間 / 1ヶ月 / カスタム |
-| 性別 | 全て / 男性 / 女性 / その他 |
-| 年齢層 | 全て / ~19歳 / 20-29歳 / 30-39歳 / 40-49歳 / 50-59歳 / 60歳~ |
-| 結果カテゴリ | 全て / 各カテゴリ |
-| CTAクリック | 全て / あり / なし |
+| フィルター | 選択肢 | 既存API対応 |
+|------------|--------|-------------|
+| 期間 | 今日/1週間/1ヶ月/カスタム | ✅ 対応済み |
+| 性別 | 全て/男性/女性/その他 | ❌ 追加必要 |
+| 年齢層 | 全て/~19歳/20-29歳/30-39歳/40-49歳/50-59歳/60歳~ | ❌ 追加必要 |
+| 結果カテゴリ | 全て/各カテゴリ | ❌ 追加必要 |
+| CTAクリック | 全て/あり/なし | ❌ 追加必要 |
 
 ### 4. 集計サマリー
 
@@ -54,94 +96,66 @@
 
 ### 5. CSVエクスポート
 
-スタンダードプラン以上で利用可能：
+スタンダードプラン以上で利用可能
 
-- 表示中のフィルター条件でエクスポート
-- ファイル名: `診断結果_{QRコード名}_{日付}.csv`
+## 実装方針
 
-## データモデル
+### 方針A: 既存history APIを拡張（推奨）
 
-### 既存テーブル（DiagnosisSession）
+**メリット**: コード重複を避けられる、保守性が高い
 
-```prisma
-model DiagnosisSession {
-  id              String    @id @default(uuid())
-  clinicId        String?   @map("clinic_id")
-  channelId       String?   @map("channel_id")
-  diagnosisTypeId String?   @map("diagnosis_type_id")
+**変更内容**:
+1. `/api/dashboard/history/route.ts` に以下を追加:
+   - レスポンスに `totalScore`, `resultCategory` を追加
+   - 性別・年齢層・結果カテゴリフィルター
+   - 集計サマリー（オプションパラメータで取得）
 
-  // ユーザー情報
-  userAge         Int?      @map("user_age")
-  userGender      String?   @map("user_gender")
+2. `/dashboard/channels/[id]/page.tsx` にタブUIを追加
 
-  // 位置情報
-  region          String?   // 都道府県
-  city            String?   // 市区町村
-  town            String?   // 町丁目
+### 方針B: 新規専用APIを作成
 
-  // 診断結果
-  totalScore      Int?      @map("total_score")
-  resultCategory  String?   @map("result_category")
-  resultTitle     String?   @map("result_title")
+**メリット**: 既存機能への影響なし
 
-  // タイムスタンプ
-  createdAt       DateTime  @default(now()) @map("created_at")
-  completedAt     DateTime? @map("completed_at")
+**デメリット**: コード重複、保守コスト増
 
-  isDemo          Boolean   @default(false) @map("is_demo")
-}
-```
+→ **方針Aを採用**
 
-### 確認事項
+## API設計（方針A: 既存API拡張）
 
-現在のDiagnosisSessionに以下のフィールドが存在するか確認が必要：
+### GET `/api/dashboard/history` 拡張
 
-- [ ] `totalScore` - 診断スコア合計
-- [ ] `resultCategory` - 結果カテゴリ
-- [ ] `resultTitle` - 結果タイトル
+**追加パラメータ**:
 
-存在しない場合はマイグレーションが必要。
+| パラメータ | 型 | 説明 |
+|------------|-----|------|
+| gender | string | male/female/other |
+| ageRange | string | ~19/20-29/30-39/40-49/50-59/60~ |
+| resultCategory | string | 結果カテゴリ |
+| hasCta | string | true/false |
+| includeSummary | string | true でサマリーを含める |
 
-## API設計
-
-### GET `/api/dashboard/channels/[id]/results`
-
-**リクエストパラメータ**:
-
-| パラメータ | 型 | 必須 | 説明 |
-|------------|-----|------|------|
-| period | string | - | today/week/month/custom |
-| startDate | string | - | カスタム期間の開始日 |
-| endDate | string | - | カスタム期間の終了日 |
-| gender | string | - | male/female/other |
-| ageRange | string | - | ~19/20-29/30-39/40-49/50-59/60~ |
-| resultCategory | string | - | 結果カテゴリ |
-| hasCta | string | - | true/false |
-| sortBy | string | - | createdAt/score/age |
-| sortOrder | string | - | asc/desc |
-| offset | number | - | ページネーション |
-| limit | number | - | 取得件数（デフォルト50） |
-
-**レスポンス**:
+**レスポンス拡張**:
 
 ```json
 {
-  "results": [
+  "history": [
     {
       "id": "uuid",
+      "type": "diagnosis",
       "createdAt": "2025-12-31T10:00:00Z",
       "userAge": 35,
-      "userGender": "female",
-      "region": "兵庫県",
-      "city": "西宮市",
-      "town": "松園町7丁目",
-      "totalScore": 45,
-      "resultCategory": "good",
-      "resultTitle": "お口年齢 実年齢-5歳",
-      "hasCta": true
+      "userGender": "女性",
+      "area": "兵庫県 西宮市 松園町7丁目",
+      "totalScore": 45,           // ← 追加
+      "resultCategory": "良好",   // ← 追加
+      "diagnosisType": "お口年齢診断",
+      "channelName": "店頭QR",
+      "channelId": "uuid",
+      "ctaType": "予約クリック",
+      "ctaClickCount": 1
     }
   ],
-  "summary": {
+  "summary": {                    // ← 追加（includeSummary=true時）
     "total": 125,
     "averageScore": 42.5,
     "ctaRate": 18.4,
@@ -157,18 +171,21 @@ model DiagnosisSession {
       "40-49": 35,
       "50-59": 18,
       "60~": 7
+    },
+    "resultDistribution": {
+      "優秀": 15,
+      "良好": 45,
+      "やや注意": 35,
+      "注意": 20,
+      "要注意": 10
     }
   },
-  "pagination": {
-    "total": 125,
-    "offset": 0,
-    "limit": 50,
-    "hasMore": true
-  }
+  "totalCount": 125,
+  "hasMore": true
 }
 ```
 
-### GET `/api/dashboard/channels/[id]/results/export`
+### GET `/api/dashboard/history/export`
 
 CSVエクスポート用エンドポイント（スタンダードプラン以上）
 
@@ -191,76 +208,61 @@ CSVエクスポート用エンドポイント（スタンダードプラン以�
 │ └───────────────────────────────────────────────┘   │
 │                                                     │
 │ 診断完了: 125件 | 平均スコア: 42.5点 | CTA率: 18.4% │
-│                                        [CSVエクスポート] │
+│                                   [CSVエクスポート] │
 │                                                     │
-│ ┌─────────────────────────────────────────────────┐ │
-│ │ 日時      │ 年齢 │ 性別 │ 地域   │ スコア │ 結果  │ │
-│ ├───────────┼──────┼──────┼────────┼────────┼───────┤ │
-│ │ 12/31 10:00│ 35  │ 女性 │ 西宮市 │ 45点  │ -5歳  │ │
-│ │ 12/31 09:30│ 42  │ 男性 │ 大阪市 │ 38点  │ +3歳  │ │
-│ │ ...       │     │     │       │       │       │ │
-│ └─────────────────────────────────────────────────┘ │
+│ ┌──────────────────────────────────────────────────┐│
+│ │ 日時       │年齢│性別│ 地域    │スコア│結果 │CTA││
+│ ├────────────┼────┼────┼─────────┼──────┼─────┼───┤│
+│ │12/31 10:00 │ 35 │女性│ 西宮市  │ 45点 │良好 │ ✓ ││
+│ │12/31 09:30 │ 42 │男性│ 大阪市  │ 38点 │注意 │ - ││
+│ └──────────────────────────────────────────────────┘│
 │                                                     │
 │              [もっと見る]                           │
 └─────────────────────────────────────────────────────┘
 ```
 
-### 結果詳細モーダル（行クリック時）
-
-```
-┌─────────────────────────────────────────┐
-│ 診断結果詳細                      [×]  │
-├─────────────────────────────────────────┤
-│ 診断日時: 2025/12/31 10:00             │
-│                                         │
-│ ■ 利用者情報                           │
-│   年齢: 35歳                           │
-│   性別: 女性                           │
-│   地域: 兵庫県西宮市松園町7丁目         │
-│                                         │
-│ ■ 診断結果                             │
-│   スコア: 45点                         │
-│   結果: お口年齢 実年齢-5歳            │
-│   カテゴリ: good                       │
-│                                         │
-│ ■ アクション                           │
-│   CTAクリック: あり（予約ボタン）       │
-│   クリック日時: 2025/12/31 10:02       │
-└─────────────────────────────────────────┘
-```
-
 ## 実装フェーズ
 
-### Phase 1: 基本機能（必須）
+### Phase 1: API拡張（0.5日）
 
-1. DiagnosisSessionテーブルの確認・マイグレーション
-2. 診断完了時にスコア・結果を保存するよう修正
-3. API実装 `/api/dashboard/channels/[id]/results`
-4. 診断結果一覧ページ実装
+1. `/api/dashboard/history/route.ts` 修正
+   - レスポンスに `totalScore`, `resultCategory` を追加
+   - 新規フィルターパラメータ対応（gender, ageRange, resultCategory, hasCta）
+   - サマリー計算・返却（includeSummary=true時）
 
-### Phase 2: 拡張機能
+### Phase 2: フロントエンド（1日）
 
-1. フィルター機能
-2. ソート機能
-3. 集計サマリー表示
-4. 結果詳細モーダル
+1. `/dashboard/channels/[id]/page.tsx` にタブUI追加
+2. 診断結果一覧コンポーネント作成
+3. フィルターUI実装
+4. サマリー表示
 
-### Phase 3: エクスポート機能
+### Phase 3: CSVエクスポート（0.5日）
 
-1. CSVエクスポートAPI
+1. `/api/dashboard/history/export` エンドポイント追加
 2. プラン制限チェック
 
-## プライバシー考慮
+## 注意事項
 
-- 個人を特定できる情報（名前、電話番号等）は保存・表示しない
-- 位置情報は町丁目レベルまで（GPS座標は保存しない）
+### プライバシー
+
+- 個人を特定できる情報は表示しない
+- 位置情報は町丁目レベルまで
 - データは医院管理者のみアクセス可能
+
+### パフォーマンス
+
+- 大量データ対応のためページネーション必須
+- サマリー計算はDBで実行（クライアント側で集計しない）
+- 既存インデックス: `[clinicId, completedAt, isDemo, createdAt]`
 
 ## 関連ファイル
 
-| ファイル | 説明 |
-|----------|------|
-| `/src/app/dashboard/channels/[id]/page.tsx` | QRコード詳細ページ（修正対象） |
-| `/src/app/api/dashboard/history/route.ts` | 既存履歴API（参考） |
-| `/src/components/diagnosis/result-card.tsx` | 診断結果保存処理（修正対象） |
-| `/prisma/schema.prisma` | データモデル（確認・修正対象） |
+| ファイル | 変更内容 |
+|----------|----------|
+| `/src/app/api/dashboard/history/route.ts` | フィルター・サマリー追加、totalScore/resultCategory返却 |
+| `/src/app/dashboard/channels/[id]/page.tsx` | タブUI追加 |
+| `/src/components/dashboard/results-tab.tsx` | 新規作成（診断結果タブコンポーネント） |
+| `/prisma/schema.prisma` | **変更なし**（必要フィールド既存） |
+| `/src/components/diagnosis/result-card.tsx` | **変更なし**（既にtotalScore/resultCategory送信済み） |
+| `/src/app/api/track/complete/route.ts` | **変更なし**（既にtotalScore/resultCategory保存済み） |
