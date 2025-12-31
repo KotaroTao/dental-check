@@ -102,7 +102,7 @@ export default function DashboardLayout({
               <span className="text-[0.5em]"> for Dental</span>
             </Link>
             {/* PC用ナビゲーション */}
-            <nav className="hidden lg:flex items-center gap-6">
+            <nav className="hidden xl:flex items-center gap-6">
               {navLinks.map((link) => (
                 <Link
                   key={link.href}
@@ -118,22 +118,22 @@ export default function DashboardLayout({
               ))}
             </nav>
           </div>
-          <div className="flex items-center gap-2 lg:gap-4">
+          <div className="flex items-center gap-2 xl:gap-4">
             {clinic?.subscription?.status === "trial" && trialDaysLeft !== null && (
               <span className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded-full whitespace-nowrap">
                 残り{trialDaysLeft}日
               </span>
             )}
-            <span className="text-sm text-gray-600 hidden lg:block truncate max-w-[150px]">
+            <span className="text-sm text-gray-600 hidden xl:block truncate max-w-[150px]">
               {clinic?.name}
             </span>
-            <Button variant="outline" size="sm" onClick={handleLogout} className="hidden lg:flex">
+            <Button variant="outline" size="sm" onClick={handleLogout} className="hidden xl:flex">
               ログアウト
             </Button>
             {/* ハンバーガーメニューボタン */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md"
+              className="xl:hidden p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md"
               aria-label="メニュー"
             >
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -143,7 +143,7 @@ export default function DashboardLayout({
 
         {/* モバイルメニュー */}
         {mobileMenuOpen && (
-          <div className="lg:hidden border-t bg-white">
+          <div className="xl:hidden border-t bg-white">
             <nav className="container mx-auto px-4 py-4 space-y-1">
               {navLinks.map((link) => (
                 <Link
