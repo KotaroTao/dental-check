@@ -32,11 +32,6 @@ const PERIOD_OPTIONS = [
   { value: "custom", label: "期間指定" },
 ];
 
-// 診断タイプの表示名
-const DIAGNOSIS_TYPE_NAMES: Record<string, string> = {
-  "oral-age": "お口年齢診断",
-  "child-orthodontics": "矯正チェック",
-};
 
 // CTAタイプの表示名
 const CTA_TYPE_NAMES: Record<string, string> = {
@@ -78,6 +73,7 @@ interface Channel {
   imageUrl: string | null;
   channelType: "diagnosis" | "link";
   diagnosisTypeSlug: string | null;
+  diagnosisTypeName: string | null;
   redirectUrl: string | null;
   isActive: boolean;
   expiresAt: string | null;
@@ -733,11 +729,17 @@ export default function DashboardPage() {
                           </Link>
                         )}
                       </div>
-                      <div className="text-sm text-gray-500 flex items-center gap-2 flex-wrap">
-                        <span>
-                          {channel.channelType === "diagnosis"
-                            ? `${channel.diagnosisTypeSlug ? DIAGNOSIS_TYPE_NAMES[channel.diagnosisTypeSlug] || channel.diagnosisTypeSlug : "診断"}`
-                            : "リンク"} / {new Date(channel.createdAt).toLocaleDateString("ja-JP")}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {channel.channelType === "diagnosis" && channel.diagnosisTypeName && (
+                          <span className="text-xs text-gray-400">
+                            {channel.diagnosisTypeName}
+                          </span>
+                        )}
+                        {channel.channelType === "link" && (
+                          <span className="text-xs text-gray-400">リンク</span>
+                        )}
+                        <span className="text-xs text-gray-400">
+                          作成日: {new Date(channel.createdAt).toLocaleDateString("ja-JP").replace(/\//g, "/")}
                         </span>
                         {channel.channelType === "link" && (
                           <span className="flex items-center gap-1 text-xs text-purple-600">
@@ -746,13 +748,13 @@ export default function DashboardPage() {
                           </span>
                         )}
                         {channel.expiresAt && (
-                          <span className="flex items-center gap-1 text-xs">
+                          <span className="flex items-center gap-1 text-xs text-gray-400">
                             <Calendar className="w-3 h-3" />
                             {new Date(channel.expiresAt).toLocaleDateString("ja-JP")}まで
                           </span>
                         )}
                         {stats?.periodLabel && (
-                          <span className="flex items-center gap-1 text-xs text-gray-400">
+                          <span className="text-xs text-gray-400">
                             掲載: {stats.periodLabel}
                           </span>
                         )}

@@ -17,6 +17,31 @@ export async function GET() {
       orderBy: [{ isActive: "desc" }, { sortOrder: "asc" }, { createdAt: "desc" }],
     })) as Channel[];
 
+    // 診断タイプ名を取得してマッピング
+    const diagnosisSlugs = channels
+      .map((c) => c.diagnosisTypeSlug)
+      .filter((slug): slug is string => slug !== null);
+
+    const diagnosisTypes = diagnosisSlugs.length > 0
+      ? await prisma.diagnosisType.findMany({
+          where: { slug: { in: diagnosisSlugs } },
+          select: { slug: true, name: true },
+        })
+      : [];
+
+    const diagnosisNameMap: Record<string, string> = {};
+    for (const dt of diagnosisTypes) {
+      diagnosisNameMap[dt.slug] = dt.name;
+    }
+
+    // チャンネルに診断名を追加
+    const channelsWithDiagnosisName = channels.map((c) => ({
+      ...c,
+      diagnosisTypeName: c.diagnosisTypeSlug
+        ? diagnosisNameMap[c.diagnosisTypeSlug] || c.diagnosisTypeSlug
+        : null,
+    }));
+
     const activeCount = channels.filter((c) => c.isActive).length;
     const hiddenCount = channels.filter((c) => !c.isActive).length;
 
@@ -24,7 +49,7 @@ export async function GET() {
     const canCreate = await canCreateChannel(session.clinicId);
 
     return NextResponse.json({
-      channels,
+      channels: channelsWithDiagnosisName,
       activeCount,
       hiddenCount,
       canCreateQR: canCreate.canCreate,
