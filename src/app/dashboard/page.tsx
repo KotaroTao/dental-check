@@ -367,6 +367,34 @@ export default function DashboardPage() {
     }
   };
 
+  // QRコード完全削除
+  const handlePermanentDeleteChannel = async (id: string) => {
+    const channel = channels.find((c) => c.id === id);
+    if (!channel) return;
+
+    const confirmed = confirm(
+      `【完全削除の警告】\n\n「${channel.name}」を完全に削除します。\n\nこの操作は取り消せません。以下のデータがすべて削除されます：\n• QRコード情報\n• QR読み込み履歴（${channel.scanCount}件）\n• 診断結果データ\n• アクセスログ\n\n本当に完全削除しますか？`
+    );
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch(`/api/channels/${id}/permanent-delete`, {
+        method: "DELETE",
+      });
+      if (response.ok) {
+        setChannels(channels.filter((c) => c.id !== id));
+        fetchChannelStats();
+        fetchHistory(0, false);
+      } else {
+        const data = await response.json();
+        alert(data.error || "完全削除に失敗しました");
+      }
+    } catch (error) {
+      console.error("Failed to permanently delete channel:", error);
+      alert("完全削除に失敗しました");
+    }
+  };
+
   const handleLoadMore = () => {
     fetchHistory(history.length, true);
   };
@@ -774,14 +802,26 @@ export default function DashboardPage() {
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       ) : (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRestoreChannel(channel.id)}
-                          className="text-green-500 hover:text-green-700 hover:bg-green-50"
-                        >
-                          <RotateCcw className="w-4 h-4" />
-                        </Button>
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRestoreChannel(channel.id)}
+                            className="text-green-500 hover:text-green-700 hover:bg-green-50"
+                            title="復元"
+                          >
+                            <RotateCcw className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handlePermanentDeleteChannel(channel.id)}
+                            className="text-red-600 hover:text-red-800 hover:bg-red-100"
+                            title="完全削除"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </>
                       )}
                     </div>
                   </div>
