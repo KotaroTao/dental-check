@@ -120,7 +120,7 @@ export default function DashboardLayout({
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             {clinic?.subscription?.status === "trial" && trialDaysLeft !== null && (
-              <span className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded-full whitespace-nowrap hidden sm:inline-block xl:inline-block">
+              <span className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded-full whitespace-nowrap">
                 残り{trialDaysLeft}日
               </span>
             )}
