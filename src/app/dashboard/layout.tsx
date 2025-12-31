@@ -119,9 +119,10 @@ export default function DashboardLayout({
             </nav>
           </div>
           <div className="flex items-center gap-2 lg:gap-4">
+            {/* トライアル残り日数表示（常にハンバーガーメニューの外に表示） */}
             {clinic?.subscription?.status === "trial" && trialDaysLeft !== null && (
-              <span className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded-full whitespace-nowrap">
-                残り{trialDaysLeft}日
+              <span className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded-full whitespace-nowrap font-medium">
+                トライアル残り{trialDaysLeft}日
               </span>
             )}
             <span className="text-sm text-gray-600 hidden lg:block truncate max-w-[150px]">
