@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 import { SubscriptionAlert } from "@/components/dashboard/subscription-alert";
 
@@ -101,40 +100,18 @@ export default function DashboardLayout({
               <span className="sm:hidden">くるくる</span>
               <span className="text-[0.5em]"> for Dental</span>
             </Link>
-            {/* PC用ナビゲーション */}
-            <nav className="hidden lg:flex items-center gap-6">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={`text-sm ${
-                    pathname === link.href
-                      ? "text-blue-600 font-medium"
-                      : "text-gray-600 hover:text-gray-900"
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </nav>
           </div>
-          <div className="flex items-center gap-2 lg:gap-4">
+          <div className="flex items-center gap-2">
             {/* トライアル残り日数表示（常にハンバーガーメニューの外に表示） */}
             {clinic?.subscription?.status === "trial" && trialDaysLeft !== null && (
               <span className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded-full whitespace-nowrap font-medium">
                 トライアル残り{trialDaysLeft}日
               </span>
             )}
-            <span className="text-sm text-gray-600 hidden lg:block truncate max-w-[150px]">
-              {clinic?.name}
-            </span>
-            <Button variant="outline" size="sm" onClick={handleLogout} className="hidden lg:flex">
-              ログアウト
-            </Button>
-            {/* ハンバーガーメニューボタン */}
+            {/* ハンバーガーメニューボタン（全画面サイズで表示） */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md"
+              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md"
               aria-label="メニュー"
             >
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -142,9 +119,9 @@ export default function DashboardLayout({
           </div>
         </div>
 
-        {/* モバイルメニュー */}
+        {/* ハンバーガーメニュー（全画面サイズ対応） */}
         {mobileMenuOpen && (
-          <div className="lg:hidden border-t bg-white">
+          <div className="border-t bg-white">
             <nav className="container mx-auto px-4 py-4 space-y-1">
               {navLinks.map((link) => (
                 <Link
