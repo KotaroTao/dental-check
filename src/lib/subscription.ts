@@ -52,9 +52,9 @@ export async function getSubscriptionState(
 
   const now = new Date();
 
-  // QRコード数を取得
+  // QRコード数を取得（非表示含む全QRコードをカウント、完全削除で枠が空く）
   const qrCount = await prisma.channel.count({
-    where: { clinicId, isActive: true },
+    where: { clinicId },
   });
 
   // サブスクリプションがない場合（新規登録直後など）
