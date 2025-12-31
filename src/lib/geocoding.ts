@@ -116,7 +116,12 @@ function parseGoogleResult(result: {
   let country = "JP";
   let region = "";
   let city = "";
-  let town = "";
+
+  // 町丁目の各レベルを個別に取得
+  let sublocalityLevel2 = ""; // 町名（例: 松園町）
+  let sublocalityLevel3 = ""; // 丁目（例: 7丁目 or 7）
+  let sublocalityLevel4 = ""; // 番地レベル
+  let sublocality = "";       // フォールバック用
 
   for (const component of components) {
     const types = component.types;
@@ -136,17 +141,51 @@ function parseGoogleResult(result: {
     ) {
       if (!city) city = component.long_name;
     }
-    // 町丁目
-    if (
-      types.includes("sublocality_level_2") ||
-      types.includes("sublocality_level_3") ||
-      types.includes("sublocality_level_4")
-    ) {
-      if (!town) town = component.long_name;
+    // 町丁目の各レベルを個別に取得
+    if (types.includes("sublocality_level_2")) {
+      sublocalityLevel2 = component.long_name;
     }
-    // 番地レベル（町丁目が取れない場合のフォールバック）
-    if (types.includes("sublocality") && !town) {
-      town = component.long_name;
+    if (types.includes("sublocality_level_3")) {
+      sublocalityLevel3 = component.long_name;
+    }
+    if (types.includes("sublocality_level_4")) {
+      sublocalityLevel4 = component.long_name;
+    }
+    // 番地レベル（フォールバック用）
+    if (types.includes("sublocality") && !sublocality) {
+      sublocality = component.long_name;
+    }
+  }
+
+  // 町名を組み立て（町名 + 丁目を結合）
+  let town = "";
+  if (sublocalityLevel2) {
+    town = sublocalityLevel2;
+    // 丁目が数字のみの場合は「丁目」を付加して結合
+    if (sublocalityLevel3) {
+      // 数字のみかチェック（半角・全角両方）
+      const isNumericOnly = /^[0-9０-９]+$/.test(sublocalityLevel3);
+      if (isNumericOnly) {
+        town += sublocalityLevel3 + "丁目";
+      } else {
+        town += sublocalityLevel3;
+      }
+    }
+  } else if (sublocalityLevel3) {
+    // level2がない場合はlevel3を使用（数字のみの場合は空にする）
+    const isNumericOnly = /^[0-9０-９]+$/.test(sublocalityLevel3);
+    if (!isNumericOnly) {
+      town = sublocalityLevel3;
+    }
+  } else if (sublocalityLevel4) {
+    const isNumericOnly = /^[0-9０-９]+$/.test(sublocalityLevel4);
+    if (!isNumericOnly) {
+      town = sublocalityLevel4;
+    }
+  } else if (sublocality) {
+    const isNumericOnly = /^[0-9０-９]+$/.test(sublocality);
+    if (!isNumericOnly) {
+      town = sublocality;
     }
   }
 
