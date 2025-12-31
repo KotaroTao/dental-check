@@ -300,18 +300,18 @@ export default function NewChannelPage() {
                 <option value="">
                   {isLoadingDiagnoses ? "読み込み中..." : "選択してください"}
                 </option>
-                {defaultDiagnoses.length > 0 && (
-                  <optgroup label="デフォルト診断">
-                    {defaultDiagnoses.map((type) => (
+                {customDiagnoses.length > 0 && (
+                  <optgroup label="オリジナル診断">
+                    {customDiagnoses.map((type) => (
                       <option key={type.slug} value={type.slug}>
                         {type.name}
                       </option>
                     ))}
                   </optgroup>
                 )}
-                {customDiagnoses.length > 0 && (
-                  <optgroup label="オリジナル診断">
-                    {customDiagnoses.map((type) => (
+                {defaultDiagnoses.length > 0 && (
+                  <optgroup label="デフォルト診断">
+                    {defaultDiagnoses.map((type) => (
                       <option key={type.slug} value={type.slug}>
                         {type.name}
                       </option>
