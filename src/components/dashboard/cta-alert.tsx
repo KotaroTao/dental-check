@@ -65,9 +65,6 @@ export function CTAAlert() {
             <span className="font-medium">予約URL、電話番号、LINE</span>
             のいずれかを設定してください。
           </p>
-          <p className="text-xs mt-1 text-amber-700 opacity-80">
-            予約導線を設定することで、診断から予約への転換率が向上します。
-          </p>
         </div>
         <Link
           href="/dashboard/settings"
