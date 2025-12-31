@@ -101,6 +101,8 @@ interface ChannelStats {
   cpa: number | null;
   cpd: number | null;
   cpc: number | null;
+  // 期間ラベル
+  periodLabel: string;
 }
 
 interface HistoryItem {
@@ -171,7 +173,7 @@ export default function DashboardPage() {
   const [expandedChannelId, setExpandedChannelId] = useState<string | null>(null);
 
   // QRコードソート
-  type ChannelSortField = "default" | "accessCount" | "completedCount" | "completionRate" | "ctaCount";
+  type ChannelSortField = "default" | "accessCount" | "completedCount" | "completionRate" | "ctaCount" | "cpa" | "cpd" | "cpc";
   const [channelSortField, setChannelSortField] = useState<ChannelSortField>("default");
 
   // ドラッグ＆ドロップ
@@ -446,6 +448,22 @@ export default function DashboardPage() {
           return statsB.completionRate - statsA.completionRate;
         case "ctaCount":
           return statsB.ctaCount - statsA.ctaCount;
+        // CPA/CPD/CPC: 低い順（効率が良い順）。nullは最後に
+        case "cpa":
+          if (statsA.cpa === null && statsB.cpa === null) return 0;
+          if (statsA.cpa === null) return 1;
+          if (statsB.cpa === null) return -1;
+          return statsA.cpa - statsB.cpa;
+        case "cpd":
+          if (statsA.cpd === null && statsB.cpd === null) return 0;
+          if (statsA.cpd === null) return 1;
+          if (statsB.cpd === null) return -1;
+          return statsA.cpd - statsB.cpd;
+        case "cpc":
+          if (statsA.cpc === null && statsB.cpc === null) return 0;
+          if (statsA.cpc === null) return 1;
+          if (statsB.cpc === null) return -1;
+          return statsA.cpc - statsB.cpc;
         default:
           return 0;
       }
@@ -631,6 +649,9 @@ export default function DashboardPage() {
               <option value="completedCount">診断完了順</option>
               <option value="completionRate">完了率順</option>
               <option value="ctaCount">CTA順</option>
+              <option value="cpa">CPA順（アクセス単価）</option>
+              <option value="cpd">CPD順（診断完了単価）</option>
+              <option value="cpc">CPC順（CTAクリック単価）</option>
             </select>
           )}
         </div>
@@ -730,6 +751,11 @@ export default function DashboardPage() {
                             {new Date(channel.expiresAt).toLocaleDateString("ja-JP")}まで
                           </span>
                         )}
+                        {stats?.periodLabel && (
+                          <span className="flex items-center gap-1 text-xs text-gray-400">
+                            掲載: {stats.periodLabel}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
@@ -782,7 +808,7 @@ export default function DashboardPage() {
                   {channel.isActive && channel.channelType === "diagnosis" && stats && (
                     <>
                       {/* PC版: ホバーでポップオーバー */}
-                      <div className="hidden md:grid grid-cols-5 gap-2 text-center">
+                      <div className={`hidden md:grid gap-2 text-center ${stats.adBudget ? "grid-cols-7" : "grid-cols-5"}`}>
                         <Popover
                           trigger={
                             <div className="bg-gray-50 rounded-lg py-2 px-3 hover:bg-blue-50 transition-colors">
@@ -879,16 +905,41 @@ export default function DashboardPage() {
                           </div>
                         </Popover>
                         {stats.adBudget ? (
-                          <Link href={`/dashboard/channels/${channel.id}#effectiveness`}>
-                            <div className="bg-blue-50 rounded-lg py-2 px-3 hover:bg-blue-100 transition-colors h-full flex flex-col justify-center">
-                              <div className="text-xs text-blue-600 mb-0.5 flex items-center justify-center gap-1">
-                                CPA（QR読み込み）
+                          <>
+                            <Link href={`/dashboard/channels/${channel.id}#effectiveness`}>
+                              <div className="bg-blue-50 rounded-lg py-2 px-3 hover:bg-blue-100 transition-colors h-full flex flex-col justify-center">
+                                <div className="text-xs text-blue-600 mb-0.5 flex items-center justify-center gap-1">
+                                  CPA
+                                </div>
+                                <div className="text-lg font-bold text-blue-600">
+                                  {stats.cpa ? `¥${stats.cpa.toLocaleString()}` : "-"}
+                                </div>
+                                <div className="text-[10px] text-blue-500">アクセス単価</div>
                               </div>
-                              <div className="text-lg font-bold text-blue-600">
-                                {stats.cpa ? `¥${stats.cpa.toLocaleString()}` : "-"}
+                            </Link>
+                            <Link href={`/dashboard/channels/${channel.id}#effectiveness`}>
+                              <div className="bg-green-50 rounded-lg py-2 px-3 hover:bg-green-100 transition-colors h-full flex flex-col justify-center">
+                                <div className="text-xs text-green-600 mb-0.5 flex items-center justify-center gap-1">
+                                  CPD
+                                </div>
+                                <div className="text-lg font-bold text-green-600">
+                                  {stats.cpd ? `¥${stats.cpd.toLocaleString()}` : "-"}
+                                </div>
+                                <div className="text-[10px] text-green-500">診断完了単価</div>
                               </div>
-                            </div>
-                          </Link>
+                            </Link>
+                            <Link href={`/dashboard/channels/${channel.id}#effectiveness`}>
+                              <div className="bg-purple-50 rounded-lg py-2 px-3 hover:bg-purple-100 transition-colors h-full flex flex-col justify-center">
+                                <div className="text-xs text-purple-600 mb-0.5 flex items-center justify-center gap-1">
+                                  CPC
+                                </div>
+                                <div className="text-lg font-bold text-purple-600">
+                                  {stats.cpc ? `¥${stats.cpc.toLocaleString()}` : "-"}
+                                </div>
+                                <div className="text-[10px] text-purple-500">CTAクリック単価</div>
+                              </div>
+                            </Link>
+                          </>
                         ) : (
                           <Link href={`/dashboard/channels/${channel.id}/edit#effectiveness`}>
                             <div className="bg-gray-50 rounded-lg py-2 px-3 hover:bg-gray-100 transition-colors h-full flex flex-col justify-center">
@@ -901,7 +952,7 @@ export default function DashboardPage() {
 
                       {/* モバイル版: タップで展開 */}
                       <div className="md:hidden">
-                        <div className="grid grid-cols-5 gap-2 text-center">
+                        <div className="grid grid-cols-4 gap-2 text-center">
                           <div className="bg-gray-50 rounded-lg py-2 px-1">
                             <div className="text-[10px] text-gray-500">QR読み込み</div>
                             <div className="text-base font-bold text-gray-800">{stats.accessCount}</div>
@@ -918,20 +969,36 @@ export default function DashboardPage() {
                             <div className="text-[10px] text-gray-500">CTA</div>
                             <div className="text-base font-bold text-purple-600">{stats.ctaCount}</div>
                           </div>
-                          {stats.adBudget ? (
+                        </div>
+                        {stats.adBudget ? (
+                          <div className="grid grid-cols-3 gap-2 text-center mt-2">
                             <Link href={`/dashboard/channels/${channel.id}#effectiveness`} className="bg-blue-50 rounded-lg py-2 px-1">
-                              <div className="text-[10px] text-blue-600">CPA</div>
+                              <div className="text-[10px] text-blue-600">CPA（アクセス）</div>
                               <div className="text-base font-bold text-blue-600">
-                                {stats.cpa ? `¥${(stats.cpa / 1000).toFixed(1)}k` : "-"}
+                                {stats.cpa ? `¥${stats.cpa.toLocaleString()}` : "-"}
                               </div>
                             </Link>
-                          ) : (
-                            <Link href={`/dashboard/channels/${channel.id}/edit#effectiveness`} className="bg-gray-50 rounded-lg py-2 px-1">
-                              <div className="text-[10px] text-gray-500">効果測定</div>
-                              <div className="text-[10px] font-medium text-blue-600">設定</div>
+                            <Link href={`/dashboard/channels/${channel.id}#effectiveness`} className="bg-green-50 rounded-lg py-2 px-1">
+                              <div className="text-[10px] text-green-600">CPD（診断）</div>
+                              <div className="text-base font-bold text-green-600">
+                                {stats.cpd ? `¥${stats.cpd.toLocaleString()}` : "-"}
+                              </div>
                             </Link>
-                          )}
-                        </div>
+                            <Link href={`/dashboard/channels/${channel.id}#effectiveness`} className="bg-purple-50 rounded-lg py-2 px-1">
+                              <div className="text-[10px] text-purple-600">CPC（CTA）</div>
+                              <div className="text-base font-bold text-purple-600">
+                                {stats.cpc ? `¥${stats.cpc.toLocaleString()}` : "-"}
+                              </div>
+                            </Link>
+                          </div>
+                        ) : (
+                          <div className="mt-2">
+                            <Link href={`/dashboard/channels/${channel.id}/edit#effectiveness`} className="block bg-gray-50 rounded-lg py-2 px-1 text-center">
+                              <div className="text-[10px] text-gray-500">効果測定</div>
+                              <div className="text-[10px] font-medium text-blue-600">設定する</div>
+                            </Link>
+                          </div>
+                        )}
                         <button
                           onClick={() => setExpandedChannelId(isExpanded ? null : channel.id)}
                           className="w-full text-center text-xs text-gray-500 hover:text-gray-700 py-2 flex items-center justify-center gap-1"

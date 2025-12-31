@@ -127,6 +127,13 @@ export default function EditChannelPage() {
         ...formData,
         [name]: (e.target as HTMLInputElement).checked,
       });
+    } else if (name === "adStartDate") {
+      // 掲載開始日を変更した場合、終了日が開始日より前なら終了日をクリア
+      const newFormData = { ...formData, [name]: value };
+      if (value && formData.adEndDate && formData.adEndDate < value) {
+        newFormData.adEndDate = "";
+      }
+      setFormData(newFormData);
     } else {
       setFormData({ ...formData, [name]: value });
     }
@@ -551,25 +558,63 @@ export default function EditChannelPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="adStartDate">掲載開始日</Label>
-                  <Input
-                    id="adStartDate"
-                    name="adStartDate"
-                    type="date"
-                    value={formData.adStartDate}
-                    onChange={handleChange}
-                    disabled={isSaving}
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      id="adStartDate"
+                      name="adStartDate"
+                      type="date"
+                      value={formData.adStartDate}
+                      onChange={handleChange}
+                      disabled={isSaving}
+                      className="flex-1"
+                    />
+                    {formData.adStartDate && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setFormData((prev) => ({ ...prev, adStartDate: "" }))}
+                        disabled={isSaving}
+                        className="shrink-0"
+                        title="リセット"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="adEndDate">掲載終了日</Label>
-                  <Input
-                    id="adEndDate"
-                    name="adEndDate"
-                    type="date"
-                    value={formData.adEndDate}
-                    onChange={handleChange}
-                    disabled={isSaving}
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      id="adEndDate"
+                      name="adEndDate"
+                      type="date"
+                      value={formData.adEndDate}
+                      onChange={handleChange}
+                      disabled={isSaving}
+                      min={formData.adStartDate || undefined}
+                      className="flex-1"
+                    />
+                    {formData.adEndDate && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setFormData((prev) => ({ ...prev, adEndDate: "" }))}
+                        disabled={isSaving}
+                        className="shrink-0"
+                        title="リセット"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                  {formData.adStartDate && (
+                    <p className="text-xs text-gray-500">
+                      {formData.adStartDate} 以降の日付を選択してください
+                    </p>
+                  )}
                 </div>
               </div>
 
