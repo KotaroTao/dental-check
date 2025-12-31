@@ -101,7 +101,12 @@ export default function DiagnosesPage() {
                   </Link>
                 </>
               ) : (
-                "カスタムプラン以上でオリジナル診断を作成できます"
+                <div className="space-y-2">
+                  <p>カスタムプラン以上でオリジナル診断を作成できます</p>
+                  <Link href="/dashboard/billing" className="text-blue-600 hover:underline inline-block">
+                    プランを変更する →
+                  </Link>
+                </div>
               )}
             </div>
           ) : (
