@@ -117,6 +117,22 @@ export default function ChannelDetailPage() {
     }
   }, [channel, qrUrl]);
 
+  // ハッシュアンカーへのスクロール対応
+  useEffect(() => {
+    if (stats && typeof window !== "undefined") {
+      const hash = window.location.hash;
+      if (hash) {
+        // 少し遅延させてDOMが確実にレンダリングされた後にスクロール
+        setTimeout(() => {
+          const element = document.querySelector(hash);
+          if (element) {
+            element.scrollIntoView({ behavior: "smooth", block: "start" });
+          }
+        }, 100);
+      }
+    }
+  }, [stats]);
+
   const handleDownloadPNG = () => {
     if (!canvasRef.current || !channel) return;
 
