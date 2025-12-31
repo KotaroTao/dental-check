@@ -730,16 +730,8 @@ export default function DashboardPage() {
                         )}
                       </div>
                       <div className="flex items-center gap-2 flex-wrap">
-                        {channel.channelType === "diagnosis" && channel.diagnosisTypeName && (
-                          <span className="text-xs text-gray-400">
-                            {channel.diagnosisTypeName}
-                          </span>
-                        )}
-                        {channel.channelType === "link" && (
-                          <span className="text-xs text-gray-400">リンク</span>
-                        )}
                         <span className="text-xs text-gray-400">
-                          作成日: {new Date(channel.createdAt).toLocaleDateString("ja-JP").replace(/\//g, "/")}
+                          作成日: {new Date(channel.createdAt).toLocaleDateString("ja-JP")}
                         </span>
                         {channel.channelType === "link" && (
                           <span className="flex items-center gap-1 text-xs text-purple-600">
