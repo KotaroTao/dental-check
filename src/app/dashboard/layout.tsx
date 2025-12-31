@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { SubscriptionAlert } from "@/components/dashboard/subscription-alert";
 import { ClinicInfoAlert } from "@/components/dashboard/clinic-info-alert";
+import { CTAAlert } from "@/components/dashboard/cta-alert";
 
 interface Clinic {
   id: string;
@@ -157,6 +158,7 @@ export default function DashboardLayout({
       <main className="container mx-auto px-4 py-4 sm:py-8">
         <SubscriptionAlert />
         <ClinicInfoAlert />
+        <CTAAlert />
         {children}
       </main>
     </div>
