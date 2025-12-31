@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
-import { SubscriptionAlert } from "@/components/dashboard/subscription-alert";
 import { CTAAlert } from "@/components/dashboard/cta-alert";
 
 interface Clinic {
@@ -69,18 +68,6 @@ export default function DashboardLayout({
     );
   }
 
-  const getTrialDaysLeft = () => {
-    if (!clinic?.subscription?.trialEnd) return null;
-    const trialEnd = new Date(clinic.subscription.trialEnd);
-    const now = new Date();
-    const diff = Math.ceil(
-      (trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-    );
-    return diff > 0 ? diff : 0;
-  };
-
-  const trialDaysLeft = getTrialDaysLeft();
-
   const navLinks = [
     { href: "/dashboard", label: "ダッシュボード" },
     { href: "/dashboard/channels/new", label: "QRコード作成" },
@@ -102,10 +89,10 @@ export default function DashboardLayout({
             </Link>
           </div>
           <div className="flex items-center gap-2">
-            {/* トライアル残り日数表示（常にハンバーガーメニューの外に表示） */}
-            {clinic?.subscription?.status === "trial" && trialDaysLeft !== null && (
-              <span className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded-full whitespace-nowrap font-medium">
-                トライアル残り{trialDaysLeft}日
+            {/* 医院名を常時表示 */}
+            {clinic?.name && (
+              <span className="text-sm text-gray-700 font-medium truncate max-w-[200px]">
+                {clinic.name}
               </span>
             )}
             {/* ハンバーガーメニューボタン（全画面サイズで表示） */}
@@ -154,7 +141,6 @@ export default function DashboardLayout({
 
       {/* メインコンテンツ */}
       <main className="container mx-auto px-4 py-4 sm:py-8">
-        <SubscriptionAlert />
         <CTAAlert />
         {children}
       </main>

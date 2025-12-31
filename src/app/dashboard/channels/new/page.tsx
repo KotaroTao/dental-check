@@ -6,12 +6,17 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, X, Image as ImageIcon, Calendar, Link2, Stethoscope } from "lucide-react";
+import { ArrowLeft, X, Image as ImageIcon, Calendar, Link2, Stethoscope, QrCode } from "lucide-react";
 
 interface DiagnosisType {
   slug: string;
   name: string;
   clinicId: string | null;
+}
+
+interface SubscriptionInfo {
+  qrCodeLimit: number | null;
+  qrCodeCount: number;
 }
 
 export default function NewChannelPage() {
@@ -27,6 +32,7 @@ export default function NewChannelPage() {
   });
   const [diagnosisTypes, setDiagnosisTypes] = useState<DiagnosisType[]>([]);
   const [isLoadingDiagnoses, setIsLoadingDiagnoses] = useState(true);
+  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -49,6 +55,22 @@ export default function NewChannelPage() {
       }
     };
     fetchDiagnoses();
+  }, []);
+
+  // サブスクリプション情報を取得
+  useEffect(() => {
+    const fetchSubscription = async () => {
+      try {
+        const response = await fetch("/api/billing/subscription");
+        if (response.ok) {
+          const data = await response.json();
+          setSubscription(data.subscription);
+        }
+      } catch (error) {
+        console.error("Failed to fetch subscription:", error);
+      }
+    };
+    fetchSubscription();
   }, []);
 
   const handleChange = (
@@ -221,7 +243,17 @@ export default function NewChannelPage() {
       </Link>
 
       <div className="bg-white rounded-xl shadow-sm border p-6">
-        <h1 className="text-xl font-bold mb-6">新しいQRコードを作成</h1>
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-xl font-bold">新しいQRコードを作成</h1>
+          {subscription && subscription.qrCodeLimit !== null && (
+            <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 px-3 py-1.5 rounded-full">
+              <QrCode className="w-4 h-4" />
+              <span>
+                {subscription.qrCodeCount} / {subscription.qrCodeLimit} 枚使用中
+              </span>
+            </div>
+          )}
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
