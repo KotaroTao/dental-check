@@ -60,19 +60,39 @@ async function getDiagnosis(slug: string) {
 
     if (dbDiagnosis) {
       // DBの診断データをDiagnosisFlow用の形式に変換
-      const questions = dbDiagnosis.questions as Array<{
-        id: number;
+      // DBは options で保存、DiagnosisFlow は choices を期待
+      const rawQuestions = dbDiagnosis.questions as Array<{
+        id: number | string;
         text: string;
-        choices: Array<{ text: string; score: number }>;
+        options?: Array<{ text: string; score: number }>;
+        choices?: Array<{ text: string; score: number }>;
       }>;
-      const resultPatterns = dbDiagnosis.resultPatterns as Array<{
+
+      const questions = rawQuestions.map((q, index) => ({
+        id: typeof q.id === 'number' ? q.id : index + 1,
+        text: q.text,
+        choices: q.choices || q.options || [],
+      }));
+
+      const rawResultPatterns = dbDiagnosis.resultPatterns as Array<{
         minScore: number;
         maxScore: number;
         category: string;
         title: string;
-        message: string;
+        message?: string;
+        description?: string;
+        advice?: string;
         ageModifier?: number;
       }>;
+
+      const resultPatterns = rawResultPatterns.map((p) => ({
+        minScore: p.minScore,
+        maxScore: p.maxScore,
+        category: p.category,
+        title: p.title,
+        message: p.message || p.description || p.advice || "",
+        ageModifier: p.ageModifier,
+      }));
 
       return {
         slug: dbDiagnosis.slug,
