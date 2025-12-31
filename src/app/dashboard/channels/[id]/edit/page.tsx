@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Upload, X, Loader2, Image as ImageIcon, Calendar, Link2, CircleDollarSign, MapPin } from "lucide-react";
+import { ArrowLeft, Upload, X, Loader2, Image as ImageIcon, Calendar, Link2, BarChart3, MapPin } from "lucide-react";
 
 // 診断タイプの表示名
 const DIAGNOSIS_TYPE_NAMES: Record<string, string> = {
@@ -508,11 +508,11 @@ export default function EditChannelPage() {
             </p>
           </div>
 
-          {/* 広告効果測定セクション */}
+          {/* 効果測定セクション */}
           <div className="border-t pt-6 mt-6">
             <div className="flex items-center gap-2 mb-4">
-              <CircleDollarSign className="w-5 h-5 text-blue-600" />
-              <h2 className="text-lg font-semibold">広告効果測定</h2>
+              <BarChart3 className="w-5 h-5 text-blue-600" />
+              <h2 className="text-lg font-semibold">効果測定</h2>
             </div>
             <p className="text-sm text-gray-500 mb-4">
               広告費用と掲載期間を設定すると、CPA・CPD・CPCなどの効果指標を確認できます。
