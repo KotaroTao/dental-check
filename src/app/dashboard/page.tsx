@@ -21,7 +21,9 @@ import {
   AlertTriangle,
   Link2,
   MousePointerClick,
+  CreditCard,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { LocationSection } from "@/components/dashboard/location-section";
 
 // 期間の選択肢
@@ -116,6 +118,16 @@ interface HistoryItem {
   ctaByType: Record<string, number>;
 }
 
+interface SubscriptionInfo {
+  status: string;
+  planType: string;
+  planName: string;
+  qrCodeLimit: number | null;
+  qrCodeCount: number;
+  remainingQRCodes: number | null;
+  canCreateQR: boolean;
+}
+
 // ポップオーバーコンポーネント
 function Popover({
   trigger,
@@ -157,6 +169,7 @@ function Skeleton({ className = "" }: { className?: string }) {
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [channels, setChannels] = useState<Channel[]>([]);
   const [channelStats, setChannelStats] = useState<Record<string, ChannelStats>>({});
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -167,6 +180,10 @@ export default function DashboardPage() {
   const [isExporting, setIsExporting] = useState(false);
   const [showHiddenChannels, setShowHiddenChannels] = useState(false);
   const [expandedChannelId, setExpandedChannelId] = useState<string | null>(null);
+
+  // サブスクリプション情報
+  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
+  const [showQRLimitModal, setShowQRLimitModal] = useState(false);
 
   // QRコードソート
   type ChannelSortField = "default" | "accessCount" | "completedCount" | "completionRate" | "ctaCount" | "cpa" | "cpd" | "cpc";
@@ -320,10 +337,24 @@ export default function DashboardPage() {
     [period, selectedChannelId, selectedDiagnosisType, customStartDate, customEndDate]
   );
 
+  // サブスクリプション情報取得
+  const fetchSubscription = useCallback(async () => {
+    try {
+      const response = await fetch("/api/billing/subscription");
+      if (response.ok) {
+        const data = await response.json();
+        setSubscription(data.subscription);
+      }
+    } catch (error) {
+      console.error("Failed to fetch subscription:", error);
+    }
+  }, []);
+
   // 初回読み込み
   useEffect(() => {
     fetchChannels();
-  }, [fetchChannels]);
+    fetchSubscription();
+  }, [fetchChannels, fetchSubscription]);
 
   // フィルター変更時
   useEffect(() => {
@@ -393,6 +424,25 @@ export default function DashboardPage() {
       console.error("Failed to permanently delete channel:", error);
       alert("完全削除に失敗しました");
     }
+  };
+
+  // 新規作成ボタンクリック
+  const handleNewQRCodeClick = () => {
+    // サブスクリプション情報が取得できていない場合は通常通り遷移
+    if (!subscription) {
+      router.push("/dashboard/channels/new");
+      return;
+    }
+
+    // QRコード作成可能かチェック
+    if (!subscription.canCreateQR && subscription.qrCodeLimit !== null) {
+      // 上限に達している場合はモーダルを表示
+      setShowQRLimitModal(true);
+      return;
+    }
+
+    // 作成可能な場合は新規作成ページへ遷移
+    router.push("/dashboard/channels/new");
   };
 
   const handleLoadMore = () => {
@@ -630,12 +680,10 @@ export default function DashboardPage() {
             <QrCode className="w-5 h-5" />
             QRコード
           </h2>
-          <Link href="/dashboard/channels/new">
-            <Button className="gap-2" size="sm">
-              <Plus className="w-4 h-4" />
-              新規作成
-            </Button>
-          </Link>
+          <Button className="gap-2" size="sm" onClick={handleNewQRCodeClick}>
+            <Plus className="w-4 h-4" />
+            新規作成
+          </Button>
         </div>
 
         {/* タブとソート */}
@@ -687,9 +735,7 @@ export default function DashboardPage() {
               {showHiddenChannels ? "非表示のQRコードはありません" : "まだQRコードがありません"}
             </h3>
             {!showHiddenChannels && (
-              <Link href="/dashboard/channels/new">
-                <Button>最初のQRコードを作成する</Button>
-              </Link>
+              <Button onClick={handleNewQRCodeClick}>最初のQRコードを作成する</Button>
             )}
           </div>
         ) : (
@@ -1291,6 +1337,67 @@ export default function DashboardPage() {
               <X className="w-5 h-5" />
             </button>
             <img src={selectedImage.url} alt={selectedImage.name} className="max-w-full max-h-[90vh] rounded-lg" onClick={(e) => e.stopPropagation()} />
+          </div>
+        </div>
+      )}
+
+      {/* QRコード作成上限アラートモーダル */}
+      {showQRLimitModal && subscription && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowQRLimitModal(false)}>
+          <div className="relative bg-white rounded-xl shadow-xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">QRコード作成上限に達しています</h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  現在のプラン（{subscription.planName}）では、QRコードは{subscription.qrCodeLimit}枚まで作成できます。
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 rounded-lg p-4 mb-4">
+              <p className="text-sm text-gray-700 font-medium mb-2">新しいQRコードを作成するには：</p>
+              <ul className="text-sm text-gray-600 space-y-2">
+                <li className="flex items-start gap-2">
+                  <span className="text-amber-600 font-bold">1.</span>
+                  <span>既存のQRコードを完全削除する<br /><span className="text-xs text-gray-500">（非表示タブから「完全削除」を選択）</span></span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-amber-600 font-bold">2.</span>
+                  <span>プランをアップグレードする</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2">
+              {hiddenChannels.length > 0 && (
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    setShowQRLimitModal(false);
+                    setShowHiddenChannels(true);
+                  }}
+                >
+                  非表示タブを確認
+                </Button>
+              )}
+              <Link href="/dashboard/billing" className="flex-1">
+                <Button className="w-full gap-2">
+                  <CreditCard className="w-4 h-4" />
+                  プランを確認
+                </Button>
+              </Link>
+            </div>
+
+            <button
+              onClick={() => setShowQRLimitModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
         </div>
       )}
