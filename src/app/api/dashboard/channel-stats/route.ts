@@ -171,6 +171,24 @@ export async function GET(request: NextRequest) {
       }),
     ]);
 
+    // 期間ラベル生成関数
+    const formatPeriodLabel = (startDate: Date | null, endDate: Date | null): string => {
+      const formatDate = (date: Date) => {
+        return `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, "0")}/${date.getDate().toString().padStart(2, "0")}`;
+      };
+
+      if (!startDate && !endDate) {
+        return "無期限";
+      } else if (startDate && !endDate) {
+        return `${formatDate(startDate)}〜`;
+      } else if (!startDate && endDate) {
+        return `〜${formatDate(endDate)}`;
+      } else if (startDate && endDate) {
+        return `${formatDate(startDate)}〜${formatDate(endDate)}`;
+      }
+      return "無期限";
+    };
+
     // 統計データを整理
     const stats: Record<string, {
       accessCount: number;
@@ -192,6 +210,8 @@ export async function GET(request: NextRequest) {
       cpa: number | null;  // Cost per Access
       cpd: number | null;  // Cost per Diagnosis completion
       cpc: number | null;  // Cost per CTA Click
+      // 期間ラベル
+      periodLabel: string;
     }> = {};
 
     // 初期化
@@ -217,6 +237,8 @@ export async function GET(request: NextRequest) {
         cpa: null,
         cpd: null,
         cpc: null,
+        // 期間ラベル
+        periodLabel: formatPeriodLabel(adData.adStartDate, adData.adEndDate),
       };
     }
 
