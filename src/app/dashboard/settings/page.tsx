@@ -356,7 +356,26 @@ export default function SettingsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="cta.lineUrl">LINE公式アカウントURL</Label>
+              <Label htmlFor="cta.clinicHomepageUrl">医院ホームページ</Label>
+              <Input
+                id="cta.clinicHomepageUrl"
+                name="cta.clinicHomepageUrl"
+                type="url"
+                placeholder="https://example-dental.com"
+                value={settings.ctaConfig.clinicHomepageUrl || ""}
+                onChange={handleChange}
+                className={validationErrors.clinicHomepageUrl ? "border-red-500" : ""}
+              />
+              {validationErrors.clinicHomepageUrl && (
+                <p className="text-xs text-red-500 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {validationErrors.clinicHomepageUrl}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="cta.lineUrl">LINE公式アカウント</Label>
               <Input
                 id="cta.lineUrl"
                 name="cta.lineUrl"
@@ -375,7 +394,7 @@ export default function SettingsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="cta.googleMapsUrl">GoogleマップURL</Label>
+              <Label htmlFor="cta.googleMapsUrl">Googleマップ</Label>
               <Input
                 id="cta.googleMapsUrl"
                 name="cta.googleMapsUrl"
@@ -385,39 +404,16 @@ export default function SettingsPage() {
                 onChange={handleChange}
                 className={validationErrors.googleMapsUrl ? "border-red-500" : ""}
               />
-              {validationErrors.googleMapsUrl ? (
+              {validationErrors.googleMapsUrl && (
                 <p className="text-xs text-red-500 flex items-center gap-1">
                   <AlertCircle className="w-3 h-3" />
                   {validationErrors.googleMapsUrl}
                 </p>
-              ) : (
-                <p className="text-xs text-gray-500">医院の場所をGoogleマップで開くリンク</p>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="cta.clinicHomepageUrl">医院ホームページURL</Label>
-              <Input
-                id="cta.clinicHomepageUrl"
-                name="cta.clinicHomepageUrl"
-                type="url"
-                placeholder="https://example-dental.com"
-                value={settings.ctaConfig.clinicHomepageUrl || ""}
-                onChange={handleChange}
-                className={validationErrors.clinicHomepageUrl ? "border-red-500" : ""}
-              />
-              {validationErrors.clinicHomepageUrl ? (
-                <p className="text-xs text-red-500 flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" />
-                  {validationErrors.clinicHomepageUrl}
-                </p>
-              ) : (
-                <p className="text-xs text-gray-500">診断結果ページに「医院について詳しく見る」リンクが表示されます</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="cta.instagramUrl">InstagramURL</Label>
+              <Label htmlFor="cta.instagramUrl">Instagram</Label>
               <Input
                 id="cta.instagramUrl"
                 name="cta.instagramUrl"
@@ -436,7 +432,7 @@ export default function SettingsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="cta.youtubeUrl">YouTubeチャンネルURL</Label>
+              <Label htmlFor="cta.youtubeUrl">YouTubeチャンネル</Label>
               <Input
                 id="cta.youtubeUrl"
                 name="cta.youtubeUrl"
@@ -455,7 +451,7 @@ export default function SettingsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="cta.facebookUrl">FacebookページURL</Label>
+              <Label htmlFor="cta.facebookUrl">Facebookページ</Label>
               <Input
                 id="cta.facebookUrl"
                 name="cta.facebookUrl"
@@ -474,7 +470,7 @@ export default function SettingsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="cta.tiktokUrl">TikTokURL</Label>
+              <Label htmlFor="cta.tiktokUrl">TikTok</Label>
               <Input
                 id="cta.tiktokUrl"
                 name="cta.tiktokUrl"
@@ -493,7 +489,7 @@ export default function SettingsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="cta.threadsUrl">ThreadsURL</Label>
+              <Label htmlFor="cta.threadsUrl">Threads</Label>
               <Input
                 id="cta.threadsUrl"
                 name="cta.threadsUrl"
@@ -512,7 +508,7 @@ export default function SettingsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="cta.xUrl">X（Twitter）URL</Label>
+              <Label htmlFor="cta.xUrl">X（Twitter）</Label>
               <Input
                 id="cta.xUrl"
                 name="cta.xUrl"
