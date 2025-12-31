@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { SubscriptionAlert } from "@/components/dashboard/subscription-alert";
+import { ClinicInfoAlert } from "@/components/dashboard/clinic-info-alert";
 
 interface Clinic {
   id: string;
@@ -155,6 +156,7 @@ export default function DashboardLayout({
       {/* メインコンテンツ */}
       <main className="container mx-auto px-4 py-4 sm:py-8">
         <SubscriptionAlert />
+        <ClinicInfoAlert />
         {children}
       </main>
     </div>
