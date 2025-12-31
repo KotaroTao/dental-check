@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import QRCode from "qrcode";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Download, Copy, ExternalLink, Edit, Image as ImageIcon, X, Calendar, AlertTriangle, Link2, MousePointerClick, Code, Check, CircleDollarSign, TrendingUp, MapPin, BarChart3 } from "lucide-react";
+import { ArrowLeft, Download, Copy, ExternalLink, Edit, Image as ImageIcon, X, Calendar, AlertTriangle, Link2, MousePointerClick, Code, Check, TrendingUp, MapPin, BarChart3 } from "lucide-react";
 
 // 診断タイプの表示名
 const DIAGNOSIS_TYPE_NAMES: Record<string, string> = {
@@ -365,12 +365,12 @@ export default function ChannelDetailPage() {
         </div>
       </div>
 
-      {/* 広告効果測定セクション */}
+      {/* 効果測定セクション */}
       {(stats?.adBudget || channel?.adBudget) && (
         <div className="bg-white rounded-xl shadow-sm border p-6 mt-6">
           <div className="flex items-center gap-2 mb-4">
-            <CircleDollarSign className="w-5 h-5 text-blue-600" />
-            <h2 className="text-lg font-bold">広告効果測定</h2>
+            <BarChart3 className="w-5 h-5 text-blue-600" />
+            <h2 className="text-lg font-bold">効果測定</h2>
           </div>
 
           {/* 広告設定情報 */}
