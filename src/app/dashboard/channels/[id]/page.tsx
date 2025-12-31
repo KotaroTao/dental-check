@@ -580,6 +580,17 @@ export default function ChannelDetailPage() {
             <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto">
               <code>{embedButtonSimple}</code>
             </pre>
+            <div className="mt-3 p-4 bg-gray-50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-2">プレビュー:</p>
+              <a
+                href={qrUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:underline"
+              >
+                {channel.channelType === "diagnosis" ? "診断を始める" : "詳しくはこちら"}
+              </a>
+            </div>
           </div>
         </div>
 
