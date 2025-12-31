@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import QRCode from "qrcode";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Download, Copy, ExternalLink, Edit, Image as ImageIcon, X, Calendar, AlertTriangle, Link2, MousePointerClick, Code, Check } from "lucide-react";
+import { ArrowLeft, Download, Copy, ExternalLink, Edit, Image as ImageIcon, X, Calendar, AlertTriangle, Link2, MousePointerClick, Code, Check, CircleDollarSign, TrendingUp, MapPin, BarChart3 } from "lucide-react";
 
 // 診断タイプの表示名
 const DIAGNOSIS_TYPE_NAMES: Record<string, string> = {
@@ -25,11 +25,33 @@ interface Channel {
   isActive: boolean;
   expiresAt: string | null;
   scanCount: number;
+  adBudget: number | null;
+  adStartDate: string | null;
+  adEndDate: string | null;
+  adPlacement: string | null;
+}
+
+interface ChannelStats {
+  accessCount: number;
+  completedCount: number;
+  completionRate: number;
+  ctaCount: number;
+  ctaRate: number;
+  adBudget: number | null;
+  adStartDate: string | null;
+  adEndDate: string | null;
+  adPlacement: string | null;
+  adDays: number | null;
+  dailyCost: number | null;
+  cpa: number | null;
+  cpd: number | null;
+  cpc: number | null;
 }
 
 export default function ChannelDetailPage() {
   const params = useParams();
   const [channel, setChannel] = useState<Channel | null>(null);
+  const [stats, setStats] = useState<ChannelStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [copiedEmbed, setCopiedEmbed] = useState<string | null>(null);
@@ -62,8 +84,23 @@ export default function ChannelDetailPage() {
       }
     };
 
+    const fetchStats = async () => {
+      try {
+        const response = await fetch(`/api/dashboard/channel-stats?period=month`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.stats && params.id && data.stats[params.id as string]) {
+            setStats(data.stats[params.id as string]);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch stats:", error);
+      }
+    };
+
     if (params.id) {
       fetchChannel();
+      fetchStats();
     }
   }, [params.id]);
 
@@ -327,6 +364,114 @@ export default function ChannelDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* 広告効果測定セクション */}
+      {(stats?.adBudget || channel?.adBudget) && (
+        <div className="bg-white rounded-xl shadow-sm border p-6 mt-6">
+          <div className="flex items-center gap-2 mb-4">
+            <CircleDollarSign className="w-5 h-5 text-blue-600" />
+            <h2 className="text-lg font-bold">広告効果測定</h2>
+          </div>
+
+          {/* 広告設定情報 */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-gray-50 rounded-lg p-3">
+              <div className="text-xs text-gray-500 mb-1">広告費用</div>
+              <div className="text-lg font-bold">
+                ¥{(stats?.adBudget || 0).toLocaleString()}
+              </div>
+            </div>
+            {stats?.adDays && (
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="text-xs text-gray-500 mb-1">掲載日数</div>
+                <div className="text-lg font-bold">{stats.adDays}日</div>
+              </div>
+            )}
+            {stats?.dailyCost && (
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="text-xs text-gray-500 mb-1">1日あたりコスト</div>
+                <div className="text-lg font-bold">¥{stats.dailyCost.toLocaleString()}</div>
+              </div>
+            )}
+            {stats?.adPlacement && (
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="text-xs text-gray-500 mb-1 flex items-center gap-1">
+                  <MapPin className="w-3 h-3" />
+                  掲載場所
+                </div>
+                <div className="text-sm font-medium truncate">{stats.adPlacement}</div>
+              </div>
+            )}
+          </div>
+
+          {/* 効果指標 */}
+          <div className="flex items-center gap-2 mb-3">
+            <TrendingUp className="w-4 h-4 text-green-600" />
+            <h3 className="font-semibold text-gray-700">効果指標（直近1ヶ月）</h3>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="border rounded-lg p-4">
+              <div className="text-xs text-gray-500 mb-1">CPA（アクセス単価）</div>
+              <div className="text-2xl font-bold text-blue-600">
+                {stats?.cpa ? `¥${stats.cpa.toLocaleString()}` : "-"}
+              </div>
+              <div className="text-xs text-gray-400 mt-1">
+                アクセス数: {stats?.accessCount || 0}件
+              </div>
+            </div>
+            <div className="border rounded-lg p-4">
+              <div className="text-xs text-gray-500 mb-1">CPD（診断完了単価）</div>
+              <div className="text-2xl font-bold text-green-600">
+                {stats?.cpd ? `¥${stats.cpd.toLocaleString()}` : "-"}
+              </div>
+              <div className="text-xs text-gray-400 mt-1">
+                完了数: {stats?.completedCount || 0}件 ({stats?.completionRate || 0}%)
+              </div>
+            </div>
+            <div className="border rounded-lg p-4">
+              <div className="text-xs text-gray-500 mb-1">CPC（CTAクリック単価）</div>
+              <div className="text-2xl font-bold text-purple-600">
+                {stats?.cpc ? `¥${stats.cpc.toLocaleString()}` : "-"}
+              </div>
+              <div className="text-xs text-gray-400 mt-1">
+                クリック数: {stats?.ctaCount || 0}件 ({stats?.ctaRate || 0}%)
+              </div>
+            </div>
+          </div>
+
+          {/* ファネル表示 */}
+          <div className="mt-6 pt-4 border-t">
+            <div className="flex items-center gap-2 mb-3">
+              <BarChart3 className="w-4 h-4 text-gray-500" />
+              <h3 className="font-semibold text-gray-700">コンバージョンファネル</h3>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex-1">
+                <div className="bg-blue-100 rounded-lg p-3 text-center">
+                  <div className="text-xs text-blue-600 mb-1">アクセス</div>
+                  <div className="text-xl font-bold text-blue-700">{stats?.accessCount || 0}</div>
+                </div>
+              </div>
+              <div className="text-gray-400">→</div>
+              <div className="flex-1">
+                <div className="bg-green-100 rounded-lg p-3 text-center">
+                  <div className="text-xs text-green-600 mb-1">診断完了</div>
+                  <div className="text-xl font-bold text-green-700">{stats?.completedCount || 0}</div>
+                  <div className="text-xs text-green-500">{stats?.completionRate || 0}%</div>
+                </div>
+              </div>
+              <div className="text-gray-400">→</div>
+              <div className="flex-1">
+                <div className="bg-purple-100 rounded-lg p-3 text-center">
+                  <div className="text-xs text-purple-600 mb-1">CTAクリック</div>
+                  <div className="text-xl font-bold text-purple-700">{stats?.ctaCount || 0}</div>
+                  <div className="text-xs text-purple-500">{stats?.ctaRate || 0}%</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ホームページ埋め込みセクション */}
       <div className="bg-white rounded-xl shadow-sm border p-6 mt-6">
