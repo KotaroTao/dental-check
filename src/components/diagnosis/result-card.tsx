@@ -14,14 +14,13 @@ import type { CTAConfig } from "@/types/clinic";
 interface Props {
   diagnosis: DiagnosisType;
   isDemo: boolean;
-  clinicSlug?: string;
   ctaConfig?: CTAConfig;
   clinicName?: string;
   mainColor?: string;
   channelId?: string;
 }
 
-export function ResultCard({ diagnosis, isDemo, clinicSlug, ctaConfig, clinicName, mainColor, channelId }: Props) {
+export function ResultCard({ diagnosis, isDemo, ctaConfig, clinicName, mainColor, channelId }: Props) {
   const { userAge, userGender, answers, totalScore, resultPattern, oralAge, latitude, longitude, reset, _hasHydrated } =
     useDiagnosisStore();
   const hasTrackedRef = useRef(false);
@@ -192,7 +191,6 @@ export function ResultCard({ diagnosis, isDemo, clinicSlug, ctaConfig, clinicNam
             <ClinicCTA
               ctaConfig={ctaConfig}
               clinicName={clinicName}
-              clinicSlug={clinicSlug}
               mainColor={mainColor}
               channelId={channelId}
               diagnosisType={diagnosis.slug}
@@ -238,14 +236,12 @@ export function ResultCard({ diagnosis, isDemo, clinicSlug, ctaConfig, clinicNam
 function ClinicCTA({
   ctaConfig,
   clinicName,
-  clinicSlug,
   mainColor,
   channelId,
   diagnosisType,
 }: {
   ctaConfig?: CTAConfig;
   clinicName?: string;
-  clinicSlug?: string;
   mainColor?: string;
   channelId?: string;
   diagnosisType?: string;
@@ -514,13 +510,13 @@ function ClinicCTA({
           </div>
         )}
 
-        {/* 医院紹介ページへのリンク */}
-        {clinicSlug && (
+        {/* 医院ホームページへのリンク */}
+        {ctaConfig?.clinicHomepageUrl && (
           <a
-            href={`/clinic/${clinicSlug}`}
+            href={ctaConfig.clinicHomepageUrl}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={() => trackClick("clinic_page")}
+            onClick={() => trackClick("clinic_homepage")}
             className="flex items-center justify-center gap-2 w-full py-3.5 rounded-lg font-medium text-white transition-all duration-200 hover:opacity-90 hover:shadow-lg active:scale-[0.98]"
             style={{ backgroundColor: mainColor || "#2563eb" }}
           >

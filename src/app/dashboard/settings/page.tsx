@@ -46,6 +46,7 @@ interface ClinicSettings {
     threadsUrl?: string;
     xUrl?: string;
     googleMapsUrl?: string;
+    clinicHomepageUrl?: string;
     phone?: string;
     directorMessage?: string;
     customCTAs?: CustomCTA[];
@@ -104,7 +105,7 @@ export default function SettingsPage() {
   const validateSettings = useCallback(() => {
     const errors: Record<string, string> = {};
     const urlFields = [
-      "bookingUrl", "lineUrl", "googleMapsUrl", "instagramUrl",
+      "bookingUrl", "lineUrl", "googleMapsUrl", "clinicHomepageUrl", "instagramUrl",
       "youtubeUrl", "facebookUrl", "tiktokUrl", "threadsUrl", "xUrl"
     ];
 
@@ -391,6 +392,27 @@ export default function SettingsPage() {
                 </p>
               ) : (
                 <p className="text-xs text-gray-500">医院の場所をGoogleマップで開くリンク</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="cta.clinicHomepageUrl">医院ホームページURL</Label>
+              <Input
+                id="cta.clinicHomepageUrl"
+                name="cta.clinicHomepageUrl"
+                type="url"
+                placeholder="https://example-dental.com"
+                value={settings.ctaConfig.clinicHomepageUrl || ""}
+                onChange={handleChange}
+                className={validationErrors.clinicHomepageUrl ? "border-red-500" : ""}
+              />
+              {validationErrors.clinicHomepageUrl ? (
+                <p className="text-xs text-red-500 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {validationErrors.clinicHomepageUrl}
+                </p>
+              ) : (
+                <p className="text-xs text-gray-500">診断結果ページに「医院について詳しく見る」リンクが表示されます</p>
               )}
             </div>
 

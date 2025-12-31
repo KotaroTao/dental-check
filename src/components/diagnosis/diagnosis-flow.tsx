@@ -11,14 +11,13 @@ import type { CTAConfig } from "@/types/clinic";
 interface Props {
   diagnosis: DiagnosisType;
   isDemo: boolean;
-  clinicSlug?: string;
   ctaConfig?: CTAConfig;
   clinicName?: string;
   mainColor?: string;
   channelId?: string;
 }
 
-export function DiagnosisFlow({ diagnosis, isDemo, clinicSlug, ctaConfig, clinicName, mainColor, channelId }: Props) {
+export function DiagnosisFlow({ diagnosis, isDemo, ctaConfig, clinicName, mainColor, channelId }: Props) {
   const { userAge, currentStep, resultPattern, reset, answers, _hasHydrated } =
     useDiagnosisStore();
   const hasInitialized = useRef(false);
@@ -69,7 +68,6 @@ export function DiagnosisFlow({ diagnosis, isDemo, clinicSlug, ctaConfig, clinic
         <ResultCard
           diagnosis={diagnosis}
           isDemo={isDemo}
-          clinicSlug={clinicSlug}
           ctaConfig={ctaConfig}
           clinicName={clinicName}
           mainColor={mainColor}
