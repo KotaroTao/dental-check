@@ -705,7 +705,7 @@ export default function DashboardPage() {
                           </span>
                         )}
                         {stats?.adBudget && (
-                          <Link href={`/dashboard/channels/${channel.id}`} className="shrink-0">
+                          <Link href={`/dashboard/channels/${channel.id}#effectiveness`} className="shrink-0">
                             <span className="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded flex items-center gap-0.5 hover:bg-blue-200 transition-colors">
                               効果測定
                             </span>
@@ -879,7 +879,7 @@ export default function DashboardPage() {
                           </div>
                         </Popover>
                         {stats.adBudget ? (
-                          <Link href={`/dashboard/channels/${channel.id}`}>
+                          <Link href={`/dashboard/channels/${channel.id}#effectiveness`}>
                             <div className="bg-blue-50 rounded-lg py-2 px-3 hover:bg-blue-100 transition-colors h-full flex flex-col justify-center">
                               <div className="text-xs text-blue-600 mb-0.5 flex items-center justify-center gap-1">
                                 CPA（QR読み込み）
@@ -919,7 +919,7 @@ export default function DashboardPage() {
                             <div className="text-base font-bold text-purple-600">{stats.ctaCount}</div>
                           </div>
                           {stats.adBudget ? (
-                            <Link href={`/dashboard/channels/${channel.id}`} className="bg-blue-50 rounded-lg py-2 px-1">
+                            <Link href={`/dashboard/channels/${channel.id}#effectiveness`} className="bg-blue-50 rounded-lg py-2 px-1">
                               <div className="text-[10px] text-blue-600">CPA</div>
                               <div className="text-base font-bold text-blue-600">
                                 {stats.cpa ? `¥${(stats.cpa / 1000).toFixed(1)}k` : "-"}
