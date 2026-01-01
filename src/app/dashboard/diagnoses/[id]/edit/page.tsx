@@ -5,10 +5,12 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Plus, Trash2, GripVertical, Eye, EyeOff } from "lucide-react";
+import { QuestionImageUpload } from "@/components/admin/question-image-upload";
 
 interface Question {
   id: string;
   text: string;
+  imageUrl?: string | null;
   options: {
     id: string;
     text: string;
@@ -75,6 +77,7 @@ export default function EditDiagnosisPage() {
             ? rawQuestions.map((q: Record<string, unknown>) => ({
                 id: q.id || crypto.randomUUID(),
                 text: q.text || "",
+                imageUrl: (q.imageUrl as string | null | undefined) || null,
                 options: Array.isArray(q.options)
                   ? q.options.map((o: Record<string, unknown>) => ({
                       id: o.id || crypto.randomUUID(),
@@ -90,6 +93,7 @@ export default function EditDiagnosisPage() {
                 {
                   id: crypto.randomUUID(),
                   text: "",
+                  imageUrl: null,
                   options: [
                     { id: crypto.randomUUID(), text: "", score: 0 },
                     { id: crypto.randomUUID(), text: "", score: 1 },
@@ -149,12 +153,19 @@ export default function EditDiagnosisPage() {
       {
         id: crypto.randomUUID(),
         text: "",
+        imageUrl: null,
         options: [
           { id: crypto.randomUUID(), text: "", score: 0 },
           { id: crypto.randomUUID(), text: "", score: 1 },
         ],
       },
     ]);
+  };
+
+  const updateQuestionImage = (questionId: string, imageUrl: string | null) => {
+    setQuestions(
+      questions.map((q) => (q.id === questionId ? { ...q, imageUrl } : q))
+    );
   };
 
   const removeQuestion = (questionId: string) => {
@@ -470,6 +481,15 @@ export default function EditDiagnosisPage() {
                       <Trash2 className="w-4 h-4 text-red-500" />
                     </Button>
                   )}
+                </div>
+                <div className="ml-7 mb-3">
+                  <label className="block text-sm font-medium text-gray-600 mb-1">
+                    質問画像（任意）
+                  </label>
+                  <QuestionImageUpload
+                    imageUrl={question.imageUrl}
+                    onImageChange={(url) => updateQuestionImage(question.id, url)}
+                  />
                 </div>
                 <div className="ml-7 space-y-2">
                   <label className="block text-sm font-medium text-gray-600">
