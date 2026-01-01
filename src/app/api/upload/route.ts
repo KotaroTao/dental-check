@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
 
     // フォルダ指定（デフォルトはclinic）
     const folder = formData.get("folder") as string || "clinic";
-    const allowedFolders = ["clinic", "channels"];
+    const allowedFolders = ["clinic", "channels", "diagnoses"];
     const targetFolder = allowedFolders.includes(folder) ? folder : "clinic";
 
     // 保存先ディレクトリ

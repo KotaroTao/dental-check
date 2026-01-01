@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import Image from "next/image";
 
 interface Props {
   diagnosis: DiagnosisType;
@@ -73,9 +74,22 @@ export function QuestionCard({ diagnosis, questionIndex, totalQuestions }: Props
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.2 }}
           >
-            <CardTitle className="text-lg mb-6">
+            <CardTitle className="text-lg mb-4">
               Q{question.id}. {question.text}
             </CardTitle>
+
+            {question.imageUrl && (
+              <div className="mb-6 flex justify-center">
+                <div className="relative w-full max-w-md aspect-[4/3] rounded-lg overflow-hidden bg-gray-100">
+                  <Image
+                    src={question.imageUrl}
+                    alt={`設問${question.id}の画像`}
+                    fill
+                    className="object-contain"
+                  />
+                </div>
+              </div>
+            )}
 
             <div className="space-y-3 mb-8">
               {question.choices.map((choice, index) => (
