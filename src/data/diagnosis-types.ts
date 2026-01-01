@@ -1,6 +1,7 @@
 export interface Question {
   id: number;
   text: string;
+  imageUrl?: string | null;
   choices: {
     text: string;
     score: number;

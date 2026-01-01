@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Trash2, GripVertical, ChevronDown, ChevronUp } from "lucide-react";
+import { QuestionImageUpload } from "./question-image-upload";
 
 interface Choice {
   text: string;
@@ -17,6 +18,7 @@ interface Choice {
 interface Question {
   id: number;
   text: string;
+  imageUrl?: string | null;
   choices: Choice[];
 }
 
@@ -89,10 +91,17 @@ export function DiagnosisForm({ initialData, isEditing = false }: Props) {
       ...formData,
       questions: [
         ...formData.questions,
-        { id: newId, text: "", choices: [{ text: "", score: 0 }] },
+        { id: newId, text: "", imageUrl: null, choices: [{ text: "", score: 0 }] },
       ],
     });
     setExpandedQuestions(new Set([...Array.from(expandedQuestions), formData.questions.length]));
+  };
+
+  // 設問画像の更新
+  const updateQuestionImage = (index: number, imageUrl: string | null) => {
+    const newQuestions = [...formData.questions];
+    newQuestions[index] = { ...newQuestions[index], imageUrl };
+    setFormData({ ...formData, questions: newQuestions });
   };
 
   // 設問の削除
@@ -331,6 +340,14 @@ export function DiagnosisForm({ initialData, isEditing = false }: Props) {
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-sm text-muted-foreground">設問画像（任意）</Label>
+                      <QuestionImageUpload
+                        imageUrl={question.imageUrl}
+                        onImageChange={(url) => updateQuestionImage(qIndex, url)}
+                      />
                     </div>
 
                     <div className="space-y-2">
