@@ -19,10 +19,11 @@ export function QuestionImageUpload({ imageUrl, onImageChange }: Props) {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // ファイルタイプチェック
-    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-    if (!allowedTypes.includes(file.type)) {
-      setError("JPEG/JPG、PNG、WebP、GIF形式のみアップロードできます");
+    // ファイルタイプチェック（HEIC/HEIFはMIMEタイプが空の場合があるので拡張子でもチェック）
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/heic", "image/heif"];
+    const isHeic = file.name.toLowerCase().endsWith(".heic") || file.name.toLowerCase().endsWith(".heif");
+    if (!allowedTypes.includes(file.type) && !isHeic) {
+      setError("JPEG/JPG、PNG、WebP、GIF、HEIC形式のみアップロードできます");
       return;
     }
 
@@ -74,7 +75,7 @@ export function QuestionImageUpload({ imageUrl, onImageChange }: Props) {
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+        accept="image/jpeg,image/jpg,image/png,image/webp,image/gif,image/heic,image/heif,.heic,.heif"
         onChange={handleFileSelect}
         className="hidden"
       />
