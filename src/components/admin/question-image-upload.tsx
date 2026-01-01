@@ -87,6 +87,7 @@ export function QuestionImageUpload({ imageUrl, onImageChange }: Props) {
               alt="設問画像"
               fill
               className="object-cover"
+              unoptimized
             />
           </div>
           <Button
