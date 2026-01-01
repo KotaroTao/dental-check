@@ -375,6 +375,25 @@ export default function SettingsPage() {
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="cta.phone">医院電話番号</Label>
+              <Input
+                id="cta.phone"
+                name="cta.phone"
+                type="tel"
+                placeholder="03-1234-5678"
+                value={settings.ctaConfig.phone || ""}
+                onChange={handleChange}
+                className={validationErrors.phone ? "border-red-500" : ""}
+              />
+              {validationErrors.phone && (
+                <p className="text-xs text-red-500 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {validationErrors.phone}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="cta.lineUrl">LINE公式アカウント</Label>
               <Input
                 id="cta.lineUrl"
@@ -522,25 +541,6 @@ export default function SettingsPage() {
                 <p className="text-xs text-red-500 flex items-center gap-1">
                   <AlertCircle className="w-3 h-3" />
                   {validationErrors.xUrl}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="cta.phone">電話番号</Label>
-              <Input
-                id="cta.phone"
-                name="cta.phone"
-                type="tel"
-                placeholder="03-1234-5678"
-                value={settings.ctaConfig.phone || ""}
-                onChange={handleChange}
-                className={validationErrors.phone ? "border-red-500" : ""}
-              />
-              {validationErrors.phone && (
-                <p className="text-xs text-red-500 flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" />
-                  {validationErrors.phone}
                 </p>
               )}
             </div>
