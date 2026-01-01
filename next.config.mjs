@@ -13,6 +13,13 @@ const nextConfig = {
     ],
   },
 
+  // API Body Size Limit（画像アップロード用に10MBに設定）
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '10mb',
+    },
+  },
+
   // セキュリティヘッダー
   async headers() {
     return [

@@ -86,6 +86,7 @@ export function QuestionCard({ diagnosis, questionIndex, totalQuestions }: Props
                     alt={`設問${question.id}の画像`}
                     fill
                     className="object-contain"
+                    unoptimized
                   />
                 </div>
               </div>

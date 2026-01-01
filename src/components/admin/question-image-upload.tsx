@@ -26,10 +26,10 @@ export function QuestionImageUpload({ imageUrl, onImageChange }: Props) {
       return;
     }
 
-    // ファイルサイズチェック (5MB)
-    const maxSize = 5 * 1024 * 1024;
+    // ファイルサイズチェック (10MB)
+    const maxSize = 10 * 1024 * 1024;
     if (file.size > maxSize) {
-      setError("ファイルサイズは5MB以下にしてください");
+      setError("ファイルサイズは10MB以下にしてください");
       return;
     }
 
@@ -87,6 +87,7 @@ export function QuestionImageUpload({ imageUrl, onImageChange }: Props) {
               alt="設問画像"
               fill
               className="object-cover"
+              unoptimized
             />
           </div>
           <Button

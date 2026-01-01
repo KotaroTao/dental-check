@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 
+// ファイルサイズ制限を10MBに設定（App Router形式）
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
@@ -14,11 +18,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ファイルサイズチェック (5MB)
-    const maxSize = 5 * 1024 * 1024;
+    // ファイルサイズチェック (10MB)
+    const maxSize = 10 * 1024 * 1024;
     if (file.size > maxSize) {
       return NextResponse.json(
-        { error: "ファイルサイズは5MB以下にしてください" },
+        { error: "ファイルサイズは10MB以下にしてください" },
         { status: 400 }
       );
     }
@@ -61,8 +65,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ url, fileName });
   } catch (error) {
     console.error("Upload error:", error);
+    const errorMessage = error instanceof Error ? error.message : "不明なエラー";
     return NextResponse.json(
-      { error: "アップロードに失敗しました" },
+      { error: `アップロードに失敗しました: ${errorMessage}` },
       { status: 500 }
     );
   }
