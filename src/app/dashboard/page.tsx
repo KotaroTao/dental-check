@@ -506,7 +506,7 @@ function EffectivenessSummary({
             )}
           </button>
 
-          {/* 折りたたみ部分: 診断完了、完了率、CTA率、CTA数、結果別CTA率 */}
+          {/* 折りたたみ部分: 診断完了、完了率、CTA率、CTA数、CTA内訳 */}
           {showDetails && (
             <div className="pt-4 border-t mt-4 space-y-4">
               {/* 診断関連指標 */}
@@ -536,26 +536,24 @@ function EffectivenessSummary({
                 </div>
               </div>
 
-              {/* 結果カテゴリ別CTA率 */}
-              {overallStats.categoryStats && Object.keys(overallStats.categoryStats).filter(c => c !== "未分類").length > 0 && (
+              {/* CTA内訳 */}
+              {overallStats.ctaByType && Object.keys(overallStats.ctaByType).length > 0 && (
                 <div className="p-4 bg-gray-50 rounded-xl">
-                  <div className="text-sm font-medium text-gray-700 mb-3">結果別CTA率（上位5件）</div>
+                  <div className="text-sm font-medium text-gray-700 mb-3">CTA内訳</div>
                   <div className="space-y-2">
-                    {Object.entries(overallStats.categoryStats)
-                      .filter(([category]) => category !== "未分類")
-                      .sort((a, b) => b[1].ctaRate - a[1].ctaRate)
-                      .slice(0, 5)
-                      .map(([category, stat]) => (
-                        <div key={category} className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600 truncate flex-1">{category}</span>
+                    {Object.entries(overallStats.ctaByType)
+                      .sort((a, b) => b[1] - a[1])
+                      .map(([type, count]) => (
+                        <div key={type} className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600">{CTA_TYPE_NAMES[type] || type}</span>
                           <div className="flex items-center gap-2">
-                            <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                            <div className="w-20 h-1.5 bg-gray-200 rounded-full overflow-hidden">
                               <div
-                                className="h-full bg-emerald-500 rounded-full"
-                                style={{ width: `${Math.min(stat.ctaRate, 100)}%` }}
+                                className="h-full bg-purple-500 rounded-full"
+                                style={{ width: `${overallStats.ctaCount > 0 ? (count / overallStats.ctaCount) * 100 : 0}%` }}
                               />
                             </div>
-                            <span className="text-sm font-medium text-emerald-600 w-12 text-right">{stat.ctaRate}%</span>
+                            <span className="text-sm font-medium text-purple-600 w-8 text-right">{count}</span>
                           </div>
                         </div>
                       ))}
