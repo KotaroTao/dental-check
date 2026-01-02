@@ -103,6 +103,23 @@ interface HistoryItem {
   ctaByType: Record<string, number>;
 }
 
+interface OverallStats {
+  accessCount: number;
+  completedCount: number;
+  completionRate: number;
+  ctaCount: number;
+  ctaRate: number;
+  ctaByType: Record<string, number>;
+  categoryStats: Record<string, { count: number; ctaCount: number; ctaRate: number }>;
+  genderByType: Record<string, number>;
+  ageRanges: Record<string, number>;
+  trends: {
+    accessCount: { value: number; isNew: boolean };
+    completedCount: { value: number; isNew: boolean };
+    ctaCount: { value: number; isNew: boolean };
+  };
+}
+
 // 履歴用CTAポップオーバーコンポーネント（コンパクト版）
 function HistoryCTAPopover({
   ctaClickCount,
@@ -503,6 +520,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [channels, setChannels] = useState<Channel[]>([]);
   const [channelStats, setChannelStats] = useState<Record<string, ChannelStats>>({});
+  const [overallStats, setOverallStats] = useState<OverallStats | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [hasMore, setHasMore] = useState(false);
@@ -624,6 +642,25 @@ export default function DashboardPage() {
     }
   }, [period, customStartDate, customEndDate]);
 
+  // 全体統計取得
+  const fetchOverallStats = useCallback(async () => {
+    try {
+      const params = new URLSearchParams({ period });
+      if (period === "custom") {
+        params.set("startDate", customStartDate);
+        params.set("endDate", customEndDate);
+      }
+
+      const response = await fetch(`/api/dashboard/stats?${params}`);
+      if (response.ok) {
+        const data = await response.json();
+        setOverallStats(data.stats);
+      }
+    } catch (error) {
+      console.error("Failed to fetch overall stats:", error);
+    }
+  }, [period, customStartDate, customEndDate]);
+
   // 履歴データ取得
   const fetchHistory = useCallback(
     async (offset = 0, append = false) => {
@@ -686,8 +723,9 @@ export default function DashboardPage() {
   // フィルター変更時
   useEffect(() => {
     fetchChannelStats();
+    fetchOverallStats();
     fetchHistory(0, false);
-  }, [fetchChannelStats, fetchHistory]);
+  }, [fetchChannelStats, fetchOverallStats, fetchHistory]);
 
   // QRコード非表示
   const handleHideChannel = async (id: string) => {
@@ -1052,6 +1090,135 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      {/* 効果測定サマリー */}
+      {overallStats && (overallStats.accessCount > 0 || overallStats.completedCount > 0) && (
+        <div className="bg-white rounded-2xl shadow-sm border">
+          <div className="p-5 border-b bg-gradient-to-r from-emerald-50 to-teal-50">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center">
+                <Target className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">効果測定サマリー</h2>
+                <p className="text-xs text-gray-500">全QRコードの集計データ</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-5">
+            {/* ファネル分析 */}
+            <div className="grid grid-cols-3 gap-4 mb-6">
+              {/* アクセス */}
+              <div className="text-center p-4 bg-gray-50 rounded-xl">
+                <div className="text-xs text-gray-500 mb-1">読み込み</div>
+                <div className="text-2xl font-bold text-gray-800">{overallStats.accessCount.toLocaleString()}</div>
+                {overallStats.trends?.accessCount && (
+                  <div className={`text-xs mt-1 ${overallStats.trends.accessCount.value >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+                    {overallStats.trends.accessCount.isNew ? "NEW" : `${overallStats.trends.accessCount.value >= 0 ? "+" : ""}${overallStats.trends.accessCount.value}%`}
+                  </div>
+                )}
+              </div>
+
+              {/* 完了 */}
+              <div className="text-center p-4 bg-emerald-50 rounded-xl">
+                <div className="text-xs text-gray-500 mb-1">診断完了</div>
+                <div className="text-2xl font-bold text-emerald-600">{overallStats.completedCount.toLocaleString()}</div>
+                <div className="text-xs text-gray-500 mt-1">完了率 {overallStats.completionRate}%</div>
+              </div>
+
+              {/* CTA */}
+              <div className="text-center p-4 bg-purple-50 rounded-xl">
+                <div className="text-xs text-gray-500 mb-1">CTA</div>
+                <div className="text-2xl font-bold text-purple-600">{overallStats.ctaCount.toLocaleString()}</div>
+                <div className="text-xs text-gray-500 mt-1">CTA率 {overallStats.ctaRate}%</div>
+              </div>
+            </div>
+
+            {/* ファネルバー */}
+            <div className="mb-6">
+              <div className="flex h-3 rounded-full overflow-hidden bg-gray-100">
+                <div
+                  className="bg-gray-400 transition-all duration-500"
+                  style={{ width: "100%" }}
+                />
+              </div>
+              <div className="flex h-3 rounded-full overflow-hidden bg-gray-100 mt-1">
+                <div
+                  className="bg-emerald-500 transition-all duration-500"
+                  style={{ width: `${overallStats.completionRate}%` }}
+                />
+              </div>
+              <div className="flex h-3 rounded-full overflow-hidden bg-gray-100 mt-1">
+                <div
+                  className="bg-purple-500 transition-all duration-500"
+                  style={{ width: `${overallStats.accessCount > 0 ? (overallStats.ctaCount / overallStats.accessCount) * 100 : 0}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-xs text-gray-500 mt-2">
+                <span>読み込み 100%</span>
+                <span>完了 {overallStats.completionRate}%</span>
+                <span>CTA {overallStats.accessCount > 0 ? Math.round((overallStats.ctaCount / overallStats.accessCount) * 100 * 10) / 10 : 0}%</span>
+              </div>
+            </div>
+
+            {/* 結果カテゴリ別CTA率 & CTA内訳 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* 結果カテゴリ別CTA率 */}
+              {overallStats.categoryStats && Object.keys(overallStats.categoryStats).length > 0 && (
+                <div className="p-4 bg-gray-50 rounded-xl">
+                  <div className="text-sm font-medium text-gray-700 mb-3">結果別CTA率</div>
+                  <div className="space-y-2">
+                    {Object.entries(overallStats.categoryStats)
+                      .filter(([category]) => category !== "未分類")
+                      .sort((a, b) => b[1].ctaRate - a[1].ctaRate)
+                      .slice(0, 5)
+                      .map(([category, stat]) => (
+                        <div key={category} className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600 truncate flex-1">{category}</span>
+                          <div className="flex items-center gap-2">
+                            <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-emerald-500 rounded-full"
+                                style={{ width: `${Math.min(stat.ctaRate, 100)}%` }}
+                              />
+                            </div>
+                            <span className="text-sm font-medium text-emerald-600 w-12 text-right">{stat.ctaRate}%</span>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {/* CTA内訳 */}
+              {overallStats.ctaByType && Object.keys(overallStats.ctaByType).length > 0 && (
+                <div className="p-4 bg-gray-50 rounded-xl">
+                  <div className="text-sm font-medium text-gray-700 mb-3">CTA内訳</div>
+                  <div className="space-y-2">
+                    {Object.entries(overallStats.ctaByType)
+                      .sort((a, b) => b[1] - a[1])
+                      .map(([type, count]) => (
+                        <div key={type} className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600">{CTA_TYPE_NAMES[type] || type}</span>
+                          <div className="flex items-center gap-2">
+                            <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-purple-500 rounded-full"
+                                style={{ width: `${overallStats.ctaCount > 0 ? (count / overallStats.ctaCount) * 100 : 0}%` }}
+                              />
+                            </div>
+                            <span className="text-sm font-medium text-purple-600 w-8 text-right">{count}</span>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* QR読み込みエリア */}
       <LocationSection
