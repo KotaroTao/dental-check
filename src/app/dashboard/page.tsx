@@ -892,7 +892,7 @@ export default function DashboardPage() {
       </div>
 
       {/* QRコードセクション */}
-      <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-sm border">
         {/* ヘッダー */}
         <div className="p-5 border-b bg-gradient-to-r from-blue-50 to-indigo-50">
           <div className="flex items-center justify-between">
