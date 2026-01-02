@@ -246,7 +246,7 @@ function QRCodeCard({
   const isExpired = channel.expiresAt && new Date() > new Date(channel.expiresAt);
 
   return (
-    <div className="bg-white rounded-xl border hover:shadow-md transition-all duration-200 overflow-hidden group">
+    <div className="bg-white rounded-xl border hover:shadow-md transition-all duration-200 group">
       {/* カードヘッダー */}
       <div className="p-4">
         <div className="flex items-start gap-3">
