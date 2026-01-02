@@ -436,23 +436,11 @@ export default function EditDiagnosisPage() {
 
         {/* 質問 */}
         <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-lg font-semibold">質問</h2>
-              <p className="text-sm text-gray-500 mt-1">
-                {questions.length} / {MAX_QUESTIONS} 件
-              </p>
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={addQuestion}
-              disabled={questions.length >= MAX_QUESTIONS}
-            >
-              <Plus className="w-4 h-4 mr-1" />
-              質問を追加
-            </Button>
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">質問</h2>
+            <p className="text-sm text-gray-500 mt-1">
+              {questions.length} / {MAX_QUESTIONS} 件
+            </p>
           </div>
           <div className="space-y-6">
             {questions.map((question, qIndex) => (
@@ -555,6 +543,16 @@ export default function EditDiagnosisPage() {
               </div>
             ))}
           </div>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={addQuestion}
+            disabled={questions.length >= MAX_QUESTIONS}
+            className="w-full mt-4"
+          >
+            <Plus className="w-4 h-4 mr-1" />
+            質問を追加
+          </Button>
         </div>
 
         {/* 結果パターン */}
