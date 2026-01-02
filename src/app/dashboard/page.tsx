@@ -123,7 +123,9 @@ function DropdownMenu({
   align?: "left" | "right";
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [openUp, setOpenUp] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -135,17 +137,85 @@ function DropdownMenu({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const handleToggle = () => {
+    if (!isOpen && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      // メニューの高さが約200pxと仮定し、下に200px未満のスペースしかない場合は上に開く
+      setOpenUp(spaceBelow < 200);
+    }
+    setIsOpen(!isOpen);
+  };
+
   return (
     <div className="relative" ref={menuRef}>
-      <div onClick={() => setIsOpen(!isOpen)}>{trigger}</div>
+      <div ref={triggerRef} onClick={handleToggle}>{trigger}</div>
       {isOpen && (
         <div
-          className={`absolute z-50 mt-1 min-w-[160px] bg-white rounded-lg shadow-lg border py-1 ${
+          className={`absolute z-50 min-w-[160px] bg-white rounded-lg shadow-lg border py-1 ${
             align === "right" ? "right-0" : "left-0"
-          }`}
+          } ${openUp ? "bottom-full mb-1" : "top-full mt-1"}`}
           onClick={() => setIsOpen(false)}
         >
           {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// CTAポップオーバーコンポーネント
+function CTAPopover({
+  ctaCount,
+  ctaByType,
+}: {
+  ctaCount: number;
+  ctaByType: Record<string, number>;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <div className="relative text-center" ref={popoverRef}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full hover:bg-purple-50 rounded-lg py-1 -my-1 transition-colors"
+      >
+        <div className="text-xs text-gray-500 mb-1 flex items-center justify-center gap-1">
+          <Target className="w-3 h-3" />
+          CTA
+        </div>
+        <div className="text-xl font-bold text-purple-600">{ctaCount}</div>
+      </button>
+      {isOpen && (
+        <div className="absolute z-50 top-full mt-2 left-1/2 -translate-x-1/2 min-w-[140px] bg-white rounded-lg shadow-lg border p-3">
+          <div className="text-xs font-medium text-gray-700 mb-2">CTA内訳</div>
+          {Object.entries(ctaByType).length === 0 ? (
+            <div className="text-xs text-gray-400">クリックなし</div>
+          ) : (
+            <div className="space-y-1">
+              {Object.entries(ctaByType)
+                .sort((a, b) => b[1] - a[1])
+                .map(([type, count]) => (
+                  <div key={type} className="flex justify-between text-xs text-gray-600">
+                    <span>{CTA_TYPE_NAMES[type] || type}</span>
+                    <span className="font-medium">{count}</span>
+                  </div>
+                ))}
+            </div>
+          )}
+          {/* 三角形のポインター */}
+          <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[6px] border-b-white" />
         </div>
       )}
     </div>
@@ -321,13 +391,7 @@ function QRCodeCard({
                   </div>
                   <div className="text-xl font-bold text-emerald-600">{stats.completedCount}</div>
                 </div>
-                <div className="text-center">
-                  <div className="text-xs text-gray-500 mb-1 flex items-center justify-center gap-1">
-                    <Target className="w-3 h-3" />
-                    CTA
-                  </div>
-                  <div className="text-xl font-bold text-purple-600">{stats.ctaCount}</div>
-                </div>
+                <CTAPopover ctaCount={stats.ctaCount} ctaByType={stats.ctaByType} />
               </div>
 
               {/* 完了率バー */}
