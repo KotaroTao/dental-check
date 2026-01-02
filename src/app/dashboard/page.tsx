@@ -124,15 +124,15 @@ function HistoryCTAPopover({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  if (ctaClickCount === 0) {
-    return <span className="text-gray-400">-</span>;
-  }
-
   return (
     <div className="relative inline-block" ref={popoverRef}>
       <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium hover:bg-purple-200 transition-colors"
+        onClick={() => ctaClickCount > 0 && setIsOpen(!isOpen)}
+        className={`px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${
+          ctaClickCount > 0
+            ? "bg-purple-100 text-purple-700 hover:bg-purple-200 cursor-pointer"
+            : "bg-gray-100 text-gray-400 cursor-default"
+        }`}
       >
         {ctaClickCount}
       </button>
