@@ -186,8 +186,8 @@ export default function DashboardPage() {
   const [showQRLimitModal, setShowQRLimitModal] = useState(false);
 
   // QRコードソート
-  type ChannelSortField = "default" | "accessCount" | "completedCount" | "completionRate" | "ctaCount" | "cpa" | "cpd" | "cpc";
-  const [channelSortField, setChannelSortField] = useState<ChannelSortField>("default");
+  type ChannelSortField = "createdAt" | "accessCount" | "completedCount" | "completionRate" | "ctaCount" | "cpa" | "cpd" | "cpc";
+  const [channelSortField, setChannelSortField] = useState<ChannelSortField>("createdAt");
 
   // ドラッグ＆ドロップ
   const [draggedChannelId, setDraggedChannelId] = useState<string | null>(null);
@@ -504,11 +504,11 @@ export default function DashboardPage() {
 
   // QRコードのソート済みリスト
   const getSortedChannels = (channelList: Channel[]) => {
-    if (channelSortField === "default") {
-      return channelList;
-    }
-
     return [...channelList].sort((a, b) => {
+      if (channelSortField === "createdAt") {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+
       const statsA = channelStats[a.id];
       const statsB = channelStats[b.id];
       if (!statsA || !statsB) return 0;
@@ -716,7 +716,7 @@ export default function DashboardPage() {
               onChange={(e) => setChannelSortField(e.target.value as ChannelSortField)}
               className="px-2 py-1 border rounded text-xs bg-white"
             >
-              <option value="default">並び順: 手動</option>
+              <option value="createdAt">並び順: 作成日</option>
               <option value="accessCount">QR読み込み順</option>
               <option value="completedCount">診断完了順</option>
               <option value="completionRate">完了率順</option>
@@ -745,7 +745,7 @@ export default function DashboardPage() {
               const isExpanded = expandedChannelId === channel.id;
 
               const isDragging = draggedChannelId === channel.id;
-              const canDrag = channel.isActive && channelSortField === "default";
+              const canDrag = false; // 手動ソートは無効化（作成日順に変更）
 
               return (
                 <div
