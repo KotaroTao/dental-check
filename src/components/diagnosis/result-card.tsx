@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { useDiagnosisStore } from "@/lib/diagnosis-store";
 import { DiagnosisType } from "@/data/diagnosis-types";
@@ -24,6 +24,7 @@ export function ResultCard({ diagnosis, isDemo, ctaConfig, clinicName, mainColor
   const { userAge, userGender, answers, totalScore, resultPattern, oralAge, latitude, longitude, reset, _hasHydrated } =
     useDiagnosisStore();
   const hasTrackedRef = useRef(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
 
   // 診断完了をトラッキング（非デモモードのみ、1回だけ）
   // 位置情報はプロファイルページで事前に取得済み
@@ -68,6 +69,9 @@ export function ResultCard({ diagnosis, isDemo, ctaConfig, clinicName, mainColor
       .then((res) => res.json())
       .then((data) => {
         console.log("Track complete response:", data);
+        if (data.sessionId) {
+          setSessionId(data.sessionId);
+        }
       })
       .catch((err) => {
         console.error("Track complete error:", err);
@@ -194,6 +198,7 @@ export function ResultCard({ diagnosis, isDemo, ctaConfig, clinicName, mainColor
               mainColor={mainColor}
               channelId={channelId}
               diagnosisType={diagnosis.slug}
+              sessionId={sessionId}
             />
           )}
 
@@ -239,12 +244,14 @@ function ClinicCTA({
   mainColor,
   channelId,
   diagnosisType,
+  sessionId,
 }: {
   ctaConfig?: CTAConfig;
   clinicName?: string;
   mainColor?: string;
   channelId?: string;
   diagnosisType?: string;
+  sessionId?: string | null;
 }) {
   const buttonStyle = mainColor
     ? { backgroundColor: mainColor, borderColor: mainColor }
@@ -255,7 +262,7 @@ function ClinicCTA({
     fetch("/api/track/cta", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ channelId, ctaType, diagnosisType }),
+      body: JSON.stringify({ channelId, ctaType, diagnosisType, sessionId }),
     }).catch(() => {});
   };
 
