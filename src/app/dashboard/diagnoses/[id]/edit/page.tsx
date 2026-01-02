@@ -557,22 +557,11 @@ export default function EditDiagnosisPage() {
 
         {/* 結果パターン */}
         <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-lg font-semibold">結果パターン</h2>
-              <p className="text-sm text-gray-500 mt-1">
-                スコア範囲: 0〜{calculatedMaxScore}点（質問の最大スコア合計）
-              </p>
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={addResultPattern}
-            >
-              <Plus className="w-4 h-4 mr-1" />
-              パターンを追加
-            </Button>
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">結果パターン</h2>
+            <p className="text-sm text-gray-500 mt-1">
+              スコア範囲: 0〜{calculatedMaxScore}点（質問の最大スコア合計）
+            </p>
           </div>
           <div className="space-y-6">
             {resultPatterns.map((pattern, pIndex) => (
@@ -687,6 +676,15 @@ export default function EditDiagnosisPage() {
               </div>
             ))}
           </div>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={addResultPattern}
+            className="w-full mt-4"
+          >
+            <Plus className="w-4 h-4 mr-1" />
+            パターンを追加
+          </Button>
         </div>
 
         {/* 送信ボタン */}
