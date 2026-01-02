@@ -84,6 +84,15 @@ export async function GET(request: NextRequest) {
     } else if (activeChannelIds.length > 0) {
       // 特定チャンネル指定がない場合、アクティブチャンネルのみ
       whereFilter.channelId = { in: activeChannelIds };
+    } else {
+      // アクティブなチャンネルがない場合、履歴を空で返す
+      return NextResponse.json({
+        history: [],
+        totalCount: 0,
+        hasMore: false,
+        offset,
+        limit,
+      });
     }
 
     if (diagnosisType) {
