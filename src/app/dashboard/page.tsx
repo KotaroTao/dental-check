@@ -141,8 +141,8 @@ function DropdownMenu({
     if (!isOpen && triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
       const spaceBelow = window.innerHeight - rect.bottom;
-      // メニューの高さが約200pxと仮定し、下に200px未満のスペースしかない場合は上に開く
-      setOpenUp(spaceBelow < 200);
+      // メニューの高さが約250pxと仮定し、下に250px未満のスペースしかない場合は上に開く
+      setOpenUp(spaceBelow < 250);
     }
     setIsOpen(!isOpen);
   };
@@ -152,7 +152,7 @@ function DropdownMenu({
       <div ref={triggerRef} onClick={handleToggle}>{trigger}</div>
       {isOpen && (
         <div
-          className={`absolute z-50 min-w-[160px] bg-white rounded-lg shadow-lg border py-1 ${
+          className={`absolute z-[9999] min-w-[160px] bg-white rounded-lg shadow-lg border py-1 ${
             align === "right" ? "right-0" : "left-0"
           } ${openUp ? "bottom-full mb-1" : "top-full mt-1"}`}
           onClick={() => setIsOpen(false)}
