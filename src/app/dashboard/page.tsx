@@ -22,10 +22,10 @@ import {
   CreditCard,
   MoreVertical,
   Eye,
-  ExternalLink,
-  TrendingUp,
-  Users,
   Target,
+  Check,
+  SquareCheck,
+  Square,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { LocationSection } from "@/components/dashboard/location-section";
@@ -259,80 +259,359 @@ function DropdownMenu({
   );
 }
 
-// CTAポップオーバーコンポーネント
-function CTAPopover({
-  ctaCount,
-  ctaByType,
-}: {
-  ctaCount: number;
-  ctaByType: Record<string, number>;
-}) {
-  const [isOpen, setIsOpen] = useState(false);
-  const popoverRef = useRef<HTMLDivElement>(null);
+// スケルトンコンポーネント
+function Skeleton({ className = "" }: { className?: string }) {
+  return <div className={`animate-pulse bg-gray-200 rounded ${className}`} />;
+}
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
+// チャンネルごとの色を定義（LocationSectionと同じ）
+const CHANNEL_COLORS = [
+  "#3b82f6", // blue
+  "#ef4444", // red
+  "#22c55e", // green
+  "#f59e0b", // amber
+  "#8b5cf6", // violet
+  "#ec4899", // pink
+  "#06b6d4", // cyan
+  "#f97316", // orange
+  "#84cc16", // lime
+  "#6366f1", // indigo
+];
+
+// 年齢層のラベル
+const AGE_RANGE_LABELS = [
+  "0-9",
+  "10-19",
+  "20-29",
+  "30-39",
+  "40-49",
+  "50-59",
+  "60-69",
+  "70-79",
+  "80+",
+];
+
+// 効果測定サマリーコンポーネント
+function EffectivenessSummary({
+  channels,
+  overallStats,
+  summaryChannelIds,
+  setSummaryChannelIds,
+}: {
+  channels: Channel[];
+  overallStats: OverallStats | null;
+  summaryChannelIds: string[];
+  setSummaryChannelIds: (ids: string[]) => void;
+}) {
+  const [showDetails, setShowDetails] = useState(false);
+
+  const activeChannels = channels.filter((c) => c.isActive && c.channelType === "diagnosis");
+
+  // チャンネルIDと色のマッピング
+  const channelColorMap: Record<string, string> = {};
+  activeChannels.forEach((channel, index) => {
+    channelColorMap[channel.id] = CHANNEL_COLORS[index % CHANNEL_COLORS.length];
+  });
+
+  const isAllSelected = summaryChannelIds.length === 0 || summaryChannelIds.length === activeChannels.length;
+
+  const toggleChannel = (channelId: string) => {
+    if (summaryChannelIds.length === 0) {
+      // 全選択状態から1つ外す
+      setSummaryChannelIds(activeChannels.filter(c => c.id !== channelId).map(c => c.id));
+    } else if (summaryChannelIds.includes(channelId)) {
+      const newIds = summaryChannelIds.filter((id) => id !== channelId);
+      setSummaryChannelIds(newIds.length === 0 ? [] : newIds);
+    } else {
+      const newIds = [...summaryChannelIds, channelId];
+      // 全部選択されたら空配列（全選択）に
+      if (newIds.length === activeChannels.length) {
+        setSummaryChannelIds([]);
+      } else {
+        setSummaryChannelIds(newIds);
       }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+    }
+  };
+
+  const selectAll = () => {
+    setSummaryChannelIds([]);
+  };
+
+  const deselectAll = () => {
+    setSummaryChannelIds([]);
+  };
+
+  const isChannelSelected = (channelId: string) => {
+    return summaryChannelIds.length === 0 || summaryChannelIds.includes(channelId);
+  };
 
   return (
-    <div className="relative text-center" ref={popoverRef}>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full hover:bg-purple-50 rounded-lg py-1 -my-1 transition-colors"
-      >
-        <div className="text-xs text-gray-500 mb-1 flex items-center justify-center gap-1">
-          <Target className="w-3 h-3" />
-          CTA
+    <div className="bg-white rounded-2xl shadow-sm border">
+      <div className="p-5 border-b bg-gradient-to-r from-emerald-50 to-teal-50">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center">
+            <Target className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">効果測定サマリー</h2>
+            <p className="text-xs text-gray-500">
+              {isAllSelected
+                ? "全QRコードの集計データ"
+                : `${summaryChannelIds.length}個のQRコードを選択中`}
+            </p>
+          </div>
         </div>
-        <div className="text-xl font-bold text-purple-600">{ctaCount}</div>
-      </button>
-      {isOpen && (
-        <div className="absolute z-50 top-full mt-2 left-1/2 -translate-x-1/2 min-w-[140px] bg-white rounded-lg shadow-lg border p-3">
-          <div className="text-xs font-medium text-gray-700 mb-2">CTA内訳</div>
-          {Object.entries(ctaByType).length === 0 ? (
-            <div className="text-xs text-gray-400">クリックなし</div>
-          ) : (
-            <div className="space-y-1">
-              {Object.entries(ctaByType)
-                .sort((a, b) => b[1] - a[1])
-                .map(([type, count]) => (
-                  <div key={type} className="flex justify-between text-xs text-gray-600">
-                    <span>{CTA_TYPE_NAMES[type] || type}</span>
-                    <span className="font-medium">{count}</span>
+
+        {/* チャンネル選択バナー */}
+        <div>
+          <div className="flex flex-wrap items-center gap-2 mb-2">
+            <span className="text-sm text-gray-600 font-medium">QRコード:</span>
+            <button
+              onClick={isAllSelected ? deselectAll : selectAll}
+              className="text-xs px-2 py-1 rounded bg-white/80 hover:bg-white text-gray-700 flex items-center gap-1"
+            >
+              {isAllSelected ? (
+                <>
+                  <SquareCheck className="w-3 h-3" />
+                  全選択中
+                </>
+              ) : (
+                <>
+                  <Square className="w-3 h-3" />
+                  全選択
+                </>
+              )}
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {activeChannels.map((channel) => {
+              const isSelected = isChannelSelected(channel.id);
+              const color = channelColorMap[channel.id];
+              return (
+                <button
+                  key={channel.id}
+                  onClick={() => toggleChannel(channel.id)}
+                  className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs border transition-colors ${
+                    isSelected
+                      ? "border-current bg-white"
+                      : "border-gray-200 text-gray-400 bg-white/50"
+                  }`}
+                  style={isSelected ? { color, backgroundColor: "white" } : {}}
+                >
+                  <span
+                    className="w-2.5 h-2.5 rounded-full"
+                    style={{ backgroundColor: isSelected ? color : "#d1d5db" }}
+                  />
+                  {channel.name}
+                  {isSelected && <Check className="w-3 h-3" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {overallStats && (overallStats.accessCount > 0 || overallStats.completedCount > 0) ? (
+        <div className="p-5">
+          {/* メイン指標: 診断完了、完了率、CTA率 */}
+          <div className="grid grid-cols-3 gap-4 mb-4">
+            {/* 診断完了 */}
+            <div className="text-center p-4 bg-emerald-50 rounded-xl">
+              <div className="text-xs text-gray-500 mb-1">診断完了</div>
+              <div className="text-2xl font-bold text-emerald-600">{overallStats.completedCount.toLocaleString()}</div>
+            </div>
+
+            {/* 完了率 */}
+            <div className="text-center p-4 bg-blue-50 rounded-xl">
+              <div className="text-xs text-gray-500 mb-1">完了率</div>
+              <div className="text-2xl font-bold text-blue-600">{overallStats.completionRate}%</div>
+            </div>
+
+            {/* CTA率 */}
+            <div className="text-center p-4 bg-purple-50 rounded-xl">
+              <div className="text-xs text-gray-500 mb-1">CTA率</div>
+              <div className="text-2xl font-bold text-purple-600">{overallStats.ctaRate}%</div>
+            </div>
+          </div>
+
+          {/* 男女・年齢層 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            {/* 性別 */}
+            {overallStats.genderByType && (
+              <div className="p-4 bg-gray-50 rounded-xl">
+                <div className="text-sm font-medium text-gray-700 mb-3">性別</div>
+                <div className="flex gap-3">
+                  <div className="flex-1 text-center p-2 bg-blue-100 rounded-lg">
+                    <div className="text-lg font-bold text-blue-600">{overallStats.genderByType.male || 0}</div>
+                    <div className="text-xs text-gray-500">男性</div>
                   </div>
-                ))}
+                  <div className="flex-1 text-center p-2 bg-pink-100 rounded-lg">
+                    <div className="text-lg font-bold text-pink-600">{overallStats.genderByType.female || 0}</div>
+                    <div className="text-xs text-gray-500">女性</div>
+                  </div>
+                  {(overallStats.genderByType.other || 0) > 0 && (
+                    <div className="flex-1 text-center p-2 bg-gray-100 rounded-lg">
+                      <div className="text-lg font-bold text-gray-600">{overallStats.genderByType.other}</div>
+                      <div className="text-xs text-gray-500">その他</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* 年齢層 */}
+            {overallStats.ageRanges && Object.keys(overallStats.ageRanges).length > 0 && (
+              <div className="p-4 bg-gray-50 rounded-xl">
+                <div className="text-sm font-medium text-gray-700 mb-3">年齢層</div>
+                <div className="space-y-1">
+                  {AGE_RANGE_LABELS.filter(range => (overallStats.ageRanges[range] || 0) > 0).map((range) => {
+                    const count = overallStats.ageRanges[range] || 0;
+                    const maxCount = Math.max(...Object.values(overallStats.ageRanges), 1);
+                    const percentage = (count / maxCount) * 100;
+                    return (
+                      <div key={range} className="flex items-center gap-2">
+                        <span className="text-xs text-gray-500 w-12">{range}歳</span>
+                        <div className="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+                            style={{ width: `${percentage}%` }}
+                          />
+                        </div>
+                        <span className="text-xs font-medium text-gray-700 w-6 text-right">{count}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 詳細表示ボタン */}
+          <button
+            onClick={() => setShowDetails(!showDetails)}
+            className="w-full py-2 text-sm text-emerald-600 hover:text-emerald-800 flex items-center justify-center gap-1 border-t"
+          >
+            {showDetails ? (
+              <>
+                <ChevronUp className="w-4 h-4" />
+                詳細を閉じる
+              </>
+            ) : (
+              <>
+                <ChevronDown className="w-4 h-4" />
+                詳細を表示
+              </>
+            )}
+          </button>
+
+          {/* 折りたたみ部分: 読み込み数、CTA数、結果別CTA率、CTA内訳 */}
+          {showDetails && (
+            <div className="pt-4 border-t mt-4 space-y-4">
+              {/* 読み込み・CTA */}
+              <div className="grid grid-cols-2 gap-4">
+                {/* 読み込み */}
+                <div className="text-center p-4 bg-gray-50 rounded-xl">
+                  <div className="text-xs text-gray-500 mb-1">読み込み</div>
+                  <div className="text-2xl font-bold text-gray-800">{overallStats.accessCount.toLocaleString()}</div>
+                  {overallStats.trends?.accessCount && (
+                    <div className={`text-xs mt-1 ${overallStats.trends.accessCount.value >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+                      {overallStats.trends.accessCount.isNew ? "NEW" : `${overallStats.trends.accessCount.value >= 0 ? "+" : ""}${overallStats.trends.accessCount.value}%`}
+                    </div>
+                  )}
+                </div>
+
+                {/* CTA数 */}
+                <div className="text-center p-4 bg-purple-50 rounded-xl">
+                  <div className="text-xs text-gray-500 mb-1">CTA数</div>
+                  <div className="text-2xl font-bold text-purple-600">{overallStats.ctaCount.toLocaleString()}</div>
+                </div>
+              </div>
+
+              {/* 結果カテゴリ別CTA率 & CTA内訳 */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* 結果カテゴリ別CTA率 */}
+                {overallStats.categoryStats && Object.keys(overallStats.categoryStats).length > 0 && (
+                  <div className="p-4 bg-gray-50 rounded-xl">
+                    <div className="text-sm font-medium text-gray-700 mb-3">結果別CTA率</div>
+                    <div className="space-y-2">
+                      {Object.entries(overallStats.categoryStats)
+                        .filter(([category]) => category !== "未分類")
+                        .sort((a, b) => b[1].ctaRate - a[1].ctaRate)
+                        .slice(0, 5)
+                        .map(([category, stat]) => (
+                          <div key={category} className="flex items-center justify-between">
+                            <span className="text-sm text-gray-600 truncate flex-1">{category}</span>
+                            <div className="flex items-center gap-2">
+                              <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-emerald-500 rounded-full"
+                                  style={{ width: `${Math.min(stat.ctaRate, 100)}%` }}
+                                />
+                              </div>
+                              <span className="text-sm font-medium text-emerald-600 w-12 text-right">{stat.ctaRate}%</span>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* CTA内訳 */}
+                {overallStats.ctaByType && Object.keys(overallStats.ctaByType).length > 0 && (
+                  <div className="p-4 bg-gray-50 rounded-xl">
+                    <div className="text-sm font-medium text-gray-700 mb-3">CTA内訳</div>
+                    <div className="space-y-2">
+                      {Object.entries(overallStats.ctaByType)
+                        .sort((a, b) => b[1] - a[1])
+                        .map(([type, count]) => (
+                          <div key={type} className="flex items-center justify-between">
+                            <span className="text-sm text-gray-600">{CTA_TYPE_NAMES[type] || type}</span>
+                            <div className="flex items-center gap-2">
+                              <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-purple-500 rounded-full"
+                                  style={{ width: `${overallStats.ctaCount > 0 ? (count / overallStats.ctaCount) * 100 : 0}%` }}
+                                />
+                              </div>
+                              <span className="text-sm font-medium text-purple-600 w-8 text-right">{count}</span>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
-          {/* 三角形のポインター */}
-          <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[6px] border-b-white" />
+        </div>
+      ) : (
+        <div className="p-8 text-center">
+          <div className="text-gray-400 mb-2">
+            <Target className="w-12 h-12 mx-auto opacity-50" />
+          </div>
+          <p className="text-sm text-gray-500">
+            {summaryChannelIds.length > 0
+              ? "選択したQRコードのデータがありません"
+              : "データがありません"}
+          </p>
+          <p className="text-xs text-gray-400 mt-1">
+            選択した期間にアクセスや診断完了がない場合は表示されません
+          </p>
         </div>
       )}
     </div>
   );
 }
 
-// スケルトンコンポーネント
-function Skeleton({ className = "" }: { className?: string }) {
-  return <div className={`animate-pulse bg-gray-200 rounded ${className}`} />;
-}
-
 // QRコードカードコンポーネント
 function QRCodeCard({
   channel,
-  stats,
   onHide,
   onRestore,
   onPermanentDelete,
   onImageClick,
 }: {
   channel: Channel;
-  stats?: ChannelStats;
   onHide: () => void;
   onRestore: () => void;
   onPermanentDelete: () => void;
@@ -458,72 +737,14 @@ function QRCodeCard({
         </div>
       </div>
 
-      {/* 統計セクション */}
-      {channel.isActive && (
-        <div className="border-t bg-gray-50/50">
-          {channel.channelType === "link" ? (
-            <div className="p-4">
-              <div className="flex items-center justify-center gap-2 text-purple-600">
-                <MousePointerClick className="w-5 h-5" />
-                <span className="text-2xl font-bold">{channel.scanCount}</span>
-                <span className="text-sm text-gray-500">クリック</span>
-              </div>
-            </div>
-          ) : stats ? (
-            <div className="p-4">
-              <div className="grid grid-cols-3 gap-3">
-                <div className="text-center">
-                  <div className="text-xs text-gray-500 mb-1 flex items-center justify-center gap-1">
-                    <TrendingUp className="w-3 h-3" />
-                    読み込み
-                  </div>
-                  <div className="text-xl font-bold text-gray-800">{stats.accessCount}</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-xs text-gray-500 mb-1 flex items-center justify-center gap-1">
-                    <Users className="w-3 h-3" />
-                    完了
-                  </div>
-                  <div className="text-xl font-bold text-emerald-600">{stats.completedCount}</div>
-                </div>
-                <CTAPopover ctaCount={stats.ctaCount} ctaByType={stats.ctaByType} />
-              </div>
-
-              {/* 完了率バー */}
-              <div className="mt-3">
-                <div className="flex items-center justify-between text-xs mb-1">
-                  <span className="text-gray-500">完了率</span>
-                  <span className="font-semibold text-blue-600">{stats.completionRate}%</span>
-                </div>
-                <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-500"
-                    style={{ width: `${Math.min(stats.completionRate, 100)}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* 効果測定バッジ */}
-              {stats.adBudget && (
-                <Link
-                  href={`/dashboard/channels/${channel.id}#effectiveness`}
-                  className="mt-3 flex items-center justify-between p-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-                >
-                  <span className="text-xs text-blue-700 font-medium">効果測定</span>
-                  <div className="flex items-center gap-2 text-xs">
-                    <span className="text-blue-600">
-                      CPA ¥{stats.cpa?.toLocaleString() || "-"}
-                    </span>
-                    <ExternalLink className="w-3 h-3 text-blue-500" />
-                  </div>
-                </Link>
-              )}
-            </div>
-          ) : (
-            <div className="p-4">
-              <Skeleton className="h-16" />
-            </div>
-          )}
+      {/* リンクタイプのクリック数 */}
+      {channel.isActive && channel.channelType === "link" && (
+        <div className="border-t bg-gray-50/50 p-4">
+          <div className="flex items-center justify-center gap-2 text-purple-600">
+            <MousePointerClick className="w-5 h-5" />
+            <span className="text-2xl font-bold">{channel.scanCount}</span>
+            <span className="text-sm text-gray-500">クリック</span>
+          </div>
         </div>
       )}
 
@@ -607,7 +828,7 @@ export default function DashboardPage() {
   const [period, setPeriod] = useState("month");
   const [selectedChannelId, setSelectedChannelId] = useState("");
   const [selectedDiagnosisType, setSelectedDiagnosisType] = useState("");
-  const [summaryChannelId, setSummaryChannelId] = useState(""); // 効果測定サマリー用
+  const [summaryChannelIds, setSummaryChannelIds] = useState<string[]>([]); // 効果測定サマリー用（複数選択）
 
   // カスタム期間
   const getDefaultDates = () => {
@@ -675,8 +896,8 @@ export default function DashboardPage() {
         params.set("startDate", customStartDate);
         params.set("endDate", customEndDate);
       }
-      if (summaryChannelId) {
-        params.set("channelId", summaryChannelId);
+      if (summaryChannelIds.length > 0) {
+        params.set("channelIds", summaryChannelIds.join(","));
       }
 
       const response = await fetch(`/api/dashboard/stats?${params}`);
@@ -687,7 +908,7 @@ export default function DashboardPage() {
     } catch (error) {
       console.error("Failed to fetch overall stats:", error);
     }
-  }, [period, customStartDate, customEndDate, summaryChannelId]);
+  }, [period, customStartDate, customEndDate, summaryChannelIds]);
 
   // 履歴データ取得
   const fetchHistory = useCallback(
@@ -1107,7 +1328,6 @@ export default function DashboardPage() {
                 <QRCodeCard
                   key={channel.id}
                   channel={channel}
-                  stats={channelStats[channel.id]}
                   onHide={() => handleHideChannel(channel.id)}
                   onRestore={() => handleRestoreChannel(channel.id)}
                   onPermanentDelete={() => handlePermanentDeleteChannel(channel.id)}
@@ -1119,173 +1339,20 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* 効果測定サマリー */}
-      <div className="bg-white rounded-2xl shadow-sm border">
-        <div className="p-5 border-b bg-gradient-to-r from-emerald-50 to-teal-50">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center">
-                <Target className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-gray-900">効果測定サマリー</h2>
-                <p className="text-xs text-gray-500">
-                  {summaryChannelId
-                    ? channels.find(c => c.id === summaryChannelId)?.name || "選択中のQRコード"
-                    : "全QRコードの集計データ"}
-                </p>
-              </div>
-            </div>
-            <select
-              value={summaryChannelId}
-              onChange={(e) => setSummaryChannelId(e.target.value)}
-              className="px-3 py-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-            >
-              <option value="">全てのQRコード</option>
-              {channels.filter(c => c.isActive && c.channelType === "diagnosis").map((channel) => (
-                <option key={channel.id} value={channel.id}>
-                  {channel.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {overallStats && (overallStats.accessCount > 0 || overallStats.completedCount > 0) ? (
-          <div className="p-5">
-            {/* ファネル分析 */}
-            <div className="grid grid-cols-3 gap-4 mb-6">
-              {/* アクセス */}
-              <div className="text-center p-4 bg-gray-50 rounded-xl">
-                <div className="text-xs text-gray-500 mb-1">読み込み</div>
-                <div className="text-2xl font-bold text-gray-800">{overallStats.accessCount.toLocaleString()}</div>
-                {overallStats.trends?.accessCount && (
-                  <div className={`text-xs mt-1 ${overallStats.trends.accessCount.value >= 0 ? "text-emerald-600" : "text-red-500"}`}>
-                    {overallStats.trends.accessCount.isNew ? "NEW" : `${overallStats.trends.accessCount.value >= 0 ? "+" : ""}${overallStats.trends.accessCount.value}%`}
-                  </div>
-                )}
-              </div>
-
-              {/* 完了 */}
-              <div className="text-center p-4 bg-emerald-50 rounded-xl">
-                <div className="text-xs text-gray-500 mb-1">診断完了</div>
-                <div className="text-2xl font-bold text-emerald-600">{overallStats.completedCount.toLocaleString()}</div>
-                <div className="text-xs text-gray-500 mt-1">完了率 {overallStats.completionRate}%</div>
-              </div>
-
-              {/* CTA */}
-              <div className="text-center p-4 bg-purple-50 rounded-xl">
-                <div className="text-xs text-gray-500 mb-1">CTA</div>
-                <div className="text-2xl font-bold text-purple-600">{overallStats.ctaCount.toLocaleString()}</div>
-                <div className="text-xs text-gray-500 mt-1">CTA率 {overallStats.ctaRate}%</div>
-              </div>
-            </div>
-
-            {/* ファネルバー */}
-            <div className="mb-6">
-              <div className="flex h-3 rounded-full overflow-hidden bg-gray-100">
-                <div
-                  className="bg-gray-400 transition-all duration-500"
-                  style={{ width: "100%" }}
-                />
-              </div>
-              <div className="flex h-3 rounded-full overflow-hidden bg-gray-100 mt-1">
-                <div
-                  className="bg-emerald-500 transition-all duration-500"
-                  style={{ width: `${overallStats.completionRate}%` }}
-                />
-              </div>
-              <div className="flex h-3 rounded-full overflow-hidden bg-gray-100 mt-1">
-                <div
-                  className="bg-purple-500 transition-all duration-500"
-                  style={{ width: `${overallStats.accessCount > 0 ? (overallStats.ctaCount / overallStats.accessCount) * 100 : 0}%` }}
-                />
-              </div>
-              <div className="flex justify-between text-xs text-gray-500 mt-2">
-                <span>読み込み 100%</span>
-                <span>完了 {overallStats.completionRate}%</span>
-                <span>CTA {overallStats.accessCount > 0 ? Math.round((overallStats.ctaCount / overallStats.accessCount) * 100 * 10) / 10 : 0}%</span>
-              </div>
-            </div>
-
-            {/* 結果カテゴリ別CTA率 & CTA内訳 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* 結果カテゴリ別CTA率 */}
-              {overallStats.categoryStats && Object.keys(overallStats.categoryStats).length > 0 && (
-                <div className="p-4 bg-gray-50 rounded-xl">
-                  <div className="text-sm font-medium text-gray-700 mb-3">結果別CTA率</div>
-                  <div className="space-y-2">
-                    {Object.entries(overallStats.categoryStats)
-                      .filter(([category]) => category !== "未分類")
-                      .sort((a, b) => b[1].ctaRate - a[1].ctaRate)
-                      .slice(0, 5)
-                      .map(([category, stat]) => (
-                        <div key={category} className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600 truncate flex-1">{category}</span>
-                          <div className="flex items-center gap-2">
-                            <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-emerald-500 rounded-full"
-                                style={{ width: `${Math.min(stat.ctaRate, 100)}%` }}
-                              />
-                            </div>
-                            <span className="text-sm font-medium text-emerald-600 w-12 text-right">{stat.ctaRate}%</span>
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-              )}
-
-              {/* CTA内訳 */}
-              {overallStats.ctaByType && Object.keys(overallStats.ctaByType).length > 0 && (
-                <div className="p-4 bg-gray-50 rounded-xl">
-                  <div className="text-sm font-medium text-gray-700 mb-3">CTA内訳</div>
-                  <div className="space-y-2">
-                    {Object.entries(overallStats.ctaByType)
-                      .sort((a, b) => b[1] - a[1])
-                      .map(([type, count]) => (
-                        <div key={type} className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600">{CTA_TYPE_NAMES[type] || type}</span>
-                          <div className="flex items-center gap-2">
-                            <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-purple-500 rounded-full"
-                                style={{ width: `${overallStats.ctaCount > 0 ? (count / overallStats.ctaCount) * 100 : 0}%` }}
-                              />
-                            </div>
-                            <span className="text-sm font-medium text-purple-600 w-8 text-right">{count}</span>
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        ) : (
-          <div className="p-8 text-center">
-            <div className="text-gray-400 mb-2">
-              <Target className="w-12 h-12 mx-auto opacity-50" />
-            </div>
-            <p className="text-sm text-gray-500">
-              {summaryChannelId
-                ? "選択したQRコードのデータがありません"
-                : "データがありません"}
-            </p>
-            <p className="text-xs text-gray-400 mt-1">
-              選択した期間にアクセスや診断完了がない場合は表示されません
-            </p>
-          </div>
-        )}
-      </div>
-
       {/* QR読み込みエリア */}
       <LocationSection
         period={period}
         channels={channels}
         customStartDate={period === "custom" ? customStartDate : undefined}
         customEndDate={period === "custom" ? customEndDate : undefined}
+      />
+
+      {/* 効果測定サマリー */}
+      <EffectivenessSummary
+        channels={channels}
+        overallStats={overallStats}
+        summaryChannelIds={summaryChannelIds}
+        setSummaryChannelIds={setSummaryChannelIds}
       />
 
       {/* QR読み込み履歴 */}
