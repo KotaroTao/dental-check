@@ -11,9 +11,15 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const channelId = searchParams.get("channelId");
+    const channelIdsParam = searchParams.get("channelIds"); // カンマ区切りで複数指定可能
     const period = searchParams.get("period") || "month"; // today, week, month, custom
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
+
+    // 複数のチャンネルIDを配列に変換
+    const selectedChannelIds = channelIdsParam
+      ? channelIdsParam.split(",").filter((id) => id.trim())
+      : [];
 
     // 期間の計算
     let dateFrom: Date;
@@ -71,11 +77,20 @@ export async function GET(request: NextRequest) {
     const activeChannelIds = activeChannels.map((c: { id: string }) => c.id);
 
     // チャンネルフィルター（特定チャンネル指定時はそれを使用、なければアクティブチャンネルのみ）
-    const channelFilter = channelId
-      ? { channelId }
-      : activeChannelIds.length > 0
-        ? { channelId: { in: activeChannelIds } }
-        : {};
+    let channelFilter: { channelId?: string | { in: string[] } } = {};
+    if (channelId) {
+      // 単一チャンネル指定
+      channelFilter = { channelId };
+    } else if (selectedChannelIds.length > 0) {
+      // 複数チャンネル指定（アクティブチャンネルのみに絞る）
+      const filteredIds = selectedChannelIds.filter((id) => activeChannelIds.includes(id));
+      if (filteredIds.length > 0) {
+        channelFilter = { channelId: { in: filteredIds } };
+      }
+    } else if (activeChannelIds.length > 0) {
+      // デフォルト: すべてのアクティブチャンネル
+      channelFilter = { channelId: { in: activeChannelIds } };
+    }
 
     // 共通のフィルター条件
     const baseFilter = {
@@ -286,24 +301,30 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 年齢層統計を計算
+    // 年齢層統計を計算（LocationSectionと同じラベルを使用）
     const ageRanges: Record<string, number> = {
-      "~19": 0,
+      "0-9": 0,
+      "10-19": 0,
       "20-29": 0,
       "30-39": 0,
       "40-49": 0,
       "50-59": 0,
-      "60~": 0,
+      "60-69": 0,
+      "70-79": 0,
+      "80+": 0,
     };
     for (const session of completedSessions) {
       const age = session.userAge;
       if (age !== null) {
-        if (age < 20) ageRanges["~19"]++;
+        if (age < 10) ageRanges["0-9"]++;
+        else if (age < 20) ageRanges["10-19"]++;
         else if (age < 30) ageRanges["20-29"]++;
         else if (age < 40) ageRanges["30-39"]++;
         else if (age < 50) ageRanges["40-49"]++;
         else if (age < 60) ageRanges["50-59"]++;
-        else ageRanges["60~"]++;
+        else if (age < 70) ageRanges["60-69"]++;
+        else if (age < 80) ageRanges["70-79"]++;
+        else ageRanges["80+"]++;
       }
     }
 
