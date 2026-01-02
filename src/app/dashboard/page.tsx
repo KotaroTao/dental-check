@@ -970,6 +970,23 @@ export default function DashboardPage() {
     fetchHistory(0, false);
   }, [fetchChannelStats, fetchOverallStats, fetchHistory]);
 
+  // チャンネル変更時にsummaryChannelIdsから非表示チャンネルを除外
+  useEffect(() => {
+    const activeIds = channels
+      .filter((c) => c.isActive && c.channelType === "diagnosis")
+      .map((c) => c.id);
+    setSummaryChannelIds((prev) => {
+      if (prev.length === 0) {
+        // 全選択状態の場合はそのまま維持
+        return prev;
+      }
+      // 非表示チャンネルを除外
+      const filtered = prev.filter((id) => activeIds.includes(id));
+      // すべて除外された場合は全選択状態に戻す
+      return filtered.length === 0 ? [] : filtered;
+    });
+  }, [channels]);
+
   // QRコード非表示
   const handleHideChannel = async (id: string) => {
     if (!confirm("このQRコードを非表示にしますか？統計からも除外されます。後から復元できます。")) {
