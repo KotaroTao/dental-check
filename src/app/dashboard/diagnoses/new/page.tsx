@@ -386,9 +386,10 @@ export default function NewDiagnosisPage() {
                             question.id,
                             option.id,
                             "score",
-                            parseInt(e.target.value) || 0
+                            e.target.value === "" ? 0 : Number(e.target.value)
                           )
                         }
+                        onFocus={(e) => e.target.select()}
                         className="w-20 border rounded-lg px-2 py-2 text-sm text-center"
                         placeholder="点数"
                       />
@@ -462,9 +463,10 @@ export default function NewDiagnosisPage() {
                         updateResultPattern(
                           pattern.id,
                           "minScore",
-                          parseInt(e.target.value) || 0
+                          e.target.value === "" ? 0 : Number(e.target.value)
                         )
                       }
+                      onFocus={(e) => e.target.select()}
                       className="w-full border rounded-lg px-3 py-2"
                     />
                   </div>
@@ -479,9 +481,10 @@ export default function NewDiagnosisPage() {
                         updateResultPattern(
                           pattern.id,
                           "maxScore",
-                          parseInt(e.target.value) || 0
+                          e.target.value === "" ? 0 : Number(e.target.value)
                         )
                       }
+                      onFocus={(e) => e.target.select()}
                       className="w-full border rounded-lg px-3 py-2"
                     />
                   </div>
