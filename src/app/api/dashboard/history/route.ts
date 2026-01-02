@@ -197,6 +197,7 @@ export async function GET(request: NextRequest) {
         userGender: s.userGender ? GENDER_NAMES[s.userGender] || s.userGender : null,
         diagnosisType: diagnosisTypeName,
         diagnosisTypeSlug: s.diagnosisType?.slug || null,
+        resultCategory: s.resultCategory,
         channelName: s.channel?.name || "不明",
         channelId: s.channel?.id,
         area,

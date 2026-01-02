@@ -94,12 +94,66 @@ interface HistoryItem {
   userGender: string | null;
   diagnosisType: string;
   diagnosisTypeSlug: string;
+  resultCategory: string | null;
   channelName: string;
   channelId: string;
   area: string;
   ctaType: string | null;
   ctaClickCount: number;
   ctaByType: Record<string, number>;
+}
+
+// 履歴用CTAポップオーバーコンポーネント（コンパクト版）
+function HistoryCTAPopover({
+  ctaClickCount,
+  ctaByType,
+}: {
+  ctaClickCount: number;
+  ctaByType: Record<string, number>;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  if (ctaClickCount === 0) {
+    return <span className="text-gray-400">-</span>;
+  }
+
+  return (
+    <div className="relative inline-block" ref={popoverRef}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium hover:bg-purple-200 transition-colors"
+      >
+        {ctaClickCount}
+      </button>
+      {isOpen && (
+        <div className="absolute z-[9999] bottom-full mb-2 left-1/2 -translate-x-1/2 min-w-[120px] bg-white rounded-lg shadow-lg border p-2">
+          <div className="text-[10px] font-medium text-gray-500 mb-1">CTA内訳</div>
+          <div className="space-y-0.5">
+            {Object.entries(ctaByType)
+              .sort((a, b) => b[1] - a[1])
+              .map(([type, count]) => (
+                <div key={type} className="flex justify-between text-xs text-gray-600">
+                  <span>{CTA_TYPE_NAMES[type] || type}</span>
+                  <span className="font-medium">{count}</span>
+                </div>
+              ))}
+          </div>
+          <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[5px] border-t-white" />
+        </div>
+      )}
+    </div>
+  );
 }
 
 interface SubscriptionInfo {
@@ -1076,7 +1130,7 @@ export default function DashboardPage() {
                 <thead className="bg-gray-50">
                   <tr>
                     <th
-                      className="text-left px-5 py-3 text-sm font-medium text-gray-500 cursor-pointer hover:bg-gray-100"
+                      className="text-left px-4 py-3 text-sm font-medium text-gray-500 cursor-pointer hover:bg-gray-100"
                       onClick={() => handleSort("createdAt")}
                     >
                       <span className="flex items-center">
@@ -1085,7 +1139,7 @@ export default function DashboardPage() {
                       </span>
                     </th>
                     <th
-                      className="text-center px-3 py-3 text-sm font-medium text-gray-500 cursor-pointer hover:bg-gray-100"
+                      className="text-center px-2 py-3 text-sm font-medium text-gray-500 cursor-pointer hover:bg-gray-100"
                       onClick={() => handleSort("userAge")}
                     >
                       <span className="flex items-center justify-center">
@@ -1093,31 +1147,45 @@ export default function DashboardPage() {
                         <SortIcon field="userAge" />
                       </span>
                     </th>
-                    <th className="text-center px-3 py-3 text-sm font-medium text-gray-500">性別</th>
-                    <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">診断</th>
-                    <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">QRコード</th>
-                    <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">エリア</th>
+                    <th className="text-center px-2 py-3 text-sm font-medium text-gray-500">性別</th>
+                    <th className="text-left px-3 py-3 text-sm font-medium text-gray-500">診断</th>
+                    <th className="text-left px-3 py-3 text-sm font-medium text-gray-500">結果</th>
+                    <th className="text-left px-3 py-3 text-sm font-medium text-gray-500">QRコード</th>
+                    <th className="text-center px-2 py-3 text-sm font-medium text-gray-500">CTA</th>
+                    <th className="text-left px-3 py-3 text-sm font-medium text-gray-500">エリア</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
                   {sortedHistory.map((item) => (
                     <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-5 py-4 text-sm text-gray-600 whitespace-nowrap">
+                      <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                         {formatDate(item.createdAt)}
                       </td>
-                      <td className="px-3 py-4 text-center text-sm text-gray-700">
+                      <td className="px-2 py-3 text-center text-sm text-gray-700">
                         {item.userAge !== null ? `${item.userAge}歳` : "-"}
                       </td>
-                      <td className="px-3 py-4 text-center text-sm text-gray-700">
+                      <td className="px-2 py-3 text-center text-sm text-gray-700">
                         {item.userGender || "-"}
                       </td>
-                      <td className="px-4 py-4">
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                      <td className="px-3 py-3">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
                           {item.diagnosisType}
                         </span>
                       </td>
-                      <td className="px-4 py-4 text-sm font-medium text-gray-900">{item.channelName}</td>
-                      <td className="px-4 py-4 text-sm text-gray-600">{item.area}</td>
+                      <td className="px-3 py-3 text-sm text-gray-700">
+                        {item.resultCategory ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-50 text-emerald-700">
+                            {item.resultCategory}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-3 text-sm font-medium text-gray-900">{item.channelName}</td>
+                      <td className="px-2 py-3 text-center">
+                        <HistoryCTAPopover ctaClickCount={item.ctaClickCount} ctaByType={item.ctaByType} />
+                      </td>
+                      <td className="px-3 py-3 text-sm text-gray-600">{item.area}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1130,15 +1198,27 @@ export default function DashboardPage() {
                 <div key={item.id} className="p-4 hover:bg-gray-50">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm text-gray-500">{formatDate(item.createdAt)}</span>
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-                      {item.diagnosisType}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                        {item.diagnosisType}
+                      </span>
+                      {item.resultCategory && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-50 text-emerald-700">
+                          {item.resultCategory}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className="text-sm text-gray-700">
-                      {item.userAge !== null ? `${item.userAge}歳` : "-"} / {item.userGender || "-"}
-                    </span>
-                    <span className="text-sm font-medium text-gray-900">{item.channelName}</span>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm text-gray-700">
+                        {item.userAge !== null ? `${item.userAge}歳` : "-"} / {item.userGender || "-"}
+                      </span>
+                      <span className="text-sm font-medium text-gray-900">{item.channelName}</span>
+                    </div>
+                    {item.ctaClickCount > 0 && (
+                      <HistoryCTAPopover ctaClickCount={item.ctaClickCount} ctaByType={item.ctaByType} />
+                    )}
                   </div>
                   <div className="text-sm text-gray-500">{item.area}</div>
                 </div>
