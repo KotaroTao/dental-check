@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
+import sharp from "sharp";
 
 // ファイルサイズ制限を10MBに設定（App Router形式）
 export const runtime = 'nodejs';
@@ -27,19 +28,46 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 許可する拡張子
-    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    // 許可する拡張子（HEIC/HEIF追加）
+    const allowedTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/gif",
+      "image/heic",
+      "image/heif",
+    ];
     if (!allowedTypes.includes(file.type)) {
       return NextResponse.json(
-        { error: "JPEG、PNG、WebP、GIF形式のみアップロードできます" },
+        { error: "JPEG、PNG、WebP、GIF、HEIC形式のみアップロードできます" },
         { status: 400 }
       );
     }
 
+    // ファイルをバッファに読み込み
+    const bytes = await file.arrayBuffer();
+    let buffer = Buffer.from(bytes);
+
     // ユニークなファイル名を生成
     const timestamp = Date.now();
     const randomStr = Math.random().toString(36).substring(2, 8);
-    const ext = file.name.split(".").pop() || "jpg";
+
+    // HEIC/HEIFの場合はJPEGに変換
+    const isHeic = file.type === "image/heic" || file.type === "image/heif" ||
+                   file.name.toLowerCase().endsWith(".heic") ||
+                   file.name.toLowerCase().endsWith(".heif");
+
+    let ext: string;
+    if (isHeic) {
+      // HEICをJPEGに変換
+      buffer = await sharp(buffer)
+        .jpeg({ quality: 90 })
+        .toBuffer();
+      ext = "jpg";
+    } else {
+      ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+    }
+
     const fileName = `${timestamp}-${randomStr}.${ext}`;
 
     // フォルダ指定（デフォルトはclinic）
@@ -54,8 +82,6 @@ export async function POST(request: NextRequest) {
     await mkdir(uploadDir, { recursive: true });
 
     // ファイルを保存
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
     const filePath = path.join(uploadDir, fileName);
     await writeFile(filePath, buffer);
 
