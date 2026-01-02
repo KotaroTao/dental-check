@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
 
     // ファイルをバッファに読み込み
     const bytes = await file.arrayBuffer();
-    let buffer = Buffer.from(bytes);
+    const inputBuffer = Buffer.from(bytes);
 
     // ユニークなファイル名を生成
     const timestamp = Date.now();
@@ -57,14 +57,16 @@ export async function POST(request: NextRequest) {
                    file.name.toLowerCase().endsWith(".heic") ||
                    file.name.toLowerCase().endsWith(".heif");
 
+    let outputBuffer: Buffer;
     let ext: string;
     if (isHeic) {
       // HEICをJPEGに変換
-      buffer = await sharp(buffer)
+      outputBuffer = await sharp(inputBuffer)
         .jpeg({ quality: 90 })
         .toBuffer();
       ext = "jpg";
     } else {
+      outputBuffer = inputBuffer;
       ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
     }
 
@@ -83,7 +85,7 @@ export async function POST(request: NextRequest) {
 
     // ファイルを保存
     const filePath = path.join(uploadDir, fileName);
-    await writeFile(filePath, buffer);
+    await writeFile(filePath, outputBuffer);
 
     // 公開URL
     const url = `/uploads/${targetFolder}/${fileName}`;
