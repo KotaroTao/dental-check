@@ -132,6 +132,9 @@ export async function GET(request: NextRequest) {
       ctaFromClinicPage,
       genderStats,
       completedSessions,
+      // 結果カテゴリ別統計
+      sessionsWithCategory,
+      ctaClicksWithSession,
       // 前期データ
       prevAccessCount,
       prevCompletedCount,
@@ -209,6 +212,27 @@ export async function GET(request: NextRequest) {
         select: { userAge: true },
       }),
 
+      // 結果カテゴリ別セッション数
+      prisma.diagnosisSession.groupBy({
+        by: ['resultCategory'],
+        where: completedFilter,
+        _count: { id: true },
+      }),
+
+      // セッションに紐づくCTAクリック（結果カテゴリ別CTA率計算用）
+      prisma.cTAClick.findMany({
+        where: {
+          ...baseFilter,
+          sessionId: { not: null },
+        },
+        select: {
+          sessionId: true,
+          session: {
+            select: { resultCategory: true },
+          },
+        },
+      }),
+
       // --- 前期データ ---
       // 前期アクセス数
       prisma.accessLog.count({
@@ -283,6 +307,35 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // 結果カテゴリ別統計を計算
+    const categoryStats: Record<string, { count: number; ctaCount: number; ctaRate: number }> = {};
+
+    // カテゴリ別セッション数を集計
+    for (const stat of sessionsWithCategory) {
+      const category = stat.resultCategory || "未分類";
+      if (!categoryStats[category]) {
+        categoryStats[category] = { count: 0, ctaCount: 0, ctaRate: 0 };
+      }
+      categoryStats[category].count = stat._count.id;
+    }
+
+    // カテゴリ別CTAクリック数を集計
+    for (const click of ctaClicksWithSession) {
+      const category = click.session?.resultCategory || "未分類";
+      if (!categoryStats[category]) {
+        categoryStats[category] = { count: 0, ctaCount: 0, ctaRate: 0 };
+      }
+      categoryStats[category].ctaCount++;
+    }
+
+    // カテゴリ別CTA率を計算
+    for (const category of Object.keys(categoryStats)) {
+      const stat = categoryStats[category];
+      stat.ctaRate = stat.count > 0
+        ? Math.round((stat.ctaCount / stat.count) * 100 * 10) / 10
+        : 0;
+    }
+
     // トレンド計算（前期比の変化率）
     // isNew: 前期が0で今期にデータがある場合（新規データ）
     const calcTrend = (current: number, previous: number): { value: number; isNew: boolean } => {
@@ -298,12 +351,18 @@ export async function GET(request: NextRequest) {
       ctaCount: calcTrend(ctaCount, prevCtaCount),
     };
 
+    // CTA率（診断完了者ベース）
+    const ctaRate = completedCount > 0
+      ? Math.round((ctaCount / completedCount) * 100 * 10) / 10
+      : 0;
+
     return NextResponse.json({
       stats: {
         accessCount,
         completedCount,
         completionRate,
         ctaCount,
+        ctaRate,
         ctaByType,
         // コンバージョン関連
         clinicPageViews,
@@ -311,6 +370,8 @@ export async function GET(request: NextRequest) {
         ctaFromClinicPage,
         resultConversionRate,
         clinicPageConversionRate,
+        // 結果カテゴリ別統計
+        categoryStats,
         // 年齢・性別統計
         genderByType,
         ageRanges,
