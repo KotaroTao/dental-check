@@ -71,8 +71,8 @@ export default function NewDiagnosisPage() {
     const maxOptionScore = Math.max(...question.options.map((o) => o.score), 0);
     return total + maxOptionScore;
   }, 0);
-  // 最低でも10は選べるようにする
-  const maxTotalScore = Math.max(calculatedMaxScore, 10);
+  // selectの選択肢用（実際の最大スコア、または最低10のうち大きい方）
+  const selectMaxScore = Math.max(calculatedMaxScore, 10);
 
   const addQuestion = () => {
     setQuestions([
@@ -443,7 +443,7 @@ export default function NewDiagnosisPage() {
             <div>
               <h2 className="text-lg font-semibold">結果パターン</h2>
               <p className="text-sm text-gray-500 mt-1">
-                スコア範囲: 0〜{maxTotalScore}点（質問の最大スコア合計）
+                スコア範囲: 0〜{calculatedMaxScore}点（質問の最大スコア合計）
               </p>
             </div>
             <Button
@@ -488,7 +488,7 @@ export default function NewDiagnosisPage() {
                       }
                       className="w-full border rounded-lg px-3 py-2 bg-white"
                     >
-                      {Array.from({ length: maxTotalScore + 1 }, (_, i) => i).map(
+                      {Array.from({ length: selectMaxScore + 1 }, (_, i) => i).map(
                         (score) => (
                           <option key={score} value={score}>
                             {score}
@@ -512,7 +512,7 @@ export default function NewDiagnosisPage() {
                       }
                       className="w-full border rounded-lg px-3 py-2 bg-white"
                     >
-                      {Array.from({ length: maxTotalScore + 1 }, (_, i) => i).map(
+                      {Array.from({ length: selectMaxScore + 1 }, (_, i) => i).map(
                         (score) => (
                           <option key={score} value={score}>
                             {score}
