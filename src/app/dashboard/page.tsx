@@ -998,6 +998,7 @@ export default function DashboardPage() {
       if (response.ok) {
         setChannels(channels.map((c) => (c.id === id ? { ...c, isActive: false } : c)));
         fetchChannelStats();
+        fetchOverallStats();
         fetchHistory(0, false);
       }
     } catch (error) {
@@ -1016,6 +1017,7 @@ export default function DashboardPage() {
       if (response.ok) {
         setChannels(channels.map((c) => (c.id === id ? { ...c, isActive: true } : c)));
         fetchChannelStats();
+        fetchOverallStats();
         fetchHistory(0, false);
       }
     } catch (error) {
@@ -1040,6 +1042,7 @@ export default function DashboardPage() {
       if (response.ok) {
         setChannels(channels.filter((c) => c.id !== id));
         fetchChannelStats();
+        fetchOverallStats();
         fetchHistory(0, false);
       } else {
         const data = await response.json();
