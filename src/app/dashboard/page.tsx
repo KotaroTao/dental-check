@@ -299,7 +299,7 @@ function EffectivenessSummary({
 }) {
   const [showDetails, setShowDetails] = useState(false);
 
-  const activeChannels = channels.filter((c) => c.isActive && c.channelType === "diagnosis");
+  const activeChannels = channels.filter((c) => c.isActive);
 
   // チャンネルIDと色のマッピング
   const channelColorMap: Record<string, string> = {};
@@ -987,7 +987,7 @@ export default function DashboardPage() {
   // チャンネル変更時にsummaryChannelIdsから非表示チャンネルを除外
   useEffect(() => {
     const activeIds = channels
-      .filter((c) => c.isActive && c.channelType === "diagnosis")
+      .filter((c) => c.isActive)
       .map((c) => c.id);
     setSummaryChannelIds((prev) => {
       if (prev.length === 0) {
