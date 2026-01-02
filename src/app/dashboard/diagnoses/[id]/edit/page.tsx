@@ -199,7 +199,7 @@ export default function EditDiagnosisPage() {
   const removeOption = (questionId: string, optionId: string) => {
     setQuestions(
       questions.map((q) =>
-        q.id === questionId && q.options.length > 2
+        q.id === questionId && q.options.length > 1
           ? { ...q, options: q.options.filter((o) => o.id !== optionId) }
           : q
       )
@@ -498,7 +498,7 @@ export default function EditDiagnosisPage() {
                   <div className="flex items-center gap-2 text-xs text-gray-500 mb-1">
                     <span className="flex-1">選択肢テキスト</span>
                     <span className="w-20 text-center">スコア</span>
-                    {question.options.length > 2 && <span className="w-8" />}
+                    {question.options.length > 1 && <span className="w-8" />}
                   </div>
                   {question.options.map((option, oIndex) => (
                     <div key={option.id} className="flex items-center gap-2">
@@ -529,7 +529,7 @@ export default function EditDiagnosisPage() {
                           </option>
                         ))}
                       </select>
-                      {question.options.length > 2 && (
+                      {question.options.length > 1 && (
                         <Button
                           type="button"
                           variant="ghost"

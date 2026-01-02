@@ -115,7 +115,7 @@ export default function NewDiagnosisPage() {
   const removeOption = (questionId: string, optionId: string) => {
     setQuestions(
       questions.map((q) =>
-        q.id === questionId && q.options.length > 2
+        q.id === questionId && q.options.length > 1
           ? { ...q, options: q.options.filter((o) => o.id !== optionId) }
           : q
       )
@@ -392,7 +392,7 @@ export default function NewDiagnosisPage() {
                         className="w-20 border rounded-lg px-2 py-2 text-sm text-center"
                         placeholder="点数"
                       />
-                      {question.options.length > 2 && (
+                      {question.options.length > 1 && (
                         <Button
                           type="button"
                           variant="ghost"
