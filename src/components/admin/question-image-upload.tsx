@@ -37,6 +37,13 @@ export function QuestionImageUpload({ imageUrl, onImageChange }: Props) {
     setError(null);
     setIsUploading(true);
 
+    // デバッグ用ログ
+    console.log("Upload file:", {
+      name: file.name,
+      type: file.type,
+      size: file.size,
+    });
+
     try {
       const formData = new FormData();
       formData.append("file", file);
@@ -55,8 +62,10 @@ export function QuestionImageUpload({ imageUrl, onImageChange }: Props) {
       }
 
       onImageChange(data.url);
-    } catch {
-      setError("アップロードに失敗しました");
+    } catch (err) {
+      console.error("Upload error:", err);
+      const message = err instanceof Error ? err.message : "不明なエラー";
+      setError(`アップロードに失敗しました: ${message}`);
     } finally {
       setIsUploading(false);
       // inputをリセット（同じファイルを再選択可能にする）
