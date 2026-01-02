@@ -18,7 +18,6 @@ import {
   Calendar,
   AlertTriangle,
   Link2,
-  MousePointerClick,
   CreditCard,
   MoreVertical,
   Eye,
@@ -307,28 +306,23 @@ function EffectivenessSummary({
     channelColorMap[channel.id] = CHANNEL_COLORS[index % CHANNEL_COLORS.length];
   });
 
-  const isAllSelected = summaryChannelIds.length === 0 || summaryChannelIds.length === activeChannels.length;
+  const isAllSelected = summaryChannelIds.length === activeChannels.length;
+  const isNoneSelected = summaryChannelIds.length === 0;
 
   const toggleChannel = (channelId: string) => {
-    if (summaryChannelIds.length === 0) {
-      // 全選択状態から1つ外す
-      setSummaryChannelIds(activeChannels.filter(c => c.id !== channelId).map(c => c.id));
-    } else if (summaryChannelIds.includes(channelId)) {
+    if (summaryChannelIds.includes(channelId)) {
+      // 選択を解除（最後の1つも解除可能）
       const newIds = summaryChannelIds.filter((id) => id !== channelId);
-      setSummaryChannelIds(newIds.length === 0 ? [] : newIds);
+      setSummaryChannelIds(newIds);
     } else {
+      // 選択を追加
       const newIds = [...summaryChannelIds, channelId];
-      // 全部選択されたら空配列（全選択）に
-      if (newIds.length === activeChannels.length) {
-        setSummaryChannelIds([]);
-      } else {
-        setSummaryChannelIds(newIds);
-      }
+      setSummaryChannelIds(newIds);
     }
   };
 
   const selectAll = () => {
-    setSummaryChannelIds([]);
+    setSummaryChannelIds(activeChannels.map((c) => c.id));
   };
 
   const deselectAll = () => {
@@ -336,7 +330,7 @@ function EffectivenessSummary({
   };
 
   const isChannelSelected = (channelId: string) => {
-    return summaryChannelIds.length === 0 || summaryChannelIds.includes(channelId);
+    return summaryChannelIds.includes(channelId);
   };
 
   return (
@@ -349,9 +343,11 @@ function EffectivenessSummary({
           <div>
             <h2 className="text-lg font-bold text-gray-900">効果測定サマリー</h2>
             <p className="text-xs text-gray-500">
-              {isAllSelected
-                ? "全QRコードの集計データ"
-                : `${summaryChannelIds.length}個のQRコードを選択中`}
+              {isNoneSelected
+                ? "QRコードを選択してください"
+                : isAllSelected
+                  ? "全QRコードの集計データ"
+                  : `${summaryChannelIds.length}個のQRコードを選択中`}
             </p>
           </div>
         </div>
@@ -362,20 +358,18 @@ function EffectivenessSummary({
           <div className="flex flex-wrap items-center gap-2 mb-2">
             <span className="text-sm text-gray-600 font-medium">QRコード:</span>
             <button
-              onClick={isAllSelected ? deselectAll : selectAll}
-              className="text-xs px-2 py-1 rounded bg-white/80 hover:bg-white text-gray-700 flex items-center gap-1"
+              onClick={selectAll}
+              className={`text-xs px-2 py-1 rounded bg-white/80 hover:bg-white text-gray-700 flex items-center gap-1 ${isAllSelected ? "ring-1 ring-emerald-500" : ""}`}
             >
-              {isAllSelected ? (
-                <>
-                  <SquareCheck className="w-3 h-3" />
-                  全選択中
-                </>
-              ) : (
-                <>
-                  <Square className="w-3 h-3" />
-                  全選択
-                </>
-              )}
+              <SquareCheck className="w-3 h-3" />
+              全選択
+            </button>
+            <button
+              onClick={deselectAll}
+              className={`text-xs px-2 py-1 rounded bg-white/80 hover:bg-white text-gray-700 flex items-center gap-1 ${isNoneSelected ? "ring-1 ring-gray-400" : ""}`}
+            >
+              <Square className="w-3 h-3" />
+              全解除
             </button>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -417,6 +411,16 @@ function EffectivenessSummary({
           <p className="text-sm text-gray-500">有効なQRコードがありません</p>
           <p className="text-xs text-gray-400 mt-1">
             QRコードを作成するか、非表示のQRコードを復元してください
+          </p>
+        </div>
+      ) : isNoneSelected ? (
+        <div className="p-8 text-center">
+          <div className="text-gray-400 mb-2">
+            <Target className="w-12 h-12 mx-auto opacity-50" />
+          </div>
+          <p className="text-sm text-gray-500">QRコードを選択してください</p>
+          <p className="text-xs text-gray-400 mt-1">
+            上のQRコードラベルをクリックして選択できます
           </p>
         </div>
       ) : overallStats && (overallStats.accessCount > 0 || overallStats.completedCount > 0) ? (
@@ -745,13 +749,14 @@ function QRCodeCard({
         </div>
       </div>
 
-      {/* リンクタイプのクリック数 */}
-      {channel.isActive && channel.channelType === "link" && (
+      {/* QR読み込み回数（アクティブなチャンネルのみ） */}
+      {channel.isActive && (
         <div className="border-t bg-gray-50/50 p-4">
-          <div className="flex items-center justify-center gap-2 text-purple-600">
-            <MousePointerClick className="w-5 h-5" />
+          <div className="flex items-center justify-center gap-2 text-emerald-600">
+            <QrCode className="w-5 h-5" />
+            <span className="text-sm text-gray-500">QR読み込み</span>
             <span className="text-2xl font-bold">{channel.scanCount}</span>
-            <span className="text-sm text-gray-500">クリック</span>
+            <span className="text-sm text-gray-500">回</span>
           </div>
         </div>
       )}
@@ -762,7 +767,7 @@ function QRCodeCard({
           href={`/dashboard/channels/${channel.id}`}
           className="block border-t px-4 py-2.5 text-center text-sm font-medium text-blue-600 hover:bg-blue-50 transition-colors"
         >
-          詳細を見る
+          QRコードを表示
         </Link>
       )}
     </div>
@@ -984,22 +989,24 @@ export default function DashboardPage() {
     fetchHistory(0, false);
   }, [fetchChannelStats, fetchOverallStats, fetchHistory]);
 
-  // チャンネル変更時にsummaryChannelIdsから非表示チャンネルを除外
+  // チャンネル変更時にsummaryChannelIdsを更新
+  const [isInitialized, setIsInitialized] = useState(false);
   useEffect(() => {
     const activeIds = channels
       .filter((c) => c.isActive)
       .map((c) => c.id);
-    setSummaryChannelIds((prev) => {
-      if (prev.length === 0) {
-        // 全選択状態の場合はそのまま維持
-        return prev;
-      }
-      // 非表示チャンネルを除外
-      const filtered = prev.filter((id) => activeIds.includes(id));
-      // すべて除外された場合は全選択状態に戻す
-      return filtered.length === 0 ? [] : filtered;
-    });
-  }, [channels]);
+
+    if (!isInitialized && activeIds.length > 0) {
+      // 初回は全選択状態にする
+      setSummaryChannelIds(activeIds);
+      setIsInitialized(true);
+    } else {
+      setSummaryChannelIds((prev) => {
+        // 非表示チャンネルを除外
+        return prev.filter((id) => activeIds.includes(id));
+      });
+    }
+  }, [channels, isInitialized]);
 
   // QRコード非表示
   const handleHideChannel = async (id: string) => {
