@@ -357,6 +357,7 @@ function EffectivenessSummary({
         </div>
 
         {/* チャンネル選択バナー */}
+        {activeChannels.length > 0 ? (
         <div>
           <div className="flex flex-wrap items-center gap-2 mb-2">
             <span className="text-sm text-gray-600 font-medium">QRコード:</span>
@@ -403,9 +404,22 @@ function EffectivenessSummary({
             })}
           </div>
         </div>
+        ) : (
+          <p className="text-sm text-gray-500">表示できるQRコードがありません</p>
+        )}
       </div>
 
-      {overallStats && (overallStats.accessCount > 0 || overallStats.completedCount > 0) ? (
+      {activeChannels.length === 0 ? (
+        <div className="p-8 text-center">
+          <div className="text-gray-400 mb-2">
+            <Target className="w-12 h-12 mx-auto opacity-50" />
+          </div>
+          <p className="text-sm text-gray-500">有効なQRコードがありません</p>
+          <p className="text-xs text-gray-400 mt-1">
+            QRコードを作成するか、非表示のQRコードを復元してください
+          </p>
+        </div>
+      ) : overallStats && (overallStats.accessCount > 0 || overallStats.completedCount > 0) ? (
         <div className="p-5">
           {/* メイン指標: 診断完了、完了率、CTA率 */}
           <div className="grid grid-cols-3 gap-4 mb-4">
