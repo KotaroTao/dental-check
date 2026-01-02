@@ -485,7 +485,7 @@ export function DiagnosisForm({ initialData, isEditing = false }: Props) {
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label>カテゴリ</Label>
+                        <Label>結果</Label>
                         <Input
                           value={pattern.category}
                           onChange={(e) =>
