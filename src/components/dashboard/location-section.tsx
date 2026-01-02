@@ -146,6 +146,7 @@ export function LocationSection({
   };
 
   const isAllSelected = selectedChannelIds.length === activeChannels.length;
+  const isNoneSelected = selectedChannelIds.length === 0;
 
   // ヘルプポップオーバーの表示状態
   const [showHelp, setShowHelp] = useState(false);
@@ -262,20 +263,18 @@ export function LocationSection({
       <div className="flex flex-wrap items-center gap-2 mb-2">
         <span className="text-sm text-gray-600 font-medium">QRコード:</span>
         <button
-          onClick={isAllSelected ? deselectAll : selectAll}
-          className="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center gap-1"
+          onClick={selectAll}
+          className={`text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center gap-1 ${isAllSelected ? "ring-1 ring-emerald-500" : ""}`}
         >
-          {isAllSelected ? (
-            <>
-              <SquareCheck className="w-3 h-3" />
-              全解除
-            </>
-          ) : (
-            <>
-              <Square className="w-3 h-3" />
-              全選択
-            </>
-          )}
+          <SquareCheck className="w-3 h-3" />
+          全選択
+        </button>
+        <button
+          onClick={deselectAll}
+          className={`text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center gap-1 ${isNoneSelected ? "ring-1 ring-gray-400" : ""}`}
+        >
+          <Square className="w-3 h-3" />
+          全解除
         </button>
       </div>
       <div className="flex flex-wrap gap-2">
