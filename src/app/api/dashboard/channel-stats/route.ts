@@ -42,35 +42,15 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // アクティブなチャンネルを取得（広告設定も含む）
+    // アクティブなチャンネルを取得
     const channels = await prisma.channel.findMany({
       where: { clinicId: session.clinicId, isActive: true },
       select: {
         id: true,
-        adBudget: true,
-        adStartDate: true,
-        adEndDate: true,
-        adPlacement: true,
       },
     });
 
     const channelIds = channels.map((c: { id: string }) => c.id);
-
-    // 広告設定をチャンネルIDでマップ化
-    const channelAdData: Record<string, {
-      adBudget: number | null;
-      adStartDate: Date | null;
-      adEndDate: Date | null;
-      adPlacement: string | null;
-    }> = {};
-    for (const channel of channels as { id: string; adBudget: number | null; adStartDate: Date | null; adEndDate: Date | null; adPlacement: string | null }[]) {
-      channelAdData[channel.id] = {
-        adBudget: channel.adBudget,
-        adStartDate: channel.adStartDate,
-        adEndDate: channel.adEndDate,
-        adPlacement: channel.adPlacement,
-      };
-    }
 
     if (channelIds.length === 0) {
       return NextResponse.json({ stats: {} });
@@ -171,24 +151,6 @@ export async function GET(request: NextRequest) {
       }),
     ]);
 
-    // 期間ラベル生成関数
-    const formatPeriodLabel = (startDate: Date | null, endDate: Date | null): string => {
-      const formatDate = (date: Date) => {
-        return `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, "0")}/${date.getDate().toString().padStart(2, "0")}`;
-      };
-
-      if (!startDate && !endDate) {
-        return "無期限";
-      } else if (startDate && !endDate) {
-        return `${formatDate(startDate)}〜`;
-      } else if (!startDate && endDate) {
-        return `〜${formatDate(endDate)}`;
-      } else if (startDate && endDate) {
-        return `${formatDate(startDate)}〜${formatDate(endDate)}`;
-      }
-      return "無期限";
-    };
-
     // 統計データを整理
     const stats: Record<string, {
       accessCount: number;
@@ -200,23 +162,10 @@ export async function GET(request: NextRequest) {
       genderByType: Record<string, number>;
       ageRanges: Record<string, number>;
       accessByDate: { date: string; count: number }[];
-      // 広告効果測定メトリクス
-      adBudget: number | null;
-      adStartDate: string | null;
-      adEndDate: string | null;
-      adPlacement: string | null;
-      adDays: number | null;
-      dailyCost: number | null;
-      cpa: number | null;  // Cost per Access
-      cpd: number | null;  // Cost per Diagnosis completion
-      cpc: number | null;  // Cost per CTA Click
-      // 期間ラベル
-      periodLabel: string;
     }> = {};
 
     // 初期化
     for (const channelId of channelIds) {
-      const adData = channelAdData[channelId];
       stats[channelId] = {
         accessCount: 0,
         completedCount: 0,
@@ -227,18 +176,6 @@ export async function GET(request: NextRequest) {
         genderByType: { male: 0, female: 0, other: 0 },
         ageRanges: { "~19": 0, "20-29": 0, "30-39": 0, "40-49": 0, "50-59": 0, "60~": 0 },
         accessByDate: [],
-        // 広告効果測定メトリクス（初期値）
-        adBudget: adData.adBudget,
-        adStartDate: adData.adStartDate?.toISOString() || null,
-        adEndDate: adData.adEndDate?.toISOString() || null,
-        adPlacement: adData.adPlacement,
-        adDays: null,
-        dailyCost: null,
-        cpa: null,
-        cpd: null,
-        cpc: null,
-        // 期間ラベル
-        periodLabel: formatPeriodLabel(adData.adStartDate, adData.adEndDate),
       };
     }
 
@@ -303,33 +240,6 @@ export async function GET(request: NextRequest) {
       s.ctaRate = s.completedCount > 0
         ? Math.round((s.ctaCount / s.completedCount) * 100 * 10) / 10
         : 0;
-
-      // 広告効果測定指標
-      if (s.adBudget && s.adBudget > 0) {
-        // 広告掲載日数を計算
-        if (s.adStartDate && s.adEndDate) {
-          const start = new Date(s.adStartDate);
-          const end = new Date(s.adEndDate);
-          s.adDays = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1);
-          // 1日あたりコスト
-          s.dailyCost = Math.round(s.adBudget / s.adDays);
-        }
-
-        // CPA (Cost per Access): アクセス1件あたりのコスト
-        if (s.accessCount > 0) {
-          s.cpa = Math.round(s.adBudget / s.accessCount);
-        }
-
-        // CPD (Cost per Diagnosis): 診断完了1件あたりのコスト
-        if (s.completedCount > 0) {
-          s.cpd = Math.round(s.adBudget / s.completedCount);
-        }
-
-        // CPC (Cost per Click): CTAクリック1件あたりのコスト
-        if (s.ctaCount > 0) {
-          s.cpc = Math.round(s.adBudget / s.ctaCount);
-        }
-      }
     }
 
     // 日付別アクセス数を集計（直近10日分のみ）
