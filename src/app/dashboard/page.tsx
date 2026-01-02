@@ -129,11 +129,14 @@ function HistoryCTAPopover({
   ctaByType: Record<string, number>;
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
+      if (popoverRef.current && !popoverRef.current.contains(event.target as Node) &&
+          buttonRef.current && !buttonRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
     };
@@ -141,10 +144,23 @@ function HistoryCTAPopover({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    if (ctaClickCount === 0) return;
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    // Calculate position above the button, centered horizontally
+    setPosition({
+      x: rect.left + rect.width / 2,
+      y: rect.top,
+    });
+    setIsOpen(!isOpen);
+  };
+
   return (
-    <div className="relative inline-block" ref={popoverRef}>
+    <div className="relative inline-block">
       <button
-        onClick={() => ctaClickCount > 0 && setIsOpen(!isOpen)}
+        ref={buttonRef}
+        onClick={handleClick}
         className={`px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${
           ctaClickCount > 0
             ? "bg-purple-100 text-purple-700 hover:bg-purple-200 cursor-pointer"
@@ -153,8 +169,16 @@ function HistoryCTAPopover({
       >
         {ctaClickCount}
       </button>
-      {isOpen && (
-        <div className="absolute z-[9999] bottom-full mb-2 left-1/2 -translate-x-1/2 min-w-[120px] bg-white rounded-lg shadow-lg border p-2">
+      {isOpen && position && (
+        <div
+          ref={popoverRef}
+          className="fixed z-[9999] min-w-[120px] bg-white rounded-lg shadow-lg border p-2"
+          style={{
+            left: position.x,
+            top: position.y - 8,
+            transform: "translate(-50%, -100%)",
+          }}
+        >
           <div className="text-[10px] font-medium text-gray-500 mb-1">CTA内訳</div>
           <div className="space-y-0.5">
             {Object.entries(ctaByType)
@@ -1265,7 +1289,7 @@ export default function DashboardPage() {
       />
 
       {/* QR読み込み履歴 */}
-      <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-sm border">
         <div className="p-5 border-b">
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             <div className="flex items-center gap-3">
