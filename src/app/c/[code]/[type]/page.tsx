@@ -64,6 +64,7 @@ async function getDiagnosis(slug: string) {
       const rawQuestions = dbDiagnosis.questions as Array<{
         id: number | string;
         text: string;
+        imageUrl?: string | null;
         options?: Array<{ text: string; score: number }>;
         choices?: Array<{ text: string; score: number }>;
       }>;
@@ -71,6 +72,7 @@ async function getDiagnosis(slug: string) {
       const questions = rawQuestions.map((q, index) => ({
         id: typeof q.id === 'number' ? q.id : index + 1,
         text: q.text,
+        imageUrl: q.imageUrl || null,
         choices: q.choices || q.options || [],
       }));
 
