@@ -330,12 +330,8 @@ export default function NewDiagnosisPage() {
 
         {/* 質問 */}
         <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between mb-4">
+          <div className="mb-4">
             <h2 className="text-lg font-semibold">質問</h2>
-            <Button type="button" variant="outline" size="sm" onClick={addQuestion}>
-              <Plus className="w-4 h-4 mr-1" />
-              質問を追加
-            </Button>
           </div>
           <div className="space-y-6">
             {questions.map((question, qIndex) => (
@@ -435,6 +431,15 @@ export default function NewDiagnosisPage() {
               </div>
             ))}
           </div>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={addQuestion}
+            className="w-full mt-4"
+          >
+            <Plus className="w-4 h-4 mr-1" />
+            質問を追加
+          </Button>
         </div>
 
         {/* 結果パターン */}
