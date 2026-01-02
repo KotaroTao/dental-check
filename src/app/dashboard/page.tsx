@@ -583,6 +583,7 @@ export default function DashboardPage() {
   const [period, setPeriod] = useState("month");
   const [selectedChannelId, setSelectedChannelId] = useState("");
   const [selectedDiagnosisType, setSelectedDiagnosisType] = useState("");
+  const [summaryChannelId, setSummaryChannelId] = useState(""); // 効果測定サマリー用
 
   // カスタム期間
   const getDefaultDates = () => {
@@ -650,6 +651,9 @@ export default function DashboardPage() {
         params.set("startDate", customStartDate);
         params.set("endDate", customEndDate);
       }
+      if (summaryChannelId) {
+        params.set("channelId", summaryChannelId);
+      }
 
       const response = await fetch(`/api/dashboard/stats?${params}`);
       if (response.ok) {
@@ -659,7 +663,7 @@ export default function DashboardPage() {
     } catch (error) {
       console.error("Failed to fetch overall stats:", error);
     }
-  }, [period, customStartDate, customEndDate]);
+  }, [period, customStartDate, customEndDate, summaryChannelId]);
 
   // 履歴データ取得
   const fetchHistory = useCallback(
@@ -1092,20 +1096,38 @@ export default function DashboardPage() {
       </div>
 
       {/* 効果測定サマリー */}
-      {overallStats && (overallStats.accessCount > 0 || overallStats.completedCount > 0) && (
-        <div className="bg-white rounded-2xl shadow-sm border">
-          <div className="p-5 border-b bg-gradient-to-r from-emerald-50 to-teal-50">
+      <div className="bg-white rounded-2xl shadow-sm border">
+        <div className="p-5 border-b bg-gradient-to-r from-emerald-50 to-teal-50">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center">
                 <Target className="w-5 h-5 text-white" />
               </div>
               <div>
                 <h2 className="text-lg font-bold text-gray-900">効果測定サマリー</h2>
-                <p className="text-xs text-gray-500">全QRコードの集計データ</p>
+                <p className="text-xs text-gray-500">
+                  {summaryChannelId
+                    ? channels.find(c => c.id === summaryChannelId)?.name || "選択中のQRコード"
+                    : "全QRコードの集計データ"}
+                </p>
               </div>
             </div>
+            <select
+              value={summaryChannelId}
+              onChange={(e) => setSummaryChannelId(e.target.value)}
+              className="px-3 py-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            >
+              <option value="">全てのQRコード</option>
+              {channels.filter(c => c.isActive && c.channelType === "diagnosis").map((channel) => (
+                <option key={channel.id} value={channel.id}>
+                  {channel.name}
+                </option>
+              ))}
+            </select>
           </div>
+        </div>
 
+        {overallStats && (overallStats.accessCount > 0 || overallStats.completedCount > 0) ? (
           <div className="p-5">
             {/* ファネル分析 */}
             <div className="grid grid-cols-3 gap-4 mb-6">
@@ -1217,8 +1239,22 @@ export default function DashboardPage() {
               )}
             </div>
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="p-8 text-center">
+            <div className="text-gray-400 mb-2">
+              <Target className="w-12 h-12 mx-auto opacity-50" />
+            </div>
+            <p className="text-sm text-gray-500">
+              {summaryChannelId
+                ? "選択したQRコードのデータがありません"
+                : "データがありません"}
+            </p>
+            <p className="text-xs text-gray-400 mt-1">
+              選択した期間にアクセスや診断完了がない場合は表示されません
+            </p>
+          </div>
+        )}
+      </div>
 
       {/* QR読み込みエリア */}
       <LocationSection
