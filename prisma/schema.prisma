@@ -55,12 +55,6 @@ model Channel {
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
-  // 広告効果測定用フィールド
-  adBudget          Int?      @map("ad_budget")       // 広告費用（円）
-  adStartDate       DateTime? @map("ad_start_date")   // 掲載開始日
-  adEndDate         DateTime? @map("ad_end_date")     // 掲載終了日
-  adPlacement       String?   @map("ad_placement")    // 掲載場所メモ
-
   clinic     Clinic             @relation(fields: [clinicId], references: [id], onDelete: Cascade)
   sessions   DiagnosisSession[]
   accessLogs AccessLog[]

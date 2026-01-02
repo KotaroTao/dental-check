@@ -79,12 +79,6 @@ interface ChannelStats {
   genderByType: Record<string, number>;
   ageRanges: Record<string, number>;
   accessByDate: { date: string; count: number }[];
-  adBudget: number | null;
-  adPlacement: string | null;
-  cpa: number | null;
-  cpd: number | null;
-  cpc: number | null;
-  periodLabel: string;
 }
 
 interface HistoryItem {
@@ -779,7 +773,7 @@ export default function DashboardPage() {
   const [showQRLimitModal, setShowQRLimitModal] = useState(false);
 
   // QRコードソート
-  type ChannelSortField = "createdAt" | "accessCount" | "completedCount" | "completionRate" | "ctaCount" | "cpa" | "cpd" | "cpc";
+  type ChannelSortField = "createdAt" | "accessCount" | "completedCount" | "completionRate" | "ctaCount";
   const [channelSortField, setChannelSortField] = useState<ChannelSortField>("createdAt");
 
   // ソート
@@ -1079,21 +1073,6 @@ export default function DashboardPage() {
           return statsB.completionRate - statsA.completionRate;
         case "ctaCount":
           return statsB.ctaCount - statsA.ctaCount;
-        case "cpa":
-          if (statsA.cpa === null && statsB.cpa === null) return 0;
-          if (statsA.cpa === null) return 1;
-          if (statsB.cpa === null) return -1;
-          return statsA.cpa - statsB.cpa;
-        case "cpd":
-          if (statsA.cpd === null && statsB.cpd === null) return 0;
-          if (statsA.cpd === null) return 1;
-          if (statsB.cpd === null) return -1;
-          return statsA.cpd - statsB.cpd;
-        case "cpc":
-          if (statsA.cpc === null && statsB.cpc === null) return 0;
-          if (statsA.cpc === null) return 1;
-          if (statsB.cpc === null) return -1;
-          return statsA.cpc - statsB.cpc;
         default:
           return 0;
       }
@@ -1293,9 +1272,6 @@ export default function DashboardPage() {
               <option value="completedCount">診断完了順</option>
               <option value="completionRate">完了率順</option>
               <option value="ctaCount">CTA順</option>
-              <option value="cpa">CPA順</option>
-              <option value="cpd">CPD順</option>
-              <option value="cpc">CPC順</option>
             </select>
           )}
         </div>
