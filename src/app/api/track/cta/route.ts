@@ -5,7 +5,7 @@ import { canTrackSession } from "@/lib/subscription";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { channelId, ctaType } = body;
+    const { channelId, ctaType, sessionId } = body;
 
     if (!channelId || !ctaType) {
       return NextResponse.json(
@@ -29,12 +29,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // CTAクリックを記録
+    // CTAクリックを記録（sessionIdがあれば関連付け）
     await prisma.cTAClick.create({
       data: {
         clinicId,
         channelId,
         ctaType, // booking, phone, line, instagram
+        sessionId: sessionId || null,
       },
     });
 
