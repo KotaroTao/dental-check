@@ -186,8 +186,8 @@ export default function DashboardPage() {
   const [showQRLimitModal, setShowQRLimitModal] = useState(false);
 
   // QRコードソート
-  type ChannelSortField = "default" | "accessCount" | "completedCount" | "completionRate" | "ctaCount" | "cpa" | "cpd" | "cpc";
-  const [channelSortField, setChannelSortField] = useState<ChannelSortField>("default");
+  type ChannelSortField = "default" | "createdAt" | "accessCount" | "completedCount" | "completionRate" | "ctaCount" | "cpa" | "cpd" | "cpc";
+  const [channelSortField, setChannelSortField] = useState<ChannelSortField>("createdAt");
 
   // ドラッグ＆ドロップ
   const [draggedChannelId, setDraggedChannelId] = useState<string | null>(null);
@@ -508,6 +508,13 @@ export default function DashboardPage() {
       return channelList;
     }
 
+    // 作成日順は stats 不要
+    if (channelSortField === "createdAt") {
+      return [...channelList].sort((a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+    }
+
     return [...channelList].sort((a, b) => {
       const statsA = channelStats[a.id];
       const statsB = channelStats[b.id];
@@ -716,6 +723,7 @@ export default function DashboardPage() {
               onChange={(e) => setChannelSortField(e.target.value as ChannelSortField)}
               className="px-2 py-1 border rounded text-xs bg-white"
             >
+              <option value="createdAt">並び順: 作成日</option>
               <option value="default">並び順: 手動</option>
               <option value="accessCount">QR読み込み順</option>
               <option value="completedCount">診断完了順</option>
