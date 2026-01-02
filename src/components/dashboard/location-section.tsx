@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import dynamic from "next/dynamic";
-import { MapPin, Check, SquareCheck, Square, HelpCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { MapPin, Check, SquareCheck, Square, HelpCircle, ChevronDown, ChevronUp, Users, X } from "lucide-react";
 import {
   PREFECTURE_CENTERS,
   normalizePrefectureName,
@@ -30,6 +30,25 @@ interface LocationData {
   count: number;
   channelId: string | null;
 }
+
+interface DemographicsData {
+  genderByType: Record<string, number>;
+  ageRanges: Record<string, number>;
+  total: number;
+}
+
+// 年齢層のラベル
+const AGE_RANGE_LABELS = [
+  "0-9",
+  "10-19",
+  "20-29",
+  "30-39",
+  "40-49",
+  "50-59",
+  "60-69",
+  "70-79",
+  "80+",
+];
 
 interface Channel {
   id: string;
@@ -130,6 +149,67 @@ export function LocationSection({
 
   // ヘルプポップオーバーの表示状態
   const [showHelp, setShowHelp] = useState(false);
+
+  // 人口統計ポップアップの状態
+  const [demographicsPopup, setDemographicsPopup] = useState<{
+    location: { region: string; city: string; town: string | null; displayName: string };
+    position: { x: number; y: number };
+  } | null>(null);
+  const [demographicsData, setDemographicsData] = useState<DemographicsData | null>(null);
+  const [isLoadingDemographics, setIsLoadingDemographics] = useState(false);
+  const popupRef = useRef<HTMLDivElement>(null);
+
+  // 人口統計ポップアップを閉じる
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (popupRef.current && !popupRef.current.contains(event.target as Node)) {
+        setDemographicsPopup(null);
+        setDemographicsData(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // 人口統計データを取得
+  const fetchDemographics = async (
+    location: { region: string; city: string; town: string | null; displayName: string },
+    event: React.MouseEvent
+  ) => {
+    const rect = (event.target as HTMLElement).getBoundingClientRect();
+    setDemographicsPopup({
+      location,
+      position: { x: rect.left, y: rect.bottom + window.scrollY },
+    });
+    setIsLoadingDemographics(true);
+    setDemographicsData(null);
+
+    try {
+      const params = new URLSearchParams({
+        region: location.region,
+        city: location.city,
+        period,
+        channelIds: selectedChannelIds.join(","),
+      });
+      if (location.town) {
+        params.set("town", location.town);
+      }
+      if (period === "custom" && customStartDate && customEndDate) {
+        params.set("startDate", customStartDate);
+        params.set("endDate", customEndDate);
+      }
+
+      const response = await fetch(`/api/dashboard/location-demographics?${params}`);
+      if (response.ok) {
+        const data = await response.json();
+        setDemographicsData(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch demographics:", error);
+    } finally {
+      setIsLoadingDemographics(false);
+    }
+  };
 
   useEffect(() => {
     const fetchLocations = async () => {
@@ -390,7 +470,20 @@ export function LocationSection({
                       >
                         {displayName}
                       </button>
-                      <span className="text-sm text-gray-500 ml-2 whitespace-nowrap">{loc.count}件</span>
+                      <button
+                        onClick={(e) => {
+                          if (loc.region && loc.city) {
+                            fetchDemographics(
+                              { region: loc.region, city: loc.city, town: loc.town, displayName },
+                              e
+                            );
+                          }
+                        }}
+                        className="text-sm text-gray-500 ml-2 whitespace-nowrap hover:text-blue-600 hover:bg-blue-50 px-2 py-0.5 rounded transition-colors cursor-pointer"
+                        title="クリックして詳細を表示"
+                      >
+                        {loc.count}件
+                      </button>
                     </div>
                     <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                       <div
@@ -431,6 +524,100 @@ export function LocationSection({
           )}
         </div>
       </div>
+
+      {/* 人口統計ポップアップ */}
+      {demographicsPopup && (
+        <div
+          ref={popupRef}
+          className="fixed z-[9999] bg-white rounded-xl shadow-2xl border p-4 w-72"
+          style={{
+            left: Math.min(demographicsPopup.position.x, window.innerWidth - 300),
+            top: demographicsPopup.position.y + 8,
+          }}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-blue-600" />
+              <span className="font-medium text-sm text-gray-800 truncate">
+                {demographicsPopup.location.displayName}
+              </span>
+            </div>
+            <button
+              onClick={() => {
+                setDemographicsPopup(null);
+                setDemographicsData(null);
+              }}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {isLoadingDemographics ? (
+            <div className="space-y-2 animate-pulse">
+              <div className="h-4 bg-gray-100 rounded w-full"></div>
+              <div className="h-4 bg-gray-100 rounded w-3/4"></div>
+              <div className="h-20 bg-gray-100 rounded w-full"></div>
+            </div>
+          ) : demographicsData ? (
+            <div className="space-y-4">
+              {/* 性別 */}
+              <div>
+                <div className="text-xs font-medium text-gray-500 mb-2">性別</div>
+                <div className="flex gap-3">
+                  <div className="flex-1 text-center p-2 bg-blue-50 rounded-lg">
+                    <div className="text-lg font-bold text-blue-600">{demographicsData.genderByType.male || 0}</div>
+                    <div className="text-xs text-gray-500">男性</div>
+                  </div>
+                  <div className="flex-1 text-center p-2 bg-pink-50 rounded-lg">
+                    <div className="text-lg font-bold text-pink-600">{demographicsData.genderByType.female || 0}</div>
+                    <div className="text-xs text-gray-500">女性</div>
+                  </div>
+                  {(demographicsData.genderByType.other || 0) > 0 && (
+                    <div className="flex-1 text-center p-2 bg-gray-50 rounded-lg">
+                      <div className="text-lg font-bold text-gray-600">{demographicsData.genderByType.other}</div>
+                      <div className="text-xs text-gray-500">その他</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 年齢層 */}
+              <div>
+                <div className="text-xs font-medium text-gray-500 mb-2">年齢層</div>
+                <div className="space-y-1">
+                  {AGE_RANGE_LABELS.map((range) => {
+                    const count = demographicsData.ageRanges[range] || 0;
+                    const maxCount = Math.max(...Object.values(demographicsData.ageRanges), 1);
+                    const percentage = (count / maxCount) * 100;
+                    return (
+                      <div key={range} className="flex items-center gap-2">
+                        <span className="text-xs text-gray-500 w-12">{range}歳</span>
+                        <div className="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+                            style={{ width: `${percentage}%` }}
+                          />
+                        </div>
+                        <span className="text-xs font-medium text-gray-700 w-6 text-right">{count}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 合計 */}
+              <div className="text-xs text-gray-400 text-center pt-2 border-t">
+                合計 {demographicsData.total}件
+              </div>
+            </div>
+          ) : (
+            <div className="text-center text-gray-400 text-sm py-4">
+              データの取得に失敗しました
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
