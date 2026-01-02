@@ -717,7 +717,7 @@ export default function DashboardPage() {
               className="px-2 py-1 border rounded text-xs bg-white"
             >
               <option value="createdAt">並び順: 作成日</option>
-              <option value="accessCount">QR読み込み順</option>
+              <option value="accessCount">アクセス回数</option>
               <option value="completedCount">診断完了順</option>
               <option value="completionRate">完了率順</option>
               <option value="ctaCount">CTA順</option>
