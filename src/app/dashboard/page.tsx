@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,15 +13,19 @@ import {
   Trash2,
   Download,
   ArrowUpDown,
-  Image as ImageIcon,
   X,
   RotateCcw,
-  Info,
   Calendar,
   AlertTriangle,
   Link2,
   MousePointerClick,
   CreditCard,
+  MoreVertical,
+  Eye,
+  ExternalLink,
+  TrendingUp,
+  Users,
+  Target,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { LocationSection } from "@/components/dashboard/location-section";
@@ -33,7 +37,6 @@ const PERIOD_OPTIONS = [
   { value: "month", label: "今月" },
   { value: "custom", label: "期間指定" },
 ];
-
 
 // CTAタイプの表示名
 const CTA_TYPE_NAMES: Record<string, string> = {
@@ -48,23 +51,6 @@ const CTA_TYPE_NAMES: Record<string, string> = {
   x: "X",
   google_maps: "マップ",
   clinic_page: "医院ページ",
-};
-
-// 性別の表示名
-const GENDER_NAMES: Record<string, string> = {
-  male: "男性",
-  female: "女性",
-  other: "-",
-};
-
-// 年齢層の表示名
-const AGE_RANGE_NAMES: Record<string, string> = {
-  "~19": "~19歳",
-  "20-29": "20代",
-  "30-39": "30代",
-  "40-49": "40代",
-  "50-59": "50代",
-  "60~": "60歳~",
 };
 
 interface Channel {
@@ -93,13 +79,11 @@ interface ChannelStats {
   genderByType: Record<string, number>;
   ageRanges: Record<string, number>;
   accessByDate: { date: string; count: number }[];
-  // 広告効果測定
   adBudget: number | null;
   adPlacement: string | null;
   cpa: number | null;
   cpd: number | null;
   cpc: number | null;
-  // 期間ラベル
   periodLabel: string;
 }
 
@@ -128,33 +112,38 @@ interface SubscriptionInfo {
   canCreateQR: boolean;
 }
 
-// ポップオーバーコンポーネント
-function Popover({
+// ドロップダウンメニューコンポーネント
+function DropdownMenu({
   trigger,
   children,
-  className = "",
+  align = "right",
 }: {
   trigger: React.ReactNode;
   children: React.ReactNode;
-  className?: string;
+  align?: "left" | "right";
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
-    <div className="relative inline-block">
-      <div
-        onMouseEnter={() => setIsOpen(true)}
-        onMouseLeave={() => setIsOpen(false)}
-        onClick={() => setIsOpen(!isOpen)}
-        className="cursor-pointer"
-      >
-        {trigger}
-      </div>
+    <div className="relative" ref={menuRef}>
+      <div onClick={() => setIsOpen(!isOpen)}>{trigger}</div>
       {isOpen && (
         <div
-          className={`absolute z-50 bg-white rounded-lg shadow-xl border p-3 min-w-[180px] ${className}`}
-          onMouseEnter={() => setIsOpen(true)}
-          onMouseLeave={() => setIsOpen(false)}
+          className={`absolute z-50 mt-1 min-w-[160px] bg-white rounded-lg shadow-lg border py-1 ${
+            align === "right" ? "right-0" : "left-0"
+          }`}
+          onClick={() => setIsOpen(false)}
         >
           {children}
         </div>
@@ -168,6 +157,230 @@ function Skeleton({ className = "" }: { className?: string }) {
   return <div className={`animate-pulse bg-gray-200 rounded ${className}`} />;
 }
 
+// QRコードカードコンポーネント
+function QRCodeCard({
+  channel,
+  stats,
+  onHide,
+  onRestore,
+  onPermanentDelete,
+  onImageClick,
+}: {
+  channel: Channel;
+  stats?: ChannelStats;
+  onHide: () => void;
+  onRestore: () => void;
+  onPermanentDelete: () => void;
+  onImageClick: (url: string, name: string) => void;
+}) {
+  const isExpired = channel.expiresAt && new Date() > new Date(channel.expiresAt);
+
+  return (
+    <div className="bg-white rounded-xl border hover:shadow-md transition-all duration-200 overflow-hidden group">
+      {/* カードヘッダー */}
+      <div className="p-4">
+        <div className="flex items-start gap-3">
+          {/* サムネイル */}
+          {channel.imageUrl ? (
+            <button
+              onClick={() => onImageClick(channel.imageUrl!, channel.name)}
+              className="w-14 h-14 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 hover:opacity-80 transition-opacity"
+            >
+              <img
+                src={channel.imageUrl}
+                alt={channel.name}
+                className="w-full h-full object-cover"
+              />
+            </button>
+          ) : (
+            <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center flex-shrink-0">
+              {channel.channelType === "link" ? (
+                <Link2 className="w-6 h-6 text-blue-500" />
+              ) : (
+                <QrCode className="w-6 h-6 text-blue-500" />
+              )}
+            </div>
+          )}
+
+          {/* タイトル・ステータス */}
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-gray-900 truncate">{channel.name}</h3>
+            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+              {channel.channelType === "link" && (
+                <span className="text-[10px] px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded-full font-medium">
+                  リンク
+                </span>
+              )}
+              {channel.isActive ? (
+                <span className="text-[10px] px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-medium">
+                  有効
+                </span>
+              ) : (
+                <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded-full font-medium">
+                  無効
+                </span>
+              )}
+              {isExpired && (
+                <span className="text-[10px] px-1.5 py-0.5 bg-red-100 text-red-600 rounded-full font-medium flex items-center gap-0.5">
+                  <AlertTriangle className="w-2.5 h-2.5" />
+                  期限切れ
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* メニュー */}
+          <DropdownMenu
+            trigger={
+              <button className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
+                <MoreVertical className="w-4 h-4 text-gray-500" />
+              </button>
+            }
+          >
+            <Link
+              href={`/dashboard/channels/${channel.id}`}
+              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            >
+              <Eye className="w-4 h-4" />
+              QRコード表示
+            </Link>
+            <Link
+              href={`/dashboard/channels/${channel.id}/edit`}
+              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            >
+              <Settings className="w-4 h-4" />
+              編集
+            </Link>
+            <div className="border-t my-1" />
+            {channel.isActive ? (
+              <button
+                onClick={onHide}
+                className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 w-full text-left"
+              >
+                <Trash2 className="w-4 h-4" />
+                非表示にする
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={onRestore}
+                  className="flex items-center gap-2 px-3 py-2 text-sm text-emerald-600 hover:bg-emerald-50 w-full text-left"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  復元する
+                </button>
+                <button
+                  onClick={onPermanentDelete}
+                  className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 w-full text-left"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  完全に削除
+                </button>
+              </>
+            )}
+          </DropdownMenu>
+        </div>
+
+        {/* 日付情報 */}
+        <div className="flex items-center gap-3 mt-3 text-xs text-gray-500">
+          <span>作成: {new Date(channel.createdAt).toLocaleDateString("ja-JP")}</span>
+          {channel.expiresAt && (
+            <span className="flex items-center gap-1">
+              <Calendar className="w-3 h-3" />
+              {new Date(channel.expiresAt).toLocaleDateString("ja-JP")}まで
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* 統計セクション */}
+      {channel.isActive && (
+        <div className="border-t bg-gray-50/50">
+          {channel.channelType === "link" ? (
+            <div className="p-4">
+              <div className="flex items-center justify-center gap-2 text-purple-600">
+                <MousePointerClick className="w-5 h-5" />
+                <span className="text-2xl font-bold">{channel.scanCount}</span>
+                <span className="text-sm text-gray-500">クリック</span>
+              </div>
+            </div>
+          ) : stats ? (
+            <div className="p-4">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="text-center">
+                  <div className="text-xs text-gray-500 mb-1 flex items-center justify-center gap-1">
+                    <TrendingUp className="w-3 h-3" />
+                    読み込み
+                  </div>
+                  <div className="text-xl font-bold text-gray-800">{stats.accessCount}</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-xs text-gray-500 mb-1 flex items-center justify-center gap-1">
+                    <Users className="w-3 h-3" />
+                    完了
+                  </div>
+                  <div className="text-xl font-bold text-emerald-600">{stats.completedCount}</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-xs text-gray-500 mb-1 flex items-center justify-center gap-1">
+                    <Target className="w-3 h-3" />
+                    CTA
+                  </div>
+                  <div className="text-xl font-bold text-purple-600">{stats.ctaCount}</div>
+                </div>
+              </div>
+
+              {/* 完了率バー */}
+              <div className="mt-3">
+                <div className="flex items-center justify-between text-xs mb-1">
+                  <span className="text-gray-500">完了率</span>
+                  <span className="font-semibold text-blue-600">{stats.completionRate}%</span>
+                </div>
+                <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(stats.completionRate, 100)}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* 効果測定バッジ */}
+              {stats.adBudget && (
+                <Link
+                  href={`/dashboard/channels/${channel.id}#effectiveness`}
+                  className="mt-3 flex items-center justify-between p-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                >
+                  <span className="text-xs text-blue-700 font-medium">効果測定</span>
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="text-blue-600">
+                      CPA ¥{stats.cpa?.toLocaleString() || "-"}
+                    </span>
+                    <ExternalLink className="w-3 h-3 text-blue-500" />
+                  </div>
+                </Link>
+              )}
+            </div>
+          ) : (
+            <div className="p-4">
+              <Skeleton className="h-16" />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 詳細リンク（アクティブなチャンネルのみ） */}
+      {channel.isActive && (
+        <Link
+          href={`/dashboard/channels/${channel.id}`}
+          className="block border-t px-4 py-2.5 text-center text-sm font-medium text-blue-600 hover:bg-blue-50 transition-colors"
+        >
+          詳細を見る
+        </Link>
+      )}
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [channels, setChannels] = useState<Channel[]>([]);
@@ -179,7 +392,6 @@ export default function DashboardPage() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [showHiddenChannels, setShowHiddenChannels] = useState(false);
-  const [expandedChannelId, setExpandedChannelId] = useState<string | null>(null);
 
   // サブスクリプション情報
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
@@ -188,9 +400,6 @@ export default function DashboardPage() {
   // QRコードソート
   type ChannelSortField = "createdAt" | "accessCount" | "completedCount" | "completionRate" | "ctaCount" | "cpa" | "cpd" | "cpc";
   const [channelSortField, setChannelSortField] = useState<ChannelSortField>("createdAt");
-
-  // ドラッグ＆ドロップ
-  const [draggedChannelId, setDraggedChannelId] = useState<string | null>(null);
 
   // ソート
   type SortField = "createdAt" | "userAge" | "ctaClickCount";
@@ -428,78 +637,21 @@ export default function DashboardPage() {
 
   // 新規作成ボタンクリック
   const handleNewQRCodeClick = () => {
-    // サブスクリプション情報が取得できていない場合は通常通り遷移
     if (!subscription) {
       router.push("/dashboard/channels/new");
       return;
     }
 
-    // QRコード作成可能かチェック
     if (!subscription.canCreateQR && subscription.qrCodeLimit !== null) {
-      // 上限に達している場合はモーダルを表示
       setShowQRLimitModal(true);
       return;
     }
 
-    // 作成可能な場合は新規作成ページへ遷移
     router.push("/dashboard/channels/new");
   };
 
   const handleLoadMore = () => {
     fetchHistory(history.length, true);
-  };
-
-  // ドラッグ＆ドロップ
-  const handleDragStart = (e: React.DragEvent, channelId: string) => {
-    setDraggedChannelId(channelId);
-    e.dataTransfer.effectAllowed = "move";
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-  };
-
-  const handleDrop = async (e: React.DragEvent, targetChannelId: string) => {
-    e.preventDefault();
-    if (!draggedChannelId || draggedChannelId === targetChannelId) {
-      setDraggedChannelId(null);
-      return;
-    }
-
-    const activeChannelList = channels.filter((c) => c.isActive);
-    const draggedIndex = activeChannelList.findIndex((c) => c.id === draggedChannelId);
-    const targetIndex = activeChannelList.findIndex((c) => c.id === targetChannelId);
-
-    if (draggedIndex === -1 || targetIndex === -1) {
-      setDraggedChannelId(null);
-      return;
-    }
-
-    // 新しい順序を作成
-    const newOrder = [...activeChannelList];
-    const [draggedItem] = newOrder.splice(draggedIndex, 1);
-    newOrder.splice(targetIndex, 0, draggedItem);
-
-    // ローカル状態を更新
-    const hiddenChannels = channels.filter((c) => !c.isActive);
-    setChannels([...newOrder, ...hiddenChannels]);
-    setDraggedChannelId(null);
-
-    // サーバーに保存
-    try {
-      await fetch("/api/channels/reorder", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ channelIds: newOrder.map((c) => c.id) }),
-      });
-    } catch (error) {
-      console.error("Failed to reorder channels:", error);
-    }
-  };
-
-  const handleDragEnd = () => {
-    setDraggedChannelId(null);
   };
 
   // QRコードのソート済みリスト
@@ -522,7 +674,6 @@ export default function DashboardPage() {
           return statsB.completionRate - statsA.completionRate;
         case "ctaCount":
           return statsB.ctaCount - statsA.ctaCount;
-        // CPA/CPD/CPC: 低い順（効率が良い順）。nullは最後に
         case "cpa":
           if (statsA.cpa === null && statsB.cpa === null) return 0;
           if (statsA.cpa === null) return 1;
@@ -575,7 +726,6 @@ export default function DashboardPage() {
       ];
 
       data.history.forEach((item: HistoryItem) => {
-        // CTA内訳を文字列に変換
         const ctaDetails = Object.entries(item.ctaByType || {})
           .map(([type, count]) => `${CTA_TYPE_NAMES[type] || type}:${count}`)
           .join(" / ");
@@ -618,14 +768,11 @@ export default function DashboardPage() {
   if (isLoading && channels.length === 0) {
     return (
       <div className="space-y-8">
-        <Skeleton className="h-8 w-48" />
-        <div className="bg-white rounded-xl shadow-sm border p-6">
-          <Skeleton className="h-6 w-24 mb-4" />
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-24 w-full" />
-            ))}
-          </div>
+        <Skeleton className="h-10 w-48" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <Skeleton key={i} className="h-48 rounded-xl" />
+          ))}
         </div>
       </div>
     );
@@ -639,34 +786,41 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8">
       {/* ヘッダー */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold">ダッシュボード</h1>
-        <div className="flex flex-wrap items-center gap-2">
-          <select
-            value={period}
-            onChange={(e) => setPeriod(e.target.value)}
-            className="px-3 py-1.5 border rounded-md text-sm bg-white"
-          >
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">ダッシュボード</h1>
+          <p className="text-sm text-gray-500 mt-1">QRコードの効果測定と管理</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center bg-white border rounded-lg px-1 py-1">
             {PERIOD_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
+              <button
+                key={opt.value}
+                onClick={() => setPeriod(opt.value)}
+                className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                  period === opt.value
+                    ? "bg-blue-600 text-white"
+                    : "text-gray-600 hover:bg-gray-100"
+                }`}
+              >
                 {opt.label}
-              </option>
+              </button>
             ))}
-          </select>
+          </div>
           {period === "custom" && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 bg-white border rounded-lg px-3 py-1.5">
               <input
                 type="date"
                 value={customStartDate}
                 onChange={(e) => setCustomStartDate(e.target.value)}
-                className="px-3 py-1.5 border rounded-md text-sm bg-white"
+                className="text-sm bg-transparent outline-none"
               />
-              <span className="text-gray-500">〜</span>
+              <span className="text-gray-400">〜</span>
               <input
                 type="date"
                 value={customEndDate}
                 onChange={(e) => setCustomEndDate(e.target.value)}
-                className="px-3 py-1.5 border rounded-md text-sm bg-white"
+                className="text-sm bg-transparent outline-none"
               />
             </div>
           )}
@@ -674,37 +828,50 @@ export default function DashboardPage() {
       </div>
 
       {/* QRコードセクション */}
-      <div className="bg-white rounded-xl shadow-sm border">
-        <div className="p-6 border-b flex items-center justify-between">
-          <h2 className="text-lg font-bold flex items-center gap-2">
-            <QrCode className="w-5 h-5" />
-            QRコード
-          </h2>
-          <Button className="gap-2" size="sm" onClick={handleNewQRCodeClick}>
-            <Plus className="w-4 h-4" />
-            新規作成
-          </Button>
+      <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
+        {/* ヘッダー */}
+        <div className="p-5 border-b bg-gradient-to-r from-blue-50 to-indigo-50">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
+                <QrCode className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">QRコード</h2>
+                <p className="text-xs text-gray-500">
+                  {activeChannels.length}個のアクティブなQRコード
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={handleNewQRCodeClick}
+              className="gap-2 bg-blue-600 hover:bg-blue-700"
+            >
+              <Plus className="w-4 h-4" />
+              新規作成
+            </Button>
+          </div>
         </div>
 
         {/* タブとソート */}
-        <div className="flex items-center justify-between border-b px-6">
-          <div className="flex">
+        <div className="flex items-center justify-between border-b px-5 bg-gray-50/50">
+          <div className="flex gap-1">
             <button
               onClick={() => setShowHiddenChannels(false)}
-              className={`px-4 py-3 text-sm font-medium border-b-2 -mb-px ${
+              className={`px-4 py-3 text-sm font-medium rounded-t-lg transition-colors ${
                 !showHiddenChannels
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
+                  ? "bg-white text-blue-600 border-t border-l border-r -mb-px"
+                  : "text-gray-500 hover:text-gray-700"
               }`}
             >
               有効 ({activeChannels.length})
             </button>
             <button
               onClick={() => setShowHiddenChannels(true)}
-              className={`px-4 py-3 text-sm font-medium border-b-2 -mb-px ${
+              className={`px-4 py-3 text-sm font-medium rounded-t-lg transition-colors ${
                 showHiddenChannels
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
+                  ? "bg-white text-blue-600 border-t border-l border-r -mb-px"
+                  : "text-gray-500 hover:text-gray-700"
               }`}
             >
               非表示 ({hiddenChannels.length})
@@ -714,439 +881,56 @@ export default function DashboardPage() {
             <select
               value={channelSortField}
               onChange={(e) => setChannelSortField(e.target.value as ChannelSortField)}
-              className="px-2 py-1 border rounded text-xs bg-white"
+              className="px-3 py-1.5 border rounded-lg text-xs bg-white text-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
-              <option value="createdAt">並び順: 作成日</option>
-              <option value="accessCount">アクセス回数</option>
+              <option value="createdAt">作成日順</option>
+              <option value="accessCount">アクセス順</option>
               <option value="completedCount">診断完了順</option>
               <option value="completionRate">完了率順</option>
               <option value="ctaCount">CTA順</option>
-              <option value="cpa">CPA順（アクセス単価）</option>
-              <option value="cpd">CPD順（診断完了単価）</option>
-              <option value="cpc">CPC順（CTAクリック単価）</option>
+              <option value="cpa">CPA順</option>
+              <option value="cpd">CPD順</option>
+              <option value="cpc">CPC順</option>
             </select>
           )}
         </div>
 
+        {/* QRコードグリッド */}
         {displayChannels.length === 0 ? (
           <div className="p-12 text-center">
-            <QrCode className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+            <div className="w-20 h-20 mx-auto bg-gray-100 rounded-2xl flex items-center justify-center mb-4">
+              <QrCode className="w-10 h-10 text-gray-400" />
+            </div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">
-              {showHiddenChannels ? "非表示のQRコードはありません" : "まだQRコードがありません"}
+              {showHiddenChannels ? "非表示のQRコードはありません" : "QRコードがありません"}
             </h3>
+            <p className="text-sm text-gray-500 mb-4">
+              {showHiddenChannels
+                ? "非表示にしたQRコードがここに表示されます"
+                : "最初のQRコードを作成してみましょう"}
+            </p>
             {!showHiddenChannels && (
-              <Button onClick={handleNewQRCodeClick}>最初のQRコードを作成する</Button>
+              <Button onClick={handleNewQRCodeClick} className="gap-2">
+                <Plus className="w-4 h-4" />
+                QRコードを作成
+              </Button>
             )}
           </div>
         ) : (
-          <div className="divide-y">
-            {displayChannels.map((channel) => {
-              const stats = channelStats[channel.id];
-              const isExpanded = expandedChannelId === channel.id;
-
-              const isDragging = draggedChannelId === channel.id;
-              const canDrag = false; // 手動ソートは無効化（作成日順に変更）
-
-              return (
-                <div
+          <div className="p-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {displayChannels.map((channel) => (
+                <QRCodeCard
                   key={channel.id}
-                  className={`p-4 hover:bg-gray-50 ${isDragging ? "opacity-50 bg-blue-50" : ""} ${canDrag ? "cursor-grab" : ""}`}
-                  draggable={canDrag}
-                  onDragStart={(e) => canDrag && handleDragStart(e, channel.id)}
-                  onDragOver={handleDragOver}
-                  onDrop={(e) => canDrag && handleDrop(e, channel.id)}
-                  onDragEnd={handleDragEnd}
-                >
-                  {/* カードヘッダー */}
-                  <div className="flex items-start gap-3 mb-3">
-                    {channel.imageUrl ? (
-                      <button
-                        onClick={() => setSelectedImage({ url: channel.imageUrl!, name: channel.name })}
-                        className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 hover:opacity-80"
-                      >
-                        <img src={channel.imageUrl} alt={channel.name} className="w-full h-full object-cover" />
-                      </button>
-                    ) : (
-                      <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
-                        <ImageIcon className="w-5 h-5 text-gray-400" />
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <span className="font-medium truncate">{channel.name}</span>
-                        {channel.channelType === "link" && (
-                          <span className="shrink-0 text-xs px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded flex items-center gap-0.5">
-                            <Link2 className="w-3 h-3" />
-                            リンク
-                          </span>
-                        )}
-                        {channel.isActive ? (
-                          <span className="shrink-0 text-xs px-1.5 py-0.5 bg-green-100 text-green-700 rounded">
-                            有効
-                          </span>
-                        ) : (
-                          <span className="shrink-0 text-xs px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded">
-                            無効
-                          </span>
-                        )}
-                        {channel.expiresAt && new Date() > new Date(channel.expiresAt) && (
-                          <span className="shrink-0 text-xs px-1.5 py-0.5 bg-red-100 text-red-700 rounded flex items-center gap-0.5">
-                            <AlertTriangle className="w-3 h-3" />
-                            有効期限切れ
-                          </span>
-                        )}
-                        {stats?.adBudget && (
-                          <Link href={`/dashboard/channels/${channel.id}#effectiveness`} className="shrink-0">
-                            <span className="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded flex items-center gap-0.5 hover:bg-blue-200 transition-colors">
-                              効果測定
-                            </span>
-                          </Link>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs text-gray-400">
-                          作成日: {new Date(channel.createdAt).toLocaleDateString("ja-JP")}
-                        </span>
-                        {channel.channelType === "link" && (
-                          <span className="flex items-center gap-1 text-xs text-purple-600">
-                            <MousePointerClick className="w-3 h-3" />
-                            {channel.scanCount}回
-                          </span>
-                        )}
-                        {channel.expiresAt && (
-                          <span className="flex items-center gap-1 text-xs text-gray-400">
-                            <Calendar className="w-3 h-3" />
-                            {new Date(channel.expiresAt).toLocaleDateString("ja-JP")}まで
-                          </span>
-                        )}
-                        {stats?.periodLabel && (
-                          <span className="text-xs text-gray-400">
-                            掲載: {stats.periodLabel}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <Link href={`/dashboard/channels/${channel.id}`}>
-                        <Button variant="outline" size="sm" className="gap-1">
-                          <QrCode className="w-4 h-4" />
-                          QRコード表示
-                        </Button>
-                      </Link>
-                      <Link href={`/dashboard/channels/${channel.id}/edit`}>
-                        <Button variant="ghost" size="sm">
-                          <Settings className="w-4 h-4" />
-                        </Button>
-                      </Link>
-                      {channel.isActive ? (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleHideChannel(channel.id)}
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      ) : (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleRestoreChannel(channel.id)}
-                            className="text-green-500 hover:text-green-700 hover:bg-green-50"
-                            title="復元"
-                          >
-                            <RotateCcw className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handlePermanentDeleteChannel(channel.id)}
-                            className="text-red-600 hover:text-red-800 hover:bg-red-100"
-                            title="完全削除"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* 統計カード */}
-                  {channel.isActive && channel.channelType === "link" && (
-                    <div className="grid grid-cols-1 gap-2 text-center">
-                      <div className="bg-purple-50 rounded-lg py-3 px-4 flex items-center justify-center gap-3">
-                        <MousePointerClick className="w-5 h-5 text-purple-600" />
-                        <div>
-                          <div className="text-xs text-gray-500">QR読み込み</div>
-                          <div className="text-2xl font-bold text-purple-600">{channel.scanCount}</div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {channel.isActive && channel.channelType === "diagnosis" && stats && (
-                    <>
-                      {/* PC版: ホバーでポップオーバー */}
-                      <div className={`hidden md:grid gap-2 text-center ${stats.adBudget ? "grid-cols-7" : "grid-cols-5"}`}>
-                        <Popover
-                          trigger={
-                            <div className="bg-gray-50 rounded-lg py-2 px-3 hover:bg-blue-50 transition-colors">
-                              <div className="text-xs text-gray-500 mb-0.5 flex items-center justify-center gap-1">
-                                QR読み込み <Info className="w-3 h-3" />
-                              </div>
-                              <div className="text-lg font-bold text-gray-800">{stats.accessCount}</div>
-                            </div>
-                          }
-                          className="left-0 top-full mt-2"
-                        >
-                          <div className="text-sm">
-                            <div className="font-medium text-gray-700 mb-2">日別アクセス</div>
-                            {stats.accessByDate.length === 0 ? (
-                              <div className="text-gray-400">データなし</div>
-                            ) : (
-                              <div className="space-y-1 max-h-48 overflow-y-auto">
-                                {stats.accessByDate.map((item) => (
-                                  <div key={item.date} className="flex justify-between text-gray-600">
-                                    <span>{new Date(item.date).toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" })}</span>
-                                    <span>{item.count}回</span>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </Popover>
-                        <Popover
-                          trigger={
-                            <div className="bg-gray-50 rounded-lg py-2 px-3 hover:bg-blue-50 transition-colors">
-                              <div className="text-xs text-gray-500 mb-0.5 flex items-center justify-center gap-1">
-                                診断完了 <Info className="w-3 h-3" />
-                              </div>
-                              <div className="text-lg font-bold text-green-600">{stats.completedCount}</div>
-                            </div>
-                          }
-                          className="left-1/2 -translate-x-1/2 top-full mt-2"
-                        >
-                          <div className="text-sm">
-                            <div className="font-medium text-gray-700 mb-2">年齢・性別分布</div>
-                            <div className="space-y-1 mb-2">
-                              {Object.entries(stats.genderByType).map(([g, c]) =>
-                                c > 0 ? (
-                                  <div key={g} className="flex justify-between text-gray-600">
-                                    <span>{GENDER_NAMES[g]}</span>
-                                    <span>{c}人</span>
-                                  </div>
-                                ) : null
-                              )}
-                            </div>
-                            <div className="border-t pt-2 space-y-1">
-                              {Object.entries(stats.ageRanges).map(([a, c]) =>
-                                c > 0 ? (
-                                  <div key={a} className="flex justify-between text-gray-600">
-                                    <span>{AGE_RANGE_NAMES[a]}</span>
-                                    <span>{c}人</span>
-                                  </div>
-                                ) : null
-                              )}
-                            </div>
-                          </div>
-                        </Popover>
-                        <div className="bg-gray-50 rounded-lg py-2 px-3">
-                          <div className="text-xs text-gray-500 mb-0.5">完了率</div>
-                          <div className="text-lg font-bold text-blue-600">{stats.completionRate}%</div>
-                        </div>
-                        <Popover
-                          trigger={
-                            <div className="bg-gray-50 rounded-lg py-2 px-3 hover:bg-purple-50 transition-colors">
-                              <div className="text-xs text-gray-500 mb-0.5 flex items-center justify-center gap-1">
-                                CTA <Info className="w-3 h-3" />
-                              </div>
-                              <div className="text-lg font-bold text-purple-600">{stats.ctaCount}</div>
-                            </div>
-                          }
-                          className="right-0 top-full mt-2"
-                        >
-                          <div className="text-sm">
-                            <div className="font-medium text-gray-700 mb-2">CTA内訳</div>
-                            <div className="space-y-1">
-                              {Object.entries(stats.ctaByType).length === 0 ? (
-                                <div className="text-gray-400">クリックなし</div>
-                              ) : (
-                                Object.entries(stats.ctaByType)
-                                  .sort((a, b) => b[1] - a[1])
-                                  .map(([type, count]) => (
-                                    <div key={type} className="flex justify-between text-gray-600">
-                                      <span>{CTA_TYPE_NAMES[type] || type}</span>
-                                      <span>{count}</span>
-                                    </div>
-                                  ))
-                              )}
-                            </div>
-                          </div>
-                        </Popover>
-                        {stats.adBudget ? (
-                          <>
-                            <Link href={`/dashboard/channels/${channel.id}#effectiveness`}>
-                              <div className="bg-blue-50 rounded-lg py-2 px-3 hover:bg-blue-100 transition-colors h-full flex flex-col justify-center">
-                                <div className="text-xs text-blue-600 mb-0.5 flex items-center justify-center gap-1">
-                                  CPA
-                                </div>
-                                <div className="text-lg font-bold text-blue-600">
-                                  {stats.cpa ? `¥${stats.cpa.toLocaleString()}` : "-"}
-                                </div>
-                                <div className="text-[10px] text-blue-500">アクセス単価</div>
-                              </div>
-                            </Link>
-                            <Link href={`/dashboard/channels/${channel.id}#effectiveness`}>
-                              <div className="bg-green-50 rounded-lg py-2 px-3 hover:bg-green-100 transition-colors h-full flex flex-col justify-center">
-                                <div className="text-xs text-green-600 mb-0.5 flex items-center justify-center gap-1">
-                                  CPD
-                                </div>
-                                <div className="text-lg font-bold text-green-600">
-                                  {stats.cpd ? `¥${stats.cpd.toLocaleString()}` : "-"}
-                                </div>
-                                <div className="text-[10px] text-green-500">診断完了単価</div>
-                              </div>
-                            </Link>
-                            <Link href={`/dashboard/channels/${channel.id}#effectiveness`}>
-                              <div className="bg-purple-50 rounded-lg py-2 px-3 hover:bg-purple-100 transition-colors h-full flex flex-col justify-center">
-                                <div className="text-xs text-purple-600 mb-0.5 flex items-center justify-center gap-1">
-                                  CPC
-                                </div>
-                                <div className="text-lg font-bold text-purple-600">
-                                  {stats.cpc ? `¥${stats.cpc.toLocaleString()}` : "-"}
-                                </div>
-                                <div className="text-[10px] text-purple-500">CTAクリック単価</div>
-                              </div>
-                            </Link>
-                          </>
-                        ) : (
-                          <Link href={`/dashboard/channels/${channel.id}/edit#effectiveness`}>
-                            <div className="bg-gray-50 rounded-lg py-2 px-3 hover:bg-gray-100 transition-colors h-full flex flex-col justify-center">
-                              <div className="text-xs text-gray-500 mb-0.5">効果測定</div>
-                              <div className="text-sm font-medium text-blue-600 hover:underline">設定する</div>
-                            </div>
-                          </Link>
-                        )}
-                      </div>
-
-                      {/* モバイル版: タップで展開 */}
-                      <div className="md:hidden">
-                        <div className="grid grid-cols-4 gap-2 text-center">
-                          <div className="bg-gray-50 rounded-lg py-2 px-1">
-                            <div className="text-[10px] text-gray-500">QR読み込み</div>
-                            <div className="text-base font-bold text-gray-800">{stats.accessCount}</div>
-                          </div>
-                          <div className="bg-gray-50 rounded-lg py-2 px-1">
-                            <div className="text-[10px] text-gray-500">診断完了</div>
-                            <div className="text-base font-bold text-green-600">{stats.completedCount}</div>
-                          </div>
-                          <div className="bg-gray-50 rounded-lg py-2 px-1">
-                            <div className="text-[10px] text-gray-500">完了率</div>
-                            <div className="text-base font-bold text-blue-600">{stats.completionRate}%</div>
-                          </div>
-                          <div className="bg-gray-50 rounded-lg py-2 px-1">
-                            <div className="text-[10px] text-gray-500">CTA</div>
-                            <div className="text-base font-bold text-purple-600">{stats.ctaCount}</div>
-                          </div>
-                        </div>
-                        {stats.adBudget ? (
-                          <div className="grid grid-cols-3 gap-2 text-center mt-2">
-                            <Link href={`/dashboard/channels/${channel.id}#effectiveness`} className="bg-blue-50 rounded-lg py-2 px-1">
-                              <div className="text-[10px] text-blue-600">CPA（アクセス）</div>
-                              <div className="text-base font-bold text-blue-600">
-                                {stats.cpa ? `¥${stats.cpa.toLocaleString()}` : "-"}
-                              </div>
-                            </Link>
-                            <Link href={`/dashboard/channels/${channel.id}#effectiveness`} className="bg-green-50 rounded-lg py-2 px-1">
-                              <div className="text-[10px] text-green-600">CPD（診断）</div>
-                              <div className="text-base font-bold text-green-600">
-                                {stats.cpd ? `¥${stats.cpd.toLocaleString()}` : "-"}
-                              </div>
-                            </Link>
-                            <Link href={`/dashboard/channels/${channel.id}#effectiveness`} className="bg-purple-50 rounded-lg py-2 px-1">
-                              <div className="text-[10px] text-purple-600">CPC（CTA）</div>
-                              <div className="text-base font-bold text-purple-600">
-                                {stats.cpc ? `¥${stats.cpc.toLocaleString()}` : "-"}
-                              </div>
-                            </Link>
-                          </div>
-                        ) : (
-                          <div className="mt-2">
-                            <Link href={`/dashboard/channels/${channel.id}/edit#effectiveness`} className="block bg-gray-50 rounded-lg py-2 px-1 text-center">
-                              <div className="text-[10px] text-gray-500">効果測定</div>
-                              <div className="text-[10px] font-medium text-blue-600">設定する</div>
-                            </Link>
-                          </div>
-                        )}
-                        <button
-                          onClick={() => setExpandedChannelId(isExpanded ? null : channel.id)}
-                          className="w-full text-center text-xs text-gray-500 hover:text-gray-700 py-2 flex items-center justify-center gap-1"
-                        >
-                          {isExpanded ? "詳細を隠す" : "詳細を表示"}
-                          {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                        </button>
-                        {isExpanded && (
-                          <div className="bg-gray-50 rounded-lg p-3 mt-2 space-y-3 text-sm">
-                            <div>
-                              <div className="font-medium text-gray-700 mb-1">年齢・性別分布</div>
-                              <div className="flex flex-wrap gap-2">
-                                {Object.entries(stats.genderByType).map(([g, c]) =>
-                                  c > 0 ? (
-                                    <span key={g} className="text-gray-600">
-                                      {GENDER_NAMES[g]}: {c}人
-                                    </span>
-                                  ) : null
-                                )}
-                              </div>
-                              <div className="flex flex-wrap gap-2 mt-1">
-                                {Object.entries(stats.ageRanges).map(([a, c]) =>
-                                  c > 0 ? (
-                                    <span key={a} className="text-gray-600">
-                                      {AGE_RANGE_NAMES[a]}: {c}
-                                    </span>
-                                  ) : null
-                                )}
-                              </div>
-                            </div>
-                            <div className="border-t pt-2">
-                              <div className="font-medium text-gray-700 mb-1">CTA内訳</div>
-                              <div className="flex flex-wrap gap-2">
-                                {Object.entries(stats.ctaByType).length === 0 ? (
-                                  <span className="text-gray-400">クリックなし</span>
-                                ) : (
-                                  Object.entries(stats.ctaByType)
-                                    .sort((a, b) => b[1] - a[1])
-                                    .map(([type, count]) => (
-                                      <span key={type} className="text-gray-600">
-                                        {CTA_TYPE_NAMES[type] || type}: {count}
-                                      </span>
-                                    ))
-                                )}
-                              </div>
-                            </div>
-                            <div className="border-t pt-2">
-                              <div className="font-medium text-gray-700 mb-1">日別アクセス</div>
-                              <div className="flex flex-wrap gap-2">
-                                {stats.accessByDate.length === 0 ? (
-                                  <span className="text-gray-400">データなし</span>
-                                ) : (
-                                  stats.accessByDate.map((item) => (
-                                    <span key={item.date} className="text-gray-600">
-                                      {new Date(item.date).toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" })}: {item.count}回
-                                    </span>
-                                  ))
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </>
-                  )}
-                </div>
-              );
-            })}
+                  channel={channel}
+                  stats={channelStats[channel.id]}
+                  onHide={() => handleHideChannel(channel.id)}
+                  onRestore={() => handleRestoreChannel(channel.id)}
+                  onPermanentDelete={() => handlePermanentDeleteChannel(channel.id)}
+                  onImageClick={(url, name) => setSelectedImage({ url, name })}
+                />
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -1160,44 +944,25 @@ export default function DashboardPage() {
       />
 
       {/* QR読み込み履歴 */}
-      <div className="bg-white rounded-xl shadow-sm border">
-        <div className="p-6 border-b">
-          <div className="flex flex-wrap items-center gap-4">
-            <h2 className="text-lg font-bold">QR読み込み履歴</h2>
-            <div className="flex flex-wrap gap-2 ml-auto">
-              {/* 期間指定 */}
-              <select
-                value={period}
-                onChange={(e) => setPeriod(e.target.value)}
-                className="px-3 py-1.5 border rounded-md text-sm bg-white"
-              >
-                {PERIOD_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-              {period === "custom" && (
-                <div className="flex items-center gap-2">
-                  <input
-                    type="date"
-                    value={customStartDate}
-                    onChange={(e) => setCustomStartDate(e.target.value)}
-                    className="px-2 py-1.5 border rounded-md text-sm bg-white"
-                  />
-                  <span className="text-gray-500">〜</span>
-                  <input
-                    type="date"
-                    value={customEndDate}
-                    onChange={(e) => setCustomEndDate(e.target.value)}
-                    className="px-2 py-1.5 border rounded-md text-sm bg-white"
-                  />
-                </div>
-              )}
+      <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
+        <div className="p-5 border-b">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center">
+                <BarChart3 className="w-5 h-5 text-gray-600" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">読み込み履歴</h2>
+                <p className="text-xs text-gray-500">
+                  {totalCount.toLocaleString()}件の診断完了
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 sm:ml-auto">
               <select
                 value={selectedDiagnosisType}
                 onChange={(e) => setSelectedDiagnosisType(e.target.value)}
-                className="px-3 py-1.5 border rounded-md text-sm bg-white"
+                className="px-3 py-1.5 border rounded-lg text-sm bg-white"
               >
                 <option value="">全ての診断</option>
                 <option value="oral-age">お口年齢診断</option>
@@ -1206,7 +971,7 @@ export default function DashboardPage() {
               <select
                 value={selectedChannelId}
                 onChange={(e) => setSelectedChannelId(e.target.value)}
-                className="px-3 py-1.5 border rounded-md text-sm bg-white"
+                className="px-3 py-1.5 border rounded-lg text-sm bg-white"
               >
                 <option value="">全てのQRコード</option>
                 {activeChannels.map((ch) => (
@@ -1231,8 +996,13 @@ export default function DashboardPage() {
 
         {history.length === 0 ? (
           <div className="p-12 text-center">
-            <BarChart3 className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+            <div className="w-20 h-20 mx-auto bg-gray-100 rounded-2xl flex items-center justify-center mb-4">
+              <BarChart3 className="w-10 h-10 text-gray-400" />
+            </div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">履歴がありません</h3>
+            <p className="text-sm text-gray-500">
+              選択した期間内に診断が完了していません
+            </p>
           </div>
         ) : (
           <>
@@ -1241,13 +1011,25 @@ export default function DashboardPage() {
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="text-left px-4 py-3 text-sm font-medium text-gray-500 cursor-pointer hover:bg-gray-100" onClick={() => handleSort("createdAt")}>
-                      <span className="flex items-center">日時<SortIcon field="createdAt" /></span>
+                    <th
+                      className="text-left px-5 py-3 text-sm font-medium text-gray-500 cursor-pointer hover:bg-gray-100"
+                      onClick={() => handleSort("createdAt")}
+                    >
+                      <span className="flex items-center">
+                        日時
+                        <SortIcon field="createdAt" />
+                      </span>
                     </th>
-                    <th className="text-center px-2 py-3 text-sm font-medium text-gray-500 cursor-pointer hover:bg-gray-100" onClick={() => handleSort("userAge")}>
-                      <span className="flex items-center justify-center">年齢<SortIcon field="userAge" /></span>
+                    <th
+                      className="text-center px-3 py-3 text-sm font-medium text-gray-500 cursor-pointer hover:bg-gray-100"
+                      onClick={() => handleSort("userAge")}
+                    >
+                      <span className="flex items-center justify-center">
+                        年齢
+                        <SortIcon field="userAge" />
+                      </span>
                     </th>
-                    <th className="text-center px-2 py-3 text-sm font-medium text-gray-500">性別</th>
+                    <th className="text-center px-3 py-3 text-sm font-medium text-gray-500">性別</th>
                     <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">診断</th>
                     <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">QRコード</th>
                     <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">エリア</th>
@@ -1255,15 +1037,23 @@ export default function DashboardPage() {
                 </thead>
                 <tbody className="divide-y">
                   {sortedHistory.map((item) => (
-                    <tr key={item.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-4 text-sm text-gray-600 whitespace-nowrap">{formatDate(item.createdAt)}</td>
-                      <td className="px-2 py-4 text-center text-sm text-gray-700">{item.userAge !== null ? `${item.userAge}歳` : "-"}</td>
-                      <td className="px-2 py-4 text-center text-sm text-gray-700">{item.userGender || "-"}</td>
-                      <td className="px-4 py-4">
-                        <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-50 text-blue-700">{item.diagnosisType}</span>
+                    <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-5 py-4 text-sm text-gray-600 whitespace-nowrap">
+                        {formatDate(item.createdAt)}
                       </td>
-                      <td className="px-4 py-4 text-sm">{item.channelName}</td>
-                      <td className="px-4 py-4 text-sm text-gray-700">{item.area}</td>
+                      <td className="px-3 py-4 text-center text-sm text-gray-700">
+                        {item.userAge !== null ? `${item.userAge}歳` : "-"}
+                      </td>
+                      <td className="px-3 py-4 text-center text-sm text-gray-700">
+                        {item.userGender || "-"}
+                      </td>
+                      <td className="px-4 py-4">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                          {item.diagnosisType}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 text-sm font-medium text-gray-900">{item.channelName}</td>
+                      <td className="px-4 py-4 text-sm text-gray-600">{item.area}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1273,29 +1063,37 @@ export default function DashboardPage() {
             {/* モバイル用カード */}
             <div className="md:hidden divide-y">
               {sortedHistory.map((item) => (
-                <div key={item.id} className="p-4">
-                  <div className="mb-2">
-                    <div className="text-sm text-gray-500">{formatDate(item.createdAt)}</div>
+                <div key={item.id} className="p-4 hover:bg-gray-50">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-gray-500">{formatDate(item.createdAt)}</span>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                      {item.diagnosisType}
+                    </span>
                   </div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-sm text-gray-600">{item.userAge !== null ? `${item.userAge}歳` : "-"} / {item.userGender || "-"}</span>
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="text-sm text-gray-700">
+                      {item.userAge !== null ? `${item.userAge}歳` : "-"} / {item.userGender || "-"}
+                    </span>
+                    <span className="text-sm font-medium text-gray-900">{item.channelName}</span>
                   </div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700">{item.diagnosisType}</span>
-                    <span className="text-sm text-gray-600">{item.channelName}</span>
-                  </div>
-                  <div className="text-sm">
-                    <span className="text-gray-500">エリア: </span>
-                    <span className="text-gray-900">{item.area}</span>
-                  </div>
+                  <div className="text-sm text-gray-500">{item.area}</div>
                 </div>
               ))}
             </div>
 
-            <div className="p-4 border-t flex items-center justify-between">
-              <div className="text-sm text-gray-500">該当: {totalCount.toLocaleString()}件</div>
+            {/* フッター */}
+            <div className="p-4 border-t flex items-center justify-between bg-gray-50">
+              <div className="text-sm text-gray-500">
+                表示: {history.length} / {totalCount.toLocaleString()}件
+              </div>
               {hasMore && (
-                <Button variant="outline" onClick={handleLoadMore} disabled={isLoadingMore} className="gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLoadMore}
+                  disabled={isLoadingMore}
+                  className="gap-2"
+                >
                   {isLoadingMore ? "読み込み中..." : "もっと見る"}
                   <ChevronDown className="w-4 h-4" />
                 </Button>
@@ -1307,23 +1105,35 @@ export default function DashboardPage() {
 
       {/* クイックスタートガイド */}
       {channels.length === 0 && (
-        <div className="bg-blue-50 rounded-xl p-6 border border-blue-100">
-          <h2 className="text-lg font-bold text-blue-900 mb-4">はじめての方へ</h2>
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100">
+          <h2 className="text-lg font-bold text-gray-900 mb-4">はじめての方へ</h2>
           <div className="grid md:grid-cols-3 gap-4">
-            <div className="bg-white rounded-lg p-4">
-              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold mb-2">1</div>
-              <h3 className="font-medium mb-1">QRコードを作成</h3>
-              <p className="text-sm text-gray-600">「チラシ①」「医院前看板」など、計測したいQRコードを登録</p>
+            <div className="bg-white rounded-xl p-4 shadow-sm">
+              <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 font-bold mb-3">
+                1
+              </div>
+              <h3 className="font-semibold mb-1">QRコードを作成</h3>
+              <p className="text-sm text-gray-600">
+                「チラシ①」「医院前看板」など、計測したいQRコードを登録
+              </p>
             </div>
-            <div className="bg-white rounded-lg p-4">
-              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold mb-2">2</div>
-              <h3 className="font-medium mb-1">QRコードを印刷</h3>
-              <p className="text-sm text-gray-600">発行されたQRコードをチラシや看板に印刷</p>
+            <div className="bg-white rounded-xl p-4 shadow-sm">
+              <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 font-bold mb-3">
+                2
+              </div>
+              <h3 className="font-semibold mb-1">QRコードを印刷</h3>
+              <p className="text-sm text-gray-600">
+                発行されたQRコードをチラシや看板に印刷
+              </p>
             </div>
-            <div className="bg-white rounded-lg p-4">
-              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold mb-2">3</div>
-              <h3 className="font-medium mb-1">効果を確認</h3>
-              <p className="text-sm text-gray-600">ダッシュボードでQRコード別の効果を比較</p>
+            <div className="bg-white rounded-xl p-4 shadow-sm">
+              <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 font-bold mb-3">
+                3
+              </div>
+              <h3 className="font-semibold mb-1">効果を確認</h3>
+              <p className="text-sm text-gray-600">
+                ダッシュボードでQRコード別の効果を比較
+              </p>
             </div>
           </div>
         </div>
@@ -1331,38 +1141,66 @@ export default function DashboardPage() {
 
       {/* 画像モーダル */}
       {selectedImage && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedImage(null)}>
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={() => setSelectedImage(null)}
+        >
           <div className="relative max-w-4xl max-h-[90vh]">
-            <button onClick={() => setSelectedImage(null)} className="absolute -top-3 -right-3 bg-white rounded-full p-2 shadow-lg hover:bg-gray-100">
+            <button
+              onClick={() => setSelectedImage(null)}
+              className="absolute -top-3 -right-3 bg-white rounded-full p-2 shadow-lg hover:bg-gray-100 transition-colors"
+            >
               <X className="w-5 h-5" />
             </button>
-            <img src={selectedImage.url} alt={selectedImage.name} className="max-w-full max-h-[90vh] rounded-lg" onClick={(e) => e.stopPropagation()} />
+            <img
+              src={selectedImage.url}
+              alt={selectedImage.name}
+              className="max-w-full max-h-[90vh] rounded-xl shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
           </div>
         </div>
       )}
 
       {/* QRコード作成上限アラートモーダル */}
       {showQRLimitModal && subscription && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowQRLimitModal(false)}>
-          <div className="relative bg-white rounded-xl shadow-xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-start gap-3 mb-4">
-              <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <AlertTriangle className="w-5 h-5 text-amber-600" />
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={() => setShowQRLimitModal(false)}
+        >
+          <div
+            className="relative bg-white rounded-2xl shadow-xl max-w-md w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-4 mb-4">
+              <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-6 h-6 text-amber-600" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-gray-900">QRコード作成上限に達しています</h3>
+                <h3 className="text-lg font-bold text-gray-900">
+                  QRコード作成上限に達しています
+                </h3>
                 <p className="text-sm text-gray-600 mt-1">
-                  現在のプラン（{subscription.planName}）では、QRコードは{subscription.qrCodeLimit}枚まで作成できます。
+                  現在のプラン（{subscription.planName}）では、QRコードは
+                  {subscription.qrCodeLimit}枚まで作成できます。
                 </p>
               </div>
             </div>
 
-            <div className="bg-gray-50 rounded-lg p-4 mb-4">
-              <p className="text-sm text-gray-700 font-medium mb-2">新しいQRコードを作成するには：</p>
+            <div className="bg-gray-50 rounded-xl p-4 mb-4">
+              <p className="text-sm text-gray-700 font-medium mb-2">
+                新しいQRコードを作成するには：
+              </p>
               <ul className="text-sm text-gray-600 space-y-2">
                 <li className="flex items-start gap-2">
                   <span className="text-amber-600 font-bold">1.</span>
-                  <span>既存のQRコードを完全削除する<br /><span className="text-xs text-gray-500">（非表示タブから「完全削除」を選択）</span></span>
+                  <span>
+                    既存のQRコードを完全削除する
+                    <br />
+                    <span className="text-xs text-gray-500">
+                      （非表示タブから「完全削除」を選択）
+                    </span>
+                  </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-amber-600 font-bold">2.</span>
@@ -1394,7 +1232,7 @@ export default function DashboardPage() {
 
             <button
               onClick={() => setShowQRLimitModal(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
