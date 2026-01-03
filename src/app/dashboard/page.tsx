@@ -199,6 +199,9 @@ interface SubscriptionInfo {
   qrCodeCount: number;
   remainingQRCodes: number | null;
   canCreateQR: boolean;
+  canEditQR: boolean;
+  canEditDiagnosis: boolean;
+  isDemo: boolean;
 }
 
 // ドロップダウンメニューコンポーネント
@@ -590,12 +593,16 @@ function QRCodeCard({
   onRestore,
   onPermanentDelete,
   onImageClick,
+  isDemo,
+  onDemoClick,
 }: {
   channel: Channel;
   onHide: () => void;
   onRestore: () => void;
   onPermanentDelete: () => void;
   onImageClick: (url: string, name: string) => void;
+  isDemo?: boolean;
+  onDemoClick?: () => void;
 }) {
   const isExpired = channel.expiresAt && new Date() > new Date(channel.expiresAt);
 
@@ -668,18 +675,28 @@ function QRCodeCard({
               <Eye className="w-4 h-4" />
               QRコード表示
             </Link>
-            <Link
-              href={`/dashboard/channels/${channel.id}/edit`}
-              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-            >
-              <Settings className="w-4 h-4" />
-              編集
-            </Link>
+            {isDemo ? (
+              <button
+                onClick={onDemoClick}
+                className="flex items-center gap-2 px-3 py-2 text-sm text-gray-400 hover:bg-gray-50 w-full text-left"
+              >
+                <Settings className="w-4 h-4" />
+                編集
+              </button>
+            ) : (
+              <Link
+                href={`/dashboard/channels/${channel.id}/edit`}
+                className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+              >
+                <Settings className="w-4 h-4" />
+                編集
+              </Link>
+            )}
             <div className="border-t my-1" />
             {channel.isActive ? (
               <button
-                onClick={onHide}
-                className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 w-full text-left"
+                onClick={isDemo ? onDemoClick : onHide}
+                className={`flex items-center gap-2 px-3 py-2 text-sm w-full text-left ${isDemo ? "text-gray-400 hover:bg-gray-50" : "text-red-600 hover:bg-red-50"}`}
               >
                 <Trash2 className="w-4 h-4" />
                 非表示にする
@@ -687,15 +704,15 @@ function QRCodeCard({
             ) : (
               <>
                 <button
-                  onClick={onRestore}
-                  className="flex items-center gap-2 px-3 py-2 text-sm text-emerald-600 hover:bg-emerald-50 w-full text-left"
+                  onClick={isDemo ? onDemoClick : onRestore}
+                  className={`flex items-center gap-2 px-3 py-2 text-sm w-full text-left ${isDemo ? "text-gray-400 hover:bg-gray-50" : "text-emerald-600 hover:bg-emerald-50"}`}
                 >
                   <RotateCcw className="w-4 h-4" />
                   復元する
                 </button>
                 <button
-                  onClick={onPermanentDelete}
-                  className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 w-full text-left"
+                  onClick={isDemo ? onDemoClick : onPermanentDelete}
+                  className={`flex items-center gap-2 px-3 py-2 text-sm w-full text-left ${isDemo ? "text-gray-400 hover:bg-gray-50" : "text-red-600 hover:bg-red-50"}`}
                 >
                   <Trash2 className="w-4 h-4" />
                   完全に削除
@@ -758,6 +775,7 @@ export default function DashboardPage() {
   // サブスクリプション情報
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
   const [showQRLimitModal, setShowQRLimitModal] = useState(false);
+  const [showDemoModal, setShowDemoModal] = useState(false);
 
   // QRコードソート
   type ChannelSortField = "createdAt" | "accessCount" | "completedCount" | "completionRate" | "ctaCount";
@@ -1057,6 +1075,12 @@ export default function DashboardPage() {
       return;
     }
 
+    // デモアカウントの場合
+    if (subscription.isDemo) {
+      setShowDemoModal(true);
+      return;
+    }
+
     if (!subscription.canCreateQR && subscription.qrCodeLimit !== null) {
       setShowQRLimitModal(true);
       return;
@@ -1324,6 +1348,8 @@ export default function DashboardPage() {
                   onRestore={() => handleRestoreChannel(channel.id)}
                   onPermanentDelete={() => handlePermanentDeleteChannel(channel.id)}
                   onImageClick={(url, name) => setSelectedImage({ url, name })}
+                  isDemo={subscription?.isDemo}
+                  onDemoClick={() => setShowDemoModal(true)}
                 />
               ))}
             </div>
@@ -1662,6 +1688,53 @@ export default function DashboardPage() {
 
             <button
               onClick={() => setShowQRLimitModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* デモアカウント制限モーダル */}
+      {showDemoModal && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={() => setShowDemoModal(false)}
+        >
+          <div
+            className="relative bg-white rounded-2xl shadow-xl max-w-md w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-4 mb-4">
+              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Eye className="w-6 h-6 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">
+                  デモアカウントです
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  デモアカウントでは、データの閲覧のみ可能です。
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-4">
+              <p className="text-sm text-blue-800">
+                QRコードや診断の新規作成・編集を行うには、正式なアカウントでのご登録が必要です。
+              </p>
+            </div>
+
+            <Button
+              className="w-full"
+              onClick={() => setShowDemoModal(false)}
+            >
+              閉じる
+            </Button>
+
+            <button
+              onClick={() => setShowDemoModal(false)}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
             >
               <X className="w-5 h-5" />

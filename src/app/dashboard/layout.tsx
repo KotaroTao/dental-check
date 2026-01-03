@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Eye } from "lucide-react";
 import { CTAAlert } from "@/components/dashboard/cta-alert";
 
 interface Clinic {
@@ -18,6 +18,10 @@ interface Clinic {
   } | null;
 }
 
+interface SubscriptionInfo {
+  isDemo?: boolean;
+}
+
 export default function DashboardLayout({
   children,
 }: {
@@ -26,6 +30,7 @@ export default function DashboardLayout({
   const router = useRouter();
   const pathname = usePathname();
   const [clinic, setClinic] = useState<Clinic | null>(null);
+  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -41,6 +46,12 @@ export default function DashboardLayout({
         if (response.ok) {
           const data = await response.json();
           setClinic(data.clinic);
+          // サブスクリプション情報を取得
+          const subResponse = await fetch("/api/billing/subscription");
+          if (subResponse.ok) {
+            const subData = await subResponse.json();
+            setSubscription(subData.subscription);
+          }
         } else {
           router.push("/login");
         }
@@ -138,6 +149,17 @@ export default function DashboardLayout({
           </div>
         )}
       </header>
+
+      {/* デモアカウントバナー */}
+      {subscription?.isDemo && (
+        <div className="bg-blue-600 text-white">
+          <div className="container mx-auto px-4 py-2 flex items-center justify-center gap-2 text-sm">
+            <Eye className="w-4 h-4" />
+            <span className="font-medium">デモアカウント</span>
+            <span className="hidden sm:inline">- データの閲覧のみ可能です。QRコードや診断の作成・編集はできません。</span>
+          </div>
+        </div>
+      )}
 
       {/* メインコンテンツ */}
       <main className="container mx-auto px-4 py-4 sm:py-8">

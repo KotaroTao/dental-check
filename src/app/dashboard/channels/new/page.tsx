@@ -17,6 +17,7 @@ interface DiagnosisType {
 interface SubscriptionInfo {
   qrCodeLimit: number | null;
   qrCodeCount: number;
+  isDemo?: boolean;
 }
 
 export default function NewChannelPage() {
@@ -65,13 +66,17 @@ export default function NewChannelPage() {
         if (response.ok) {
           const data = await response.json();
           setSubscription(data.subscription);
+          // デモアカウントの場合はダッシュボードにリダイレクト
+          if (data.subscription?.isDemo) {
+            router.replace("/dashboard");
+          }
         }
       } catch (error) {
         console.error("Failed to fetch subscription:", error);
       }
     };
     fetchSubscription();
-  }, []);
+  }, [router]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>

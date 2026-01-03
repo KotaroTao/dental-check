@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getSubscriptionState } from "@/lib/subscription";
 import type { Channel } from "@/types/clinic";
 
 // QRコード詳細を取得
@@ -76,6 +77,15 @@ export async function PATCH(
       );
     }
 
+    // デモアカウントは編集不可
+    const subscriptionState = await getSubscriptionState(session.clinicId);
+    if (subscriptionState.isDemo) {
+      return NextResponse.json(
+        { error: "デモアカウントではQRコードの編集はできません。" },
+        { status: 403 }
+      );
+    }
+
     // リンクタイプでリダイレクトURLが指定された場合は検証
     if (existingChannel.channelType === "link" && redirectUrl !== undefined) {
       if (!redirectUrl || redirectUrl.trim() === "") {
@@ -140,6 +150,15 @@ export async function DELETE(
       return NextResponse.json(
         { error: "QRコードが見つかりません" },
         { status: 404 }
+      );
+    }
+
+    // デモアカウントは非表示化不可
+    const subscriptionState = await getSubscriptionState(session.clinicId);
+    if (subscriptionState.isDemo) {
+      return NextResponse.json(
+        { error: "デモアカウントではQRコードの操作はできません。" },
+        { status: 403 }
       );
     }
 

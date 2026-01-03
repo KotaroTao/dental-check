@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getSubscriptionState } from "@/lib/subscription";
 
 // QRコードを完全に削除する（物理削除）
 // 非表示（isActive=false）のQRコードのみが対象
@@ -12,6 +13,15 @@ export async function DELETE(
     const session = await getSession();
     if (!session) {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
+    }
+
+    // デモアカウントは完全削除不可
+    const subscriptionState = await getSubscriptionState(session.clinicId);
+    if (subscriptionState.isDemo) {
+      return NextResponse.json(
+        { error: "デモアカウントではQRコードの操作はできません。" },
+        { status: 403 }
+      );
     }
 
     const { id } = await params;

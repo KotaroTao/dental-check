@@ -79,6 +79,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     // 契約状態を確認
     const subscriptionState = await getSubscriptionState(session.clinicId);
+    if (subscriptionState.isDemo) {
+      return NextResponse.json(
+        { error: "デモアカウントでは診断の編集はできません。" },
+        { status: 403 }
+      );
+    }
     if (!subscriptionState.canCreateCustomDiagnosis) {
       return NextResponse.json(
         { error: "診断を編集するには、カスタムプラン以上のご契約が必要です。" },
@@ -170,6 +176,15 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     if (diagnosis.clinicId !== session.clinicId) {
       return NextResponse.json(
         { error: "この診断を削除する権限がありません" },
+        { status: 403 }
+      );
+    }
+
+    // デモアカウントは削除不可
+    const subscriptionState = await getSubscriptionState(session.clinicId);
+    if (subscriptionState.isDemo) {
+      return NextResponse.json(
+        { error: "デモアカウントでは診断の削除はできません。" },
         { status: 403 }
       );
     }

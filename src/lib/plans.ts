@@ -1,6 +1,6 @@
 // プラン定義
 
-export type PlanType = "starter" | "standard" | "custom" | "managed" | "free";
+export type PlanType = "starter" | "standard" | "custom" | "managed" | "free" | "demo";
 
 export interface Plan {
   type: PlanType;
@@ -10,6 +10,7 @@ export interface Plan {
   features: string[];
   description: string;
   isAdminOnly?: boolean; // 管理者のみが設定可能
+  isReadOnly?: boolean; // 閲覧のみ（作成・編集不可）
 }
 
 export const PLANS: Record<PlanType, Plan> = {
@@ -83,6 +84,20 @@ export const PLANS: Record<PlanType, Plan> = {
     ],
     isAdminOnly: true,
   },
+  demo: {
+    type: "demo",
+    name: "デモアカウント",
+    price: 0,
+    qrCodeLimit: null,
+    description: "閲覧専用のデモアカウント",
+    features: [
+      "データの閲覧のみ可能",
+      "QRコード・診断の作成不可",
+      "QRコード・診断の編集不可",
+    ],
+    isAdminOnly: true,
+    isReadOnly: true,
+  },
 };
 
 // トライアル期間の設定
@@ -144,4 +159,10 @@ const CUSTOM_DIAGNOSIS_PLANS: PlanType[] = ["free", "custom", "managed"];
 // オリジナル診断作成可能かチェック
 export function canCreateCustomDiagnosis(planType: PlanType): boolean {
   return CUSTOM_DIAGNOSIS_PLANS.includes(planType);
+}
+
+// 閲覧専用プランかチェック
+export function isReadOnlyPlan(planType: PlanType): boolean {
+  const plan = getPlan(planType);
+  return plan.isReadOnly === true;
 }

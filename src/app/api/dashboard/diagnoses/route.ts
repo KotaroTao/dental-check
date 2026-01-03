@@ -88,6 +88,7 @@ export async function GET() {
     return NextResponse.json({
       diagnoses: sortedDiagnoses,
       canCreateCustomDiagnosis: subscriptionState.canCreateCustomDiagnosis,
+      isDemo: subscriptionState.isDemo,
     });
   } catch (error) {
     console.error("Failed to fetch diagnoses:", error);
@@ -108,6 +109,12 @@ export async function POST(request: NextRequest) {
 
     // 契約状態を確認
     const subscriptionState = await getSubscriptionState(session.clinicId);
+    if (subscriptionState.isDemo) {
+      return NextResponse.json(
+        { error: "デモアカウントでは診断の作成はできません。" },
+        { status: 403 }
+      );
+    }
     if (!subscriptionState.canCreateCustomDiagnosis) {
       return NextResponse.json(
         { error: "オリジナル診断を作成するには、カスタムプラン以上のご契約が必要です。" },

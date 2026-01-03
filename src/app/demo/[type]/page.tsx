@@ -19,6 +19,7 @@ async function getDiagnosis(slug: string) {
       const questions = dbDiagnosis.questions as Array<{
         id: string;
         text: string;
+        imageUrl?: string | null;
         options: Array<{ id: string; text: string; score: number }>;
       }>;
       const resultPatterns = dbDiagnosis.resultPatterns as Array<{
@@ -38,6 +39,7 @@ async function getDiagnosis(slug: string) {
         questions: questions.map((q, index) => ({
           id: index + 1,
           text: q.text,
+          imageUrl: q.imageUrl || undefined,
           choices: q.options.map((o) => ({
             text: o.text,
             score: o.score,

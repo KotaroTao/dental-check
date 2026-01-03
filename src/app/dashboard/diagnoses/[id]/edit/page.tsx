@@ -46,6 +46,24 @@ export default function EditDiagnosisPage() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [resultPatterns, setResultPatterns] = useState<ResultPattern[]>([]);
 
+  // デモアカウントはリダイレクト
+  useEffect(() => {
+    const checkDemo = async () => {
+      try {
+        const response = await fetch("/api/dashboard/diagnoses");
+        if (response.ok) {
+          const data = await response.json();
+          if (data.isDemo) {
+            router.replace("/dashboard/diagnoses");
+          }
+        }
+      } catch (error) {
+        console.error("Failed to check demo status:", error);
+      }
+    };
+    checkDemo();
+  }, [router]);
+
   // 選択肢スコアの選択肢（0〜10）
   const scoreOptions = Array.from({ length: 11 }, (_, i) => i);
 

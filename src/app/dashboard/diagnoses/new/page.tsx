@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -36,6 +36,24 @@ export default function NewDiagnosisPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // デモアカウントはリダイレクト
+  useEffect(() => {
+    const checkDemo = async () => {
+      try {
+        const response = await fetch("/api/dashboard/diagnoses");
+        if (response.ok) {
+          const data = await response.json();
+          if (data.isDemo) {
+            router.replace("/dashboard/diagnoses");
+          }
+        }
+      } catch (error) {
+        console.error("Failed to check demo status:", error);
+      }
+    };
+    checkDemo();
+  }, [router]);
 
   const [formData, setFormData] = useState({
     name: "",
