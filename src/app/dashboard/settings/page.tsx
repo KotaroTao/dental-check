@@ -774,7 +774,7 @@ export default function SettingsPage() {
                 {showPreview ? "閉じる" : "プレビュー"}
               </Button>
               <a
-                href="/demo/oral-age"
+                href="/preview/result"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -797,7 +797,7 @@ export default function SettingsPage() {
                     <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-gray-800 rounded-b-2xl z-10" />
                     {/* iframe */}
                     <iframe
-                      src="/demo/oral-age"
+                      src="/preview/result"
                       className="w-full h-full border-0"
                       title="診断結果プレビュー"
                     />
