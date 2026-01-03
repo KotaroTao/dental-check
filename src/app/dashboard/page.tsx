@@ -506,7 +506,7 @@ function EffectivenessSummary({
             )}
           </button>
 
-          {/* 折りたたみ部分: 診断完了、完了率、CTA率、CTA数、CTA内訳 */}
+          {/* 折りたたみ部分: 診断完了、完了率、CTAクリック数、CTA率、CTA内訳 */}
           {showDetails && (
             <div className="pt-4 border-t mt-4 space-y-4">
               {/* 診断関連指標 */}
@@ -523,9 +523,9 @@ function EffectivenessSummary({
                   <div className="text-xl font-bold text-blue-600">{overallStats.completionRate}%</div>
                 </div>
 
-                {/* CTA数 */}
+                {/* CTAクリック数 */}
                 <div className="text-center p-3 bg-purple-50 rounded-xl">
-                  <div className="text-xs text-gray-500 mb-1">CTA数</div>
+                  <div className="text-xs text-gray-500 mb-1">CTAクリック数</div>
                   <div className="text-xl font-bold text-purple-600">{overallStats.ctaCount.toLocaleString()}</div>
                 </div>
 
@@ -900,13 +900,17 @@ export default function DashboardPage() {
         const params = new URLSearchParams({
           period,
           offset: offset.toString(),
-          limit: "50",
+          limit: "30",
         });
         if (selectedChannelId) params.set("channelId", selectedChannelId);
         if (selectedDiagnosisType) params.set("diagnosisType", selectedDiagnosisType);
         if (period === "custom") {
           params.set("startDate", customStartDate);
           params.set("endDate", customEndDate);
+        }
+        // 追加読み込み時はCOUNTクエリをスキップしてパフォーマンス最適化
+        if (offset > 0) {
+          params.set("skipCount", "true");
         }
 
         const response = await fetch(`/api/dashboard/history?${params}`);
@@ -917,7 +921,10 @@ export default function DashboardPage() {
           } else {
             setHistory(data.history);
           }
-          setTotalCount(data.totalCount);
+          // skipCount時はtotalCountが-1なので更新しない（初回取得値を維持）
+          if (data.totalCount >= 0) {
+            setTotalCount(data.totalCount);
+          }
           setHasMore(data.hasMore);
         }
       } catch (error) {
