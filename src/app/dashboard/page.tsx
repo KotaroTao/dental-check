@@ -908,6 +908,10 @@ export default function DashboardPage() {
           params.set("startDate", customStartDate);
           params.set("endDate", customEndDate);
         }
+        // 追加読み込み時はCOUNTクエリをスキップしてパフォーマンス最適化
+        if (offset > 0) {
+          params.set("skipCount", "true");
+        }
 
         const response = await fetch(`/api/dashboard/history?${params}`);
         if (response.ok) {
@@ -917,7 +921,10 @@ export default function DashboardPage() {
           } else {
             setHistory(data.history);
           }
-          setTotalCount(data.totalCount);
+          // skipCount時はtotalCountが-1なので更新しない（初回取得値を維持）
+          if (data.totalCount >= 0) {
+            setTotalCount(data.totalCount);
+          }
           setHasMore(data.hasMore);
         }
       } catch (error) {

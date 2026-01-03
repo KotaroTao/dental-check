@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
     const endDate = searchParams.get("endDate");
     const offset = parseInt(searchParams.get("offset") || "0");
     const limit = parseInt(searchParams.get("limit") || "50");
+    const skipCount = searchParams.get("skipCount") === "true"; // 追加読み込み時はカウントをスキップ
 
     // 期間の計算
     let dateFrom: Date;
@@ -99,32 +100,39 @@ export async function GET(request: NextRequest) {
       whereFilter.diagnosisType = { slug: diagnosisType };
     }
 
-    // 総件数と履歴データを並行取得
-    const [totalCount, sessions] = await Promise.all([
-      prisma.diagnosisSession.count({
-        where: whereFilter,
-      }),
-      prisma.diagnosisSession.findMany({
-        where: whereFilter,
-        include: {
-          channel: {
-            select: { id: true, name: true },
-          },
-          diagnosisType: {
-            select: { slug: true, name: true },
-          },
-          ctaClicks: {
-            select: { ctaType: true },
-          },
-          _count: {
-            select: { ctaClicks: true },
-          },
+    // 履歴データを取得（カウントは初回のみ実行）
+    const sessionsQuery = prisma.diagnosisSession.findMany({
+      where: whereFilter,
+      include: {
+        channel: {
+          select: { id: true, name: true },
         },
-        orderBy: { createdAt: "desc" },
-        skip: offset,
-        take: limit,
-      }),
-    ]);
+        diagnosisType: {
+          select: { slug: true, name: true },
+        },
+        ctaClicks: {
+          select: { ctaType: true },
+        },
+        _count: {
+          select: { ctaClicks: true },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      skip: offset,
+      take: limit + 1, // 次のページがあるか確認するために1件多く取得
+    });
+
+    // skipCountがtrueの場合はカウントをスキップ（パフォーマンス最適化）
+    const [sessions, totalCount] = skipCount
+      ? [await sessionsQuery, -1]
+      : await Promise.all([
+          sessionsQuery,
+          prisma.diagnosisSession.count({ where: whereFilter }),
+        ]);
+
+    // 次のページがあるかどうかを判定
+    const hasMore = sessions.length > limit;
+    const sessionsToReturn = hasMore ? sessions.slice(0, limit) : sessions;
 
     // CTAクリックタイプの表示名
     const CTA_TYPE_NAMES: Record<string, string> = {
@@ -160,7 +168,7 @@ export async function GET(request: NextRequest) {
     };
 
     // 診断履歴を整形
-    const diagnosisHistory = (sessions as SessionWithRelations[]).map((s) => {
+    const diagnosisHistory = (sessionsToReturn as SessionWithRelations[]).map((s) => {
       // CTA内訳を集計
       const ctaByType: Record<string, number> = {};
       for (const click of s.ctaClicks) {
@@ -267,7 +275,7 @@ export async function GET(request: NextRequest) {
         },
         orderBy: { createdAt: "desc" },
         skip: offset,
-        take: limit,
+        take: limit + 1, // 次のページがあるか確認するために1件多く取得
       }) as AccessLogWithChannel[];
 
       qrScanHistory = qrScans.map((log: AccessLogWithChannel) => {
@@ -299,20 +307,35 @@ export async function GET(request: NextRequest) {
     }
 
     // 両方の履歴を統合し、日時でソート
-    const history = [...diagnosisHistory, ...qrScanHistory].sort(
+    const combinedHistory = [...diagnosisHistory, ...qrScanHistory].sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    ).slice(0, limit);
+    );
 
-    // 合計件数
-    const qrScanTotalCount = includeQRScans
-      ? await prisma.accessLog.count({ where: accessLogFilter })
-      : 0;
-    const combinedTotalCount = totalCount + qrScanTotalCount;
+    // 次のページがあるかどうかを判定（skipCount時はlimit+1パターンで判定）
+    const combinedHasMore = combinedHistory.length > limit;
+    const history = combinedHasMore ? combinedHistory.slice(0, limit) : combinedHistory;
+
+    // 合計件数（skipCountがtrueの場合はカウントをスキップ）
+    let combinedTotalCount: number;
+    let responseHasMore: boolean;
+
+    if (skipCount) {
+      // 追加読み込み時はCOUNTをスキップしてパフォーマンス最適化
+      combinedTotalCount = -1;
+      responseHasMore = combinedHasMore;
+    } else {
+      // 初回読み込み時は正確な件数を取得
+      const qrScanTotalCount = includeQRScans
+        ? await prisma.accessLog.count({ where: accessLogFilter })
+        : 0;
+      combinedTotalCount = totalCount + qrScanTotalCount;
+      responseHasMore = offset + limit < combinedTotalCount;
+    }
 
     return NextResponse.json({
       history,
       totalCount: combinedTotalCount,
-      hasMore: offset + limit < combinedTotalCount,
+      hasMore: responseHasMore,
       offset,
       limit,
     });
