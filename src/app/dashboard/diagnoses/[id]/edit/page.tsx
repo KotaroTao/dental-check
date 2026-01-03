@@ -141,7 +141,7 @@ export default function EditDiagnosisPage() {
   }, [id]);
 
   // 質問の上限
-  const MAX_QUESTIONS = 200;
+  const MAX_QUESTIONS = 50;
 
   const addQuestion = () => {
     if (questions.length >= MAX_QUESTIONS) {
@@ -632,7 +632,7 @@ export default function EditDiagnosisPage() {
                 <div className="space-y-3">
                   <div>
                     <label className="block text-sm font-medium mb-1">
-                      タイトル <span className="text-red-500">*</span>
+                      結果 <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
