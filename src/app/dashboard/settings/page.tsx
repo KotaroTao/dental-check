@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, GripVertical, AlertCircle, Eye, Phone, Calendar, MapPin, MessageCircle, Loader2, Save, X } from "lucide-react";
+import { Plus, Trash2, GripVertical, AlertCircle, Eye, Loader2, Save, X, ExternalLink, Smartphone } from "lucide-react";
 import type { CustomCTA } from "@/types/clinic";
 
 interface SubscriptionInfo {
@@ -754,100 +754,59 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* CTAプレビュー */}
+        {/* 診断結果プレビュー */}
         <div className="bg-white rounded-xl shadow-sm border p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-lg font-bold">CTAボタンプレビュー</h2>
+              <h2 className="text-lg font-bold">診断結果プレビュー</h2>
               <p className="text-sm text-gray-500">
-                診断結果ページに表示されるボタンのプレビュー
+                実際の診断結果ページを確認できます
               </p>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setShowPreview(!showPreview)}
-              className="gap-2"
-            >
-              <Eye className="w-4 h-4" />
-              {showPreview ? "閉じる" : "プレビューを表示"}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowPreview(!showPreview)}
+                className="gap-2"
+              >
+                <Smartphone className="w-4 h-4" />
+                {showPreview ? "閉じる" : "プレビュー"}
+              </Button>
+              <a
+                href="/demo/oral-age"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Button type="button" variant="outline" className="gap-2">
+                  <ExternalLink className="w-4 h-4" />
+                  新しいタブで開く
+                </Button>
+              </a>
+            </div>
           </div>
 
           {showPreview && (
-            <div className="border rounded-lg p-6 bg-gray-50">
-              <div className="max-w-md mx-auto space-y-4">
-                {/* 医院名 */}
-                <h3 className="text-xl font-bold text-center" style={{ color: settings.mainColor }}>
-                  {settings.name || "医院名"}
-                </h3>
-
-                {/* CTAボタン */}
-                <div className="space-y-3">
-                  {settings.ctaConfig.phone && (
-                    <button
-                      type="button"
-                      className="w-full py-3 px-4 rounded-lg text-white font-medium flex items-center justify-center gap-2"
-                      style={{ backgroundColor: settings.mainColor }}
-                    >
-                      <Phone className="w-5 h-5" />
-                      電話で予約
-                    </button>
-                  )}
-                  {settings.ctaConfig.bookingUrl && (
-                    <button
-                      type="button"
-                      className="w-full py-3 px-4 rounded-lg text-white font-medium flex items-center justify-center gap-2"
-                      style={{ backgroundColor: settings.mainColor }}
-                    >
-                      <Calendar className="w-5 h-5" />
-                      WEB予約
-                    </button>
-                  )}
-                  {settings.ctaConfig.lineUrl && (
-                    <button
-                      type="button"
-                      className="w-full py-3 px-4 rounded-lg text-white font-medium flex items-center justify-center gap-2 bg-[#06C755]"
-                    >
-                      <MessageCircle className="w-5 h-5" />
-                      LINEで相談
-                    </button>
-                  )}
-                  {settings.ctaConfig.googleMapsUrl && (
-                    <button
-                      type="button"
-                      className="w-full py-3 px-4 rounded-lg border-2 font-medium flex items-center justify-center gap-2"
-                      style={{ borderColor: settings.mainColor, color: settings.mainColor }}
-                    >
-                      <MapPin className="w-5 h-5" />
-                      アクセス
-                    </button>
-                  )}
-
-                  {/* カスタムCTA */}
-                  {settings.ctaConfig.customCTAs?.map((cta, index) => (
-                    cta.label && cta.url && (
-                      <button
-                        key={index}
-                        type="button"
-                        className="w-full py-3 px-4 rounded-lg text-white font-medium"
-                        style={{ backgroundColor: cta.color || settings.mainColor }}
-                      >
-                        {cta.label}
-                      </button>
-                    )
-                  ))}
-                </div>
-
-                {/* 院長メッセージ */}
-                {settings.ctaConfig.directorMessage && (
-                  <div className="mt-4 p-4 bg-white rounded-lg border">
-                    <p className="text-sm text-gray-600 whitespace-pre-wrap">
-                      {settings.ctaConfig.directorMessage}
-                    </p>
+            <div className="border rounded-lg bg-gray-100 overflow-hidden">
+              {/* モバイルフレーム風のプレビュー */}
+              <div className="flex justify-center py-6">
+                <div className="relative">
+                  {/* スマホフレーム */}
+                  <div className="w-[375px] h-[700px] bg-white rounded-[40px] shadow-xl border-4 border-gray-800 overflow-hidden">
+                    {/* ノッチ */}
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-gray-800 rounded-b-2xl z-10" />
+                    {/* iframe */}
+                    <iframe
+                      src="/demo/oral-age"
+                      className="w-full h-full border-0"
+                      title="診断結果プレビュー"
+                    />
                   </div>
-                )}
+                </div>
               </div>
+              <p className="text-center text-sm text-gray-500 pb-4">
+                ※ 設定変更を反映するには、保存後にページを再読み込みしてください
+              </p>
             </div>
           )}
         </div>
