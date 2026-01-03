@@ -900,7 +900,7 @@ export default function DashboardPage() {
         const params = new URLSearchParams({
           period,
           offset: offset.toString(),
-          limit: "50",
+          limit: "30",
         });
         if (selectedChannelId) params.set("channelId", selectedChannelId);
         if (selectedDiagnosisType) params.set("diagnosisType", selectedDiagnosisType);
