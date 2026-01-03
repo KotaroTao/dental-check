@@ -34,12 +34,37 @@ export async function GET() {
       diagnosisNameMap[dt.slug] = dt.name;
     }
 
-    // チャンネルに診断名を追加
+    // 各チャンネルのアクセスログ数を取得（診断QRの読み込み回数）
+    const channelIds = channels.map((c) => c.id);
+    const accessCounts = channelIds.length > 0
+      ? await prisma.accessLog.groupBy({
+          by: ["channelId"],
+          where: {
+            clinicId: session.clinicId,
+            channelId: { in: channelIds },
+            eventType: { not: "clinic_page_view" },
+          },
+          _count: { id: true },
+        })
+      : [];
+
+    // アクセスカウントをマップに変換
+    const accessCountMap: Record<string, number> = {};
+    for (const ac of accessCounts) {
+      if (ac.channelId) {
+        accessCountMap[ac.channelId] = ac._count.id;
+      }
+    }
+
+    // チャンネルに診断名とスキャン数を追加
+    // 診断QRの場合はAccessLogから、リンクQRの場合はscanCountフィールドから取得
     const channelsWithDiagnosisName = channels.map((c) => ({
       ...c,
       diagnosisTypeName: c.diagnosisTypeSlug
         ? diagnosisNameMap[c.diagnosisTypeSlug] || c.diagnosisTypeSlug
         : null,
+      // 診断タイプはAccessLogカウント、リンクタイプはscanCountを使用
+      scanCount: c.channelType === "link" ? c.scanCount : (accessCountMap[c.id] || 0),
     }));
 
     const activeCount = channels.filter((c) => c.isActive).length;

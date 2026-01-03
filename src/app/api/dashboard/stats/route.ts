@@ -318,7 +318,10 @@ export async function GET(request: NextRequest) {
       ctaCount += cta._count.id;
     }
 
-    // リンクのみタイプの診断完了はCTAとしてカウント
+    // リンクのみタイプの診断完了はCTAとしてカウント（QRリンクとして内訳に追加）
+    if (linkOnlyCompletedCount > 0) {
+      ctaByType["qr_link"] = linkOnlyCompletedCount;
+    }
     ctaCount += linkOnlyCompletedCount;
 
     // リンクのみタイプの診断完了はアクセス数にも加算（完了率100%を実現）
