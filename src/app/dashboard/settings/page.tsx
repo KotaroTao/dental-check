@@ -4,8 +4,12 @@ import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, GripVertical, AlertCircle, Eye, Phone, Calendar, MapPin, MessageCircle, Loader2, Save } from "lucide-react";
+import { Plus, Trash2, GripVertical, AlertCircle, Eye, Phone, Calendar, MapPin, MessageCircle, Loader2, Save, X } from "lucide-react";
 import type { CustomCTA } from "@/types/clinic";
+
+interface SubscriptionInfo {
+  isDemo?: boolean;
+}
 
 // URL検証関数（絶対URLと相対URLを許可）
 function isValidUrl(url: string): boolean {
@@ -82,6 +86,10 @@ export default function SettingsPage() {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [showPreview, setShowPreview] = useState(false);
+  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
+  const [showDemoModal, setShowDemoModal] = useState(false);
+
+  const isDemo = subscription?.isDemo ?? false;
 
   // 未保存の変更があるかチェック
   const hasUnsavedChanges = useCallback(() => {
@@ -155,7 +163,20 @@ export default function SettingsPage() {
       }
     };
 
+    const fetchSubscription = async () => {
+      try {
+        const response = await fetch("/api/billing/subscription");
+        if (response.ok) {
+          const data = await response.json();
+          setSubscription(data.subscription);
+        }
+      } catch (error) {
+        console.error("Failed to fetch subscription:", error);
+      }
+    };
+
     fetchSettings();
+    fetchSubscription();
   }, []);
 
   const handleChange = (
@@ -278,6 +299,21 @@ export default function SettingsPage() {
     <div className="max-w-2xl">
       <h1 className="text-2xl font-bold mb-6">設定</h1>
 
+      {/* デモアカウントバナー */}
+      {isDemo && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 flex items-start gap-3">
+          <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+            <Eye className="w-5 h-5 text-blue-600" />
+          </div>
+          <div>
+            <h3 className="font-medium text-blue-900">デモアカウント - 閲覧専用</h3>
+            <p className="text-sm text-blue-700 mt-1">
+              デモアカウントでは設定の変更はできません。正式なアカウントでご登録いただくと、すべての機能をご利用いただけます。
+            </p>
+          </div>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-8">
         {message && (
           <div
@@ -303,6 +339,8 @@ export default function SettingsPage() {
                 name="name"
                 value={settings.name}
                 onChange={handleChange}
+                disabled={isDemo}
+                className={isDemo ? "bg-gray-50 cursor-not-allowed" : ""}
               />
             </div>
 
@@ -315,13 +353,15 @@ export default function SettingsPage() {
                   name="mainColor"
                   value={settings.mainColor}
                   onChange={handleChange}
-                  className="w-12 h-10 rounded border cursor-pointer"
+                  disabled={isDemo}
+                  className={`w-12 h-10 rounded border ${isDemo ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}
                 />
                 <Input
                   name="mainColor"
                   value={settings.mainColor}
                   onChange={handleChange}
-                  className="flex-1"
+                  disabled={isDemo}
+                  className={`flex-1 ${isDemo ? "bg-gray-50 cursor-not-allowed" : ""}`}
                 />
               </div>
             </div>
@@ -345,7 +385,8 @@ export default function SettingsPage() {
                 placeholder="https://example.com/booking"
                 value={settings.ctaConfig.bookingUrl || ""}
                 onChange={handleChange}
-                className={validationErrors.bookingUrl ? "border-red-500" : ""}
+                disabled={isDemo}
+                className={`${validationErrors.bookingUrl ? "border-red-500" : ""} ${isDemo ? "bg-gray-50 cursor-not-allowed" : ""}`}
               />
               {validationErrors.bookingUrl && (
                 <p className="text-xs text-red-500 flex items-center gap-1">
@@ -364,7 +405,8 @@ export default function SettingsPage() {
                 placeholder="https://example-dental.com"
                 value={settings.ctaConfig.clinicHomepageUrl || ""}
                 onChange={handleChange}
-                className={validationErrors.clinicHomepageUrl ? "border-red-500" : ""}
+                disabled={isDemo}
+                className={`${validationErrors.clinicHomepageUrl ? "border-red-500" : ""} ${isDemo ? "bg-gray-50 cursor-not-allowed" : ""}`}
               />
               {validationErrors.clinicHomepageUrl && (
                 <p className="text-xs text-red-500 flex items-center gap-1">
@@ -383,7 +425,8 @@ export default function SettingsPage() {
                 placeholder="03-1234-5678"
                 value={settings.ctaConfig.phone || ""}
                 onChange={handleChange}
-                className={validationErrors.phone ? "border-red-500" : ""}
+                disabled={isDemo}
+                className={`${validationErrors.phone ? "border-red-500" : ""} ${isDemo ? "bg-gray-50 cursor-not-allowed" : ""}`}
               />
               {validationErrors.phone && (
                 <p className="text-xs text-red-500 flex items-center gap-1">
@@ -402,7 +445,8 @@ export default function SettingsPage() {
                 placeholder="https://line.me/R/ti/p/@xxx"
                 value={settings.ctaConfig.lineUrl || ""}
                 onChange={handleChange}
-                className={validationErrors.lineUrl ? "border-red-500" : ""}
+                disabled={isDemo}
+                className={`${validationErrors.lineUrl ? "border-red-500" : ""} ${isDemo ? "bg-gray-50 cursor-not-allowed" : ""}`}
               />
               {validationErrors.lineUrl && (
                 <p className="text-xs text-red-500 flex items-center gap-1">
@@ -421,7 +465,8 @@ export default function SettingsPage() {
                 placeholder="https://maps.google.com/..."
                 value={settings.ctaConfig.googleMapsUrl || ""}
                 onChange={handleChange}
-                className={validationErrors.googleMapsUrl ? "border-red-500" : ""}
+                disabled={isDemo}
+                className={`${validationErrors.googleMapsUrl ? "border-red-500" : ""} ${isDemo ? "bg-gray-50 cursor-not-allowed" : ""}`}
               />
               {validationErrors.googleMapsUrl && (
                 <p className="text-xs text-red-500 flex items-center gap-1">
@@ -440,7 +485,8 @@ export default function SettingsPage() {
                 placeholder="https://instagram.com/xxx"
                 value={settings.ctaConfig.instagramUrl || ""}
                 onChange={handleChange}
-                className={validationErrors.instagramUrl ? "border-red-500" : ""}
+                disabled={isDemo}
+                className={`${validationErrors.instagramUrl ? "border-red-500" : ""} ${isDemo ? "bg-gray-50 cursor-not-allowed" : ""}`}
               />
               {validationErrors.instagramUrl && (
                 <p className="text-xs text-red-500 flex items-center gap-1">
@@ -459,7 +505,8 @@ export default function SettingsPage() {
                 placeholder="https://youtube.com/@xxx"
                 value={settings.ctaConfig.youtubeUrl || ""}
                 onChange={handleChange}
-                className={validationErrors.youtubeUrl ? "border-red-500" : ""}
+                disabled={isDemo}
+                className={`${validationErrors.youtubeUrl ? "border-red-500" : ""} ${isDemo ? "bg-gray-50 cursor-not-allowed" : ""}`}
               />
               {validationErrors.youtubeUrl && (
                 <p className="text-xs text-red-500 flex items-center gap-1">
@@ -478,7 +525,8 @@ export default function SettingsPage() {
                 placeholder="https://facebook.com/xxx"
                 value={settings.ctaConfig.facebookUrl || ""}
                 onChange={handleChange}
-                className={validationErrors.facebookUrl ? "border-red-500" : ""}
+                disabled={isDemo}
+                className={`${validationErrors.facebookUrl ? "border-red-500" : ""} ${isDemo ? "bg-gray-50 cursor-not-allowed" : ""}`}
               />
               {validationErrors.facebookUrl && (
                 <p className="text-xs text-red-500 flex items-center gap-1">
@@ -497,7 +545,8 @@ export default function SettingsPage() {
                 placeholder="https://tiktok.com/@xxx"
                 value={settings.ctaConfig.tiktokUrl || ""}
                 onChange={handleChange}
-                className={validationErrors.tiktokUrl ? "border-red-500" : ""}
+                disabled={isDemo}
+                className={`${validationErrors.tiktokUrl ? "border-red-500" : ""} ${isDemo ? "bg-gray-50 cursor-not-allowed" : ""}`}
               />
               {validationErrors.tiktokUrl && (
                 <p className="text-xs text-red-500 flex items-center gap-1">
@@ -516,7 +565,8 @@ export default function SettingsPage() {
                 placeholder="https://threads.net/@xxx"
                 value={settings.ctaConfig.threadsUrl || ""}
                 onChange={handleChange}
-                className={validationErrors.threadsUrl ? "border-red-500" : ""}
+                disabled={isDemo}
+                className={`${validationErrors.threadsUrl ? "border-red-500" : ""} ${isDemo ? "bg-gray-50 cursor-not-allowed" : ""}`}
               />
               {validationErrors.threadsUrl && (
                 <p className="text-xs text-red-500 flex items-center gap-1">
@@ -535,7 +585,8 @@ export default function SettingsPage() {
                 placeholder="https://x.com/xxx"
                 value={settings.ctaConfig.xUrl || ""}
                 onChange={handleChange}
-                className={validationErrors.xUrl ? "border-red-500" : ""}
+                disabled={isDemo}
+                className={`${validationErrors.xUrl ? "border-red-500" : ""} ${isDemo ? "bg-gray-50 cursor-not-allowed" : ""}`}
               />
               {validationErrors.xUrl && (
                 <p className="text-xs text-red-500 flex items-center gap-1">
@@ -550,10 +601,11 @@ export default function SettingsPage() {
               <textarea
                 id="cta.directorMessage"
                 name="cta.directorMessage"
-                className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className={`flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${isDemo ? "bg-gray-50 cursor-not-allowed" : ""}`}
                 placeholder="診断結果ページに表示するメッセージを入力してください"
                 value={settings.ctaConfig.directorMessage || ""}
                 onChange={handleChange}
+                disabled={isDemo}
               />
             </div>
           </div>
@@ -563,20 +615,20 @@ export default function SettingsPage() {
         <div className="bg-white rounded-xl shadow-sm border p-6">
           <h2 className="text-lg font-bold mb-4">ボタンの並び順</h2>
           <p className="text-sm text-gray-500 mb-4">
-            ドラッグ&ドロップでボタンの表示順序を変更できます
+            {isDemo ? "デモアカウントでは並び順の変更はできません" : "ドラッグ&ドロップでボタンの表示順序を変更できます"}
           </p>
 
           <div className="space-y-2">
             {ctaOrder.map((key, index) => (
               <div
                 key={key}
-                draggable
-                onDragStart={() => handleDragStart(index)}
-                onDragOver={(e) => handleDragOver(e, index)}
+                draggable={!isDemo}
+                onDragStart={() => !isDemo && handleDragStart(index)}
+                onDragOver={(e) => !isDemo && handleDragOver(e, index)}
                 onDragEnd={handleDragEnd}
-                className={`flex items-center gap-3 p-3 bg-gray-50 rounded-lg cursor-move transition-colors ${
-                  draggedIndex === index ? "bg-blue-100" : "hover:bg-gray-100"
-                }`}
+                className={`flex items-center gap-3 p-3 bg-gray-50 rounded-lg transition-colors ${
+                  isDemo ? "cursor-not-allowed opacity-70" : "cursor-move"
+                } ${draggedIndex === index ? "bg-blue-100" : isDemo ? "" : "hover:bg-gray-100"}`}
               >
                 <GripVertical className="w-4 h-4 text-gray-400" />
                 <span className="text-sm font-medium">
@@ -593,10 +645,21 @@ export default function SettingsPage() {
             <div>
               <h2 className="text-lg font-bold">カスタムCTAボタン</h2>
               <p className="text-sm text-gray-500">
-                オリジナルのリンクボタンを追加できます
+                {isDemo ? "デモアカウントでは追加・編集できません" : "オリジナルのリンクボタンを追加できます"}
               </p>
             </div>
-            <Button type="button" variant="outline" onClick={addCustomCTA} className="gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                if (isDemo) {
+                  setShowDemoModal(true);
+                } else {
+                  addCustomCTA();
+                }
+              }}
+              className="gap-2"
+            >
               <Plus className="w-4 h-4" />
               追加
             </Button>
@@ -604,7 +667,7 @@ export default function SettingsPage() {
 
           <div className="space-y-4">
             {settings.ctaConfig.customCTAs?.map((cta, index) => (
-              <div key={cta.id} className="p-4 border rounded-lg bg-gray-50 space-y-3">
+              <div key={cta.id} className={`p-4 border rounded-lg bg-gray-50 space-y-3 ${isDemo ? "opacity-70" : ""}`}>
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-gray-600">
                     カスタムボタン {index + 1}
@@ -613,8 +676,14 @@ export default function SettingsPage() {
                     type="button"
                     variant="ghost"
                     size="sm"
-                    onClick={() => removeCustomCTA(index)}
-                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                    onClick={() => {
+                      if (isDemo) {
+                        setShowDemoModal(true);
+                      } else {
+                        removeCustomCTA(index);
+                      }
+                    }}
+                    className={isDemo ? "text-gray-400" : "text-red-500 hover:text-red-700 hover:bg-red-50"}
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
@@ -626,7 +695,8 @@ export default function SettingsPage() {
                     placeholder="例: 公式サイト"
                     value={cta.label}
                     onChange={(e) => updateCustomCTA(index, "label", e.target.value)}
-                    className={validationErrors[`customCTA_${index}_label`] ? "border-red-500" : ""}
+                    disabled={isDemo}
+                    className={`${validationErrors[`customCTA_${index}_label`] ? "border-red-500" : ""} ${isDemo ? "bg-gray-50 cursor-not-allowed" : ""}`}
                   />
                   {validationErrors[`customCTA_${index}_label`] && (
                     <p className="text-xs text-red-500 flex items-center gap-1">
@@ -643,7 +713,8 @@ export default function SettingsPage() {
                     placeholder="https://example.com"
                     value={cta.url}
                     onChange={(e) => updateCustomCTA(index, "url", e.target.value)}
-                    className={validationErrors[`customCTA_${index}_url`] ? "border-red-500" : ""}
+                    disabled={isDemo}
+                    className={`${validationErrors[`customCTA_${index}_url`] ? "border-red-500" : ""} ${isDemo ? "bg-gray-50 cursor-not-allowed" : ""}`}
                   />
                   {validationErrors[`customCTA_${index}_url`] && (
                     <p className="text-xs text-red-500 flex items-center gap-1">
@@ -660,12 +731,14 @@ export default function SettingsPage() {
                       type="color"
                       value={cta.color || settings.mainColor}
                       onChange={(e) => updateCustomCTA(index, "color", e.target.value)}
-                      className="w-12 h-10 rounded border cursor-pointer"
+                      disabled={isDemo}
+                      className={`w-12 h-10 rounded border ${isDemo ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}
                     />
                     <Input
                       value={cta.color || settings.mainColor}
                       onChange={(e) => updateCustomCTA(index, "color", e.target.value)}
-                      className="flex-1"
+                      disabled={isDemo}
+                      className={`flex-1 ${isDemo ? "bg-gray-50 cursor-not-allowed" : ""}`}
                     />
                   </div>
                 </div>
@@ -675,7 +748,7 @@ export default function SettingsPage() {
             {(!settings.ctaConfig.customCTAs || settings.ctaConfig.customCTAs.length === 0) && (
               <div className="text-center py-8 text-gray-400">
                 <p>カスタムボタンはまだありません</p>
-                <p className="text-sm">「追加」ボタンをクリックして作成してください</p>
+                <p className="text-sm">{isDemo ? "デモアカウントでは追加できません" : "「追加」ボタンをクリックして作成してください"}</p>
               </div>
             )}
           </div>
@@ -779,30 +852,81 @@ export default function SettingsPage() {
           )}
         </div>
 
-        <div className="flex justify-end">
-          <Button type="submit" disabled={isSaving}>
-            {isSaving ? "保存中..." : "設定を保存"}
-          </Button>
-        </div>
+        {!isDemo && (
+          <div className="flex justify-end">
+            <Button type="submit" disabled={isSaving}>
+              {isSaving ? "保存中..." : "設定を保存"}
+            </Button>
+          </div>
+        )}
       </form>
 
       {/* 固定保存ボタン */}
-      <button
-        type="button"
-        onClick={() => {
-          const form = document.querySelector('form');
-          if (form) form.requestSubmit();
-        }}
-        disabled={isSaving}
-        className="fixed bottom-6 right-6 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full shadow-lg flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed z-50"
-      >
-        {isSaving ? (
-          <Loader2 className="w-5 h-5 animate-spin" />
-        ) : (
-          <Save className="w-5 h-5" />
-        )}
-        <span className="font-medium">{isSaving ? "保存中..." : "設定を保存"}</span>
-      </button>
+      {!isDemo && (
+        <button
+          type="button"
+          onClick={() => {
+            const form = document.querySelector('form');
+            if (form) form.requestSubmit();
+          }}
+          disabled={isSaving}
+          className="fixed bottom-6 right-6 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full shadow-lg flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed z-50"
+        >
+          {isSaving ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
+          ) : (
+            <Save className="w-5 h-5" />
+          )}
+          <span className="font-medium">{isSaving ? "保存中..." : "設定を保存"}</span>
+        </button>
+      )}
+
+      {/* デモアカウント制限モーダル */}
+      {showDemoModal && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={() => setShowDemoModal(false)}
+        >
+          <div
+            className="relative bg-white rounded-2xl shadow-xl max-w-md w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-4 mb-4">
+              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Eye className="w-6 h-6 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">
+                  デモアカウントです
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  デモアカウントでは、データの閲覧のみ可能です。
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-4">
+              <p className="text-sm text-blue-800">
+                設定の変更を行うには、正式なアカウントでのご登録が必要です。
+              </p>
+            </div>
+
+            <Button
+              className="w-full"
+              onClick={() => setShowDemoModal(false)}
+            >
+              閉じる
+            </Button>
+
+            <button
+              onClick={() => setShowDemoModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

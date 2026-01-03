@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import QRCode from "qrcode";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Download, Copy, ExternalLink, Edit, Image as ImageIcon, X, Calendar, AlertTriangle, Link2, MousePointerClick, Code, Check } from "lucide-react";
+import { ArrowLeft, Download, Copy, ExternalLink, Edit, Image as ImageIcon, X, Calendar, AlertTriangle, Link2, MousePointerClick, Code, Check, Eye } from "lucide-react";
 
 // 診断タイプの表示名
 const DIAGNOSIS_TYPE_NAMES: Record<string, string> = {
@@ -35,6 +35,10 @@ interface ChannelStats {
   ctaRate: number;
 }
 
+interface SubscriptionInfo {
+  isDemo?: boolean;
+}
+
 export default function ChannelDetailPage() {
   const params = useParams();
   const [channel, setChannel] = useState<Channel | null>(null);
@@ -43,6 +47,8 @@ export default function ChannelDetailPage() {
   const [copied, setCopied] = useState(false);
   const [copiedEmbed, setCopiedEmbed] = useState<string | null>(null);
   const [showImageModal, setShowImageModal] = useState(false);
+  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
+  const [showDemoModal, setShowDemoModal] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // 本番環境では環境変数を優先、それ以外はwindow.location.originを使用
@@ -85,9 +91,22 @@ export default function ChannelDetailPage() {
       }
     };
 
+    const fetchSubscription = async () => {
+      try {
+        const response = await fetch("/api/billing/subscription");
+        if (response.ok) {
+          const data = await response.json();
+          setSubscription(data.subscription);
+        }
+      } catch (error) {
+        console.error("Failed to fetch subscription:", error);
+      }
+    };
+
     if (params.id) {
       fetchChannel();
       fetchStats();
+      fetchSubscription();
     }
   }, [params.id]);
 
@@ -233,12 +252,24 @@ export default function ChannelDetailPage() {
             >
               {channel.isActive ? "有効" : "無効"}
             </span>
-            <Link href={`/dashboard/channels/${channel.id}/edit`}>
-              <Button variant="outline" size="sm" className="gap-1">
+            {subscription?.isDemo ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1"
+                onClick={() => setShowDemoModal(true)}
+              >
                 <Edit className="w-4 h-4" />
                 編集
               </Button>
-            </Link>
+            ) : (
+              <Link href={`/dashboard/channels/${channel.id}/edit`}>
+                <Button variant="outline" size="sm" className="gap-1">
+                  <Edit className="w-4 h-4" />
+                  編集
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
 
@@ -507,6 +538,53 @@ export default function ChannelDetailPage() {
               className="max-w-full max-h-[90vh] rounded-lg"
               onClick={(e) => e.stopPropagation()}
             />
+          </div>
+        </div>
+      )}
+
+      {/* デモアカウント制限モーダル */}
+      {showDemoModal && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={() => setShowDemoModal(false)}
+        >
+          <div
+            className="relative bg-white rounded-2xl shadow-xl max-w-md w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-4 mb-4">
+              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Eye className="w-6 h-6 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">
+                  デモアカウントです
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  デモアカウントでは、データの閲覧のみ可能です。
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-4">
+              <p className="text-sm text-blue-800">
+                QRコードの編集を行うには、正式なアカウントでのご登録が必要です。
+              </p>
+            </div>
+
+            <Button
+              className="w-full"
+              onClick={() => setShowDemoModal(false)}
+            >
+              閉じる
+            </Button>
+
+            <button
+              onClick={() => setShowDemoModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
         </div>
       )}

@@ -1413,7 +1413,13 @@ export default function DashboardPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={exportHistoryToCSV}
+                onClick={() => {
+                  if (subscription?.isDemo) {
+                    setShowDemoModal(true);
+                  } else {
+                    exportHistoryToCSV();
+                  }
+                }}
                 disabled={history.length === 0 || isExporting}
                 className="gap-2"
               >
