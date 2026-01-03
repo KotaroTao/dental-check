@@ -40,6 +40,7 @@ interface SubscriptionInfo {
   canTrack: boolean;
   message: string | null;
   alertType: "info" | "warning" | "error" | null;
+  isDemo?: boolean;
 }
 
 declare global {
@@ -304,6 +305,35 @@ export default function BillingPage() {
           }`}
         >
           {message.text}
+        </div>
+      )}
+
+      {/* デモアカウント案内 */}
+      {subscription?.isDemo && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-6">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+              <AlertCircle className="w-6 h-6 text-blue-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-bold text-gray-900">デモアカウントをご利用中</h3>
+              <p className="text-gray-600 mt-1">
+                デモアカウントではデータの閲覧のみ可能です。
+                正式にご利用いただく場合は、新規アカウントをご登録ください。
+              </p>
+              <div className="mt-4 flex flex-col sm:flex-row gap-3">
+                <a
+                  href="https://lin.ee/xaT03Sm"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Button className="bg-[#06C755] hover:bg-[#05b34d]">
+                    お問い合わせ（LINE）
+                  </Button>
+                </a>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

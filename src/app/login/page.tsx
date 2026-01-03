@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Eye } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -15,6 +16,13 @@ export default function LoginPage() {
   });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  const handleDemoLogin = () => {
+    setFormData({
+      email: "test@gmail.com",
+      password: "testtest",
+    });
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -112,6 +120,38 @@ export default function LoginPage() {
               新規登録
             </Link>
           </div>
+        </div>
+
+        {/* デモアカウント案内 */}
+        <div className="mt-6 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl border-2 border-emerald-200 p-6">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
+              <Eye className="w-5 h-5 text-emerald-600" />
+            </div>
+            <div>
+              <h3 className="font-bold text-gray-900">デモアカウント</h3>
+              <p className="text-xs text-gray-600">管理画面を自由にお試しいただけます</p>
+            </div>
+          </div>
+          <div className="bg-white rounded-lg p-3 mb-3 space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-500">メール</span>
+              <code className="bg-gray-100 px-2 py-1 rounded text-xs font-mono">test@gmail.com</code>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-500">パスワード</span>
+              <code className="bg-gray-100 px-2 py-1 rounded text-xs font-mono">testtest</code>
+            </div>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-full border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+            onClick={handleDemoLogin}
+          >
+            デモアカウントで入力
+          </Button>
         </div>
 
         <div className="mt-4 text-center">
