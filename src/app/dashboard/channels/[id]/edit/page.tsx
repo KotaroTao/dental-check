@@ -45,6 +45,24 @@ export default function EditChannelPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
 
+  // デモアカウントはリダイレクト
+  useEffect(() => {
+    const checkDemo = async () => {
+      try {
+        const response = await fetch("/api/billing/subscription");
+        if (response.ok) {
+          const data = await response.json();
+          if (data.subscription?.isDemo) {
+            router.replace("/dashboard");
+          }
+        }
+      } catch (error) {
+        console.error("Failed to check subscription:", error);
+      }
+    };
+    checkDemo();
+  }, [router]);
+
   // ハッシュアンカーへのスクロール対応
   useEffect(() => {
     if (!isLoading && channel && typeof window !== "undefined") {

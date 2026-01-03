@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getSubscriptionState } from "@/lib/subscription";
 
 // QRコードの順序を更新
 export async function PUT(request: NextRequest) {
@@ -8,6 +9,15 @@ export async function PUT(request: NextRequest) {
     const session = await getSession();
     if (!session) {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
+    }
+
+    // デモアカウントは順序変更不可
+    const subscriptionState = await getSubscriptionState(session.clinicId);
+    if (subscriptionState.isDemo) {
+      return NextResponse.json(
+        { error: "デモアカウントではQRコードの操作はできません。" },
+        { status: 403 }
+      );
     }
 
     const body = await request.json();
