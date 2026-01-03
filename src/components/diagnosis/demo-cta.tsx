@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Building2, Check } from "lucide-react";
+import { Building2 } from "lucide-react";
 
 export function DemoCTA() {
   return (
@@ -25,27 +24,27 @@ export function DemoCTA() {
           </p>
         </div>
 
-        <ul className="text-sm text-left space-y-2 max-w-xs mx-auto">
-          <li className="flex items-center gap-2">
-            <Check className="w-4 h-4 text-green-500 flex-shrink-0" />
-            <span>14日間無料でお試し</span>
-          </li>
-          <li className="flex items-center gap-2">
-            <Check className="w-4 h-4 text-green-500 flex-shrink-0" />
-            <span>月額4,980円〜</span>
-          </li>
-          <li className="flex items-center gap-2">
-            <Check className="w-4 h-4 text-green-500 flex-shrink-0" />
-            <span>QRコード発行・統計機能付き</span>
-          </li>
-        </ul>
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+          <p className="text-sm font-medium text-yellow-800">
+            現在リリース準備中
+          </p>
+          <p className="text-xs text-yellow-700 mt-1">
+            正式リリースはLINEアプリ
+            <br />
+            「ポチッとデンタル」にてお知らせします
+          </p>
+        </div>
 
         <div className="pt-2">
-          <Link href="/signup">
-            <Button size="lg" className="w-full max-w-xs">
-              医院として登録する
+          <a
+            href="https://lin.ee/xaT03Sm"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Button size="lg" className="w-full max-w-xs bg-[#06C755] hover:bg-[#05b34d]">
+              ポチッとデンタルに登録（無料）
             </Button>
-          </Link>
+          </a>
         </div>
       </div>
     </div>
