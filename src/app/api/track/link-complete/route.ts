@@ -12,6 +12,16 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { channelId, userAge, userGender, latitude, longitude } = body;
 
+    // リクエストデータをログ
+    console.log("Link complete request:", {
+      channelId,
+      userAge,
+      userGender,
+      hasLocation: latitude !== null && longitude !== null,
+      latitude,
+      longitude,
+    });
+
     if (!channelId) {
       return NextResponse.json(
         { error: "channelId is required" },
@@ -57,16 +67,31 @@ export async function POST(request: NextRequest) {
     let roundedLng: number | null = null;
 
     if (latitude !== null && latitude !== undefined && longitude !== null && longitude !== undefined) {
+      console.log("Processing location data:", { latitude, longitude });
       location = await reverseGeocode(latitude, longitude);
       // 座標を小数点2桁に丸める（約1km精度、プライバシー保護）
       roundedLat = Math.round(latitude * 100) / 100;
       roundedLng = Math.round(longitude * 100) / 100;
+      console.log("Geocoded location:", {
+        roundedLat,
+        roundedLng,
+        location,
+      });
+    } else {
+      console.log("No location data provided (latitude/longitude is null/undefined)");
     }
 
     // セッションを作成（契約が有効な場合のみ）
     let sessionId: string | null = null;
 
     if (canTrack) {
+      console.log("Creating session with location:", {
+        roundedLat,
+        roundedLng,
+        country: location?.country,
+        region: location?.region,
+        city: location?.city,
+      });
       const session = await prisma.diagnosisSession.create({
         data: {
           clinicId: channel.clinicId,

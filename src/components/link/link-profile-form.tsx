@@ -91,15 +91,24 @@ export function LinkProfileForm({ channelId, channelName, redirectUrl, mainColor
         const position = await new Promise<GeolocationPosition>((resolve, reject) => {
           navigator.geolocation.getCurrentPosition(resolve, reject, {
             enableHighAccuracy: true,
-            timeout: 10000,
+            timeout: 30000, // 30秒に延長
             maximumAge: 0,
           });
         });
         latitude = position.coords.latitude;
         longitude = position.coords.longitude;
-      } catch {
+        console.log("Location obtained:", { latitude, longitude });
+      } catch (error) {
         // GPS拒否またはエラー
+        const geoError = error as GeolocationPositionError;
+        console.error("Geolocation error:", {
+          code: geoError?.code,
+          message: geoError?.message,
+          // 1: PERMISSION_DENIED, 2: POSITION_UNAVAILABLE, 3: TIMEOUT
+        });
       }
+    } else {
+      console.warn("Geolocation API not available");
     }
 
     setIsRequestingLocation(false);
