@@ -86,7 +86,7 @@ export async function PATCH(
     const { planType } = body;
 
     // プランタイプの検証（管理者は全プラン設定可能）
-    const validPlanTypes: PlanType[] = ["starter", "standard", "custom", "managed", "free"];
+    const validPlanTypes: PlanType[] = ["starter", "standard", "custom", "managed", "free", "demo"];
     if (!planType || !validPlanTypes.includes(planType)) {
       return NextResponse.json(
         { error: "無効なプランタイプです" },
@@ -113,16 +113,17 @@ export async function PATCH(
     // プランを更新
     const plan = getPlan(planType);
 
-    // 無料プランの場合は active に設定
-    const newStatus = planType === "free" ? "active" : clinic.subscription.status;
+    // 無料プランまたはデモプランの場合は active に設定
+    const isFreePlan = planType === "free" || planType === "demo";
+    const newStatus = isFreePlan ? "active" : clinic.subscription.status;
 
     await prisma.subscription.update({
       where: { id: clinic.subscription.id },
       data: {
         planType: planType,
         status: newStatus,
-        // 無料プランの場合は期限を無効に
-        ...(planType === "free" && {
+        // 無料プラン/デモプランの場合は期限を無効に
+        ...(isFreePlan && {
           currentPeriodEnd: null,
           trialEnd: null,
           gracePeriodEnd: null,
@@ -131,7 +132,7 @@ export async function PATCH(
     });
 
     // 医院ステータスも更新
-    if (planType === "free" || newStatus === "active") {
+    if (isFreePlan || newStatus === "active") {
       await prisma.clinic.update({
         where: { id },
         data: { status: "active" },
