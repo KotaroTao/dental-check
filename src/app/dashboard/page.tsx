@@ -506,7 +506,7 @@ function EffectivenessSummary({
             )}
           </button>
 
-          {/* 折りたたみ部分: 診断完了、完了率、CTA率、CTA数、CTA内訳 */}
+          {/* 折りたたみ部分: 診断完了、完了率、CTAクリック数、CTA率、CTA内訳 */}
           {showDetails && (
             <div className="pt-4 border-t mt-4 space-y-4">
               {/* 診断関連指標 */}
@@ -523,9 +523,9 @@ function EffectivenessSummary({
                   <div className="text-xl font-bold text-blue-600">{overallStats.completionRate}%</div>
                 </div>
 
-                {/* CTA数 */}
+                {/* CTAクリック数 */}
                 <div className="text-center p-3 bg-purple-50 rounded-xl">
-                  <div className="text-xs text-gray-500 mb-1">CTA数</div>
+                  <div className="text-xs text-gray-500 mb-1">CTAクリック数</div>
                   <div className="text-xl font-bold text-purple-600">{overallStats.ctaCount.toLocaleString()}</div>
                 </div>
 
