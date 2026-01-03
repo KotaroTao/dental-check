@@ -80,27 +80,6 @@ export function ResultCard({ diagnosis, isDemo, ctaConfig, clinicName, mainColor
 
   if (!resultPattern) return null;
 
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case "要注意":
-      case "至急相談":
-        return "text-red-600 bg-red-50 border-red-200";
-      case "注意":
-      case "早期相談":
-        return "text-orange-600 bg-orange-50 border-orange-200";
-      case "やや注意":
-      case "相談推奨":
-        return "text-yellow-600 bg-yellow-50 border-yellow-200";
-      case "良好":
-      case "様子見":
-        return "text-green-600 bg-green-50 border-green-200";
-      case "優秀":
-        return "text-blue-600 bg-blue-50 border-blue-200";
-      default:
-        return "text-gray-600 bg-gray-50 border-gray-200";
-    }
-  };
-
   const handleShare = async () => {
     const text =
       diagnosis.slug === "oral-age"
@@ -170,14 +149,6 @@ export function ResultCard({ diagnosis, isDemo, ctaConfig, clinicName, mainColor
               </p>
             </div>
           )}
-
-          <div
-            className={`inline-block px-4 py-1 rounded-full text-sm font-medium border mt-4 ${getCategoryColor(
-              resultPattern.category
-            )}`}
-          >
-            {resultPattern.category}
-          </div>
         </CardHeader>
 
         <CardContent className="space-y-6 pt-6">

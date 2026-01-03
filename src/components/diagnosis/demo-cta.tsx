@@ -32,7 +32,7 @@ export function DemoCTA() {
           </li>
           <li className="flex items-center gap-2">
             <Check className="w-4 h-4 text-green-500 flex-shrink-0" />
-            <span>月額3,000円（税抜）</span>
+            <span>月額4,980円〜</span>
           </li>
           <li className="flex items-center gap-2">
             <Check className="w-4 h-4 text-green-500 flex-shrink-0" />
@@ -40,11 +40,13 @@ export function DemoCTA() {
           </li>
         </ul>
 
-        <Link href="/signup">
-          <Button size="lg" className="w-full max-w-xs">
-            医院として登録する
-          </Button>
-        </Link>
+        <div className="pt-2">
+          <Link href="/signup">
+            <Button size="lg" className="w-full max-w-xs">
+              医院として登録する
+            </Button>
+          </Link>
+        </div>
       </div>
     </div>
   );
