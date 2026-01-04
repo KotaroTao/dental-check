@@ -96,14 +96,16 @@ export async function GET(request: NextRequest) {
     }
 
     // チャンネルに診断名とスキャン数を追加
-    // 診断QRの場合はAccessLogから、リンクQRの場合はscanCountフィールドから取得
+    // 期間フィルター適用時はAccessLogから取得、全期間時はリンクタイプのみscanCountを使用
     const channelsWithDiagnosisName = channels.map((c) => ({
       ...c,
       diagnosisTypeName: c.diagnosisTypeSlug
         ? diagnosisNameMap[c.diagnosisTypeSlug] || c.diagnosisTypeSlug
         : null,
-      // 診断タイプはAccessLogカウント、リンクタイプはscanCountを使用
-      scanCount: c.channelType === "link" ? c.scanCount : (accessCountMap[c.id] || 0),
+      // 全期間の場合はリンクタイプはscanCountを使用、それ以外はAccessLogから
+      scanCount: (period === "all" && c.channelType === "link")
+        ? c.scanCount
+        : (accessCountMap[c.id] || 0),
     }));
 
     const activeCount = channels.filter((c) => c.isActive).length;
