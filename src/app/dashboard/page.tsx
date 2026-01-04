@@ -1036,13 +1036,17 @@ export default function DashboardPage() {
     fetchSubscription();
   }, [fetchSubscription]);
 
-  // フィルター変更時（初回含む）
+  // フィルター変更時（初回含む）- fetchOverallStatsは除く
   useEffect(() => {
     fetchChannels();
     fetchChannelStats();
-    fetchOverallStats();
     fetchHistory(0, false);
-  }, [fetchChannels, fetchChannelStats, fetchOverallStats, fetchHistory]);
+  }, [fetchChannels, fetchChannelStats, fetchHistory]);
+
+  // summaryChannelIds変更時（効果測定サマリー用）
+  useEffect(() => {
+    fetchOverallStats();
+  }, [fetchOverallStats]);
 
   // チャンネル変更時にsummaryChannelIdsを更新
   const [isInitialized, setIsInitialized] = useState(false);
