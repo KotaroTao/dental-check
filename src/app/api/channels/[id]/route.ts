@@ -61,6 +61,7 @@ export async function PATCH(
       imageUrl,
       expiresAt,
       redirectUrl,
+      budget,
     } = body;
 
     const existingChannel = await prisma.channel.findFirst({
@@ -113,6 +114,7 @@ export async function PATCH(
         ...(imageUrl !== undefined && { imageUrl: imageUrl || null }),
         ...(expiresAt !== undefined && { expiresAt: expiresAt ? new Date(expiresAt) : null }),
         ...(redirectUrl !== undefined && existingChannel.channelType === "link" && { redirectUrl: redirectUrl.trim() }),
+        ...(budget !== undefined && { budget: budget !== null && budget !== "" ? parseInt(budget, 10) : null }),
       },
     })) as Channel;
 

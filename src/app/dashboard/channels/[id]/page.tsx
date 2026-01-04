@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import QRCode from "qrcode";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Download, Copy, ExternalLink, Edit, Image as ImageIcon, X, Calendar, AlertTriangle, Link2, MousePointerClick, Code, Check, Eye } from "lucide-react";
+import { ArrowLeft, Download, Copy, ExternalLink, Edit, Image as ImageIcon, X, Calendar, AlertTriangle, Link2, MousePointerClick, Code, Check, Eye, Wallet, BarChart3 } from "lucide-react";
 
 // 診断タイプの表示名
 const DIAGNOSIS_TYPE_NAMES: Record<string, string> = {
@@ -25,6 +25,7 @@ interface Channel {
   isActive: boolean;
   expiresAt: string | null;
   scanCount: number;
+  budget: number | null;
 }
 
 interface ChannelStats {
@@ -350,6 +351,69 @@ export default function ChannelDetailPage() {
           </div>
         )}
       </div>
+
+      {/* 効果測定サマリー */}
+      {stats && (
+        <div className="bg-white rounded-xl shadow-sm border p-6 mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <BarChart3 className="w-5 h-5 text-blue-600" />
+            <h2 className="text-lg font-bold">効果測定サマリー（今月）</h2>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            {/* QR読み込み回数 */}
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="text-sm text-gray-500 mb-1">QR読み込み回数</div>
+              <div className="text-2xl font-bold text-gray-900">
+                {stats.accessCount.toLocaleString()}
+                <span className="text-sm font-normal text-gray-500 ml-1">回</span>
+              </div>
+            </div>
+
+            {/* QR読み込み単価 */}
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="text-sm text-gray-500 mb-1">QR読み込み単価</div>
+              {channel.budget !== null && channel.budget > 0 ? (
+                <div className="text-2xl font-bold text-blue-600">
+                  ¥{stats.accessCount > 0
+                    ? Math.round(channel.budget / stats.accessCount).toLocaleString()
+                    : "-"}
+                  <span className="text-sm font-normal text-gray-500 ml-1">/回</span>
+                </div>
+              ) : (
+                <div>
+                  <span className="text-gray-400 text-sm">予算未設定</span>
+                  <Link
+                    href={`/dashboard/channels/${channel.id}/edit#budget`}
+                    className="block mt-1 text-sm text-blue-600 hover:text-blue-700 hover:underline"
+                  >
+                    予算を設定する →
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 予算情報 */}
+          {channel.budget !== null && channel.budget > 0 && (
+            <div className="mt-4 pt-4 border-t flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Wallet className="w-4 h-4 text-gray-500" />
+                <span className="text-sm text-gray-500">設定予算:</span>
+                <span className="text-sm font-medium text-gray-700">
+                  ¥{channel.budget.toLocaleString()}
+                </span>
+              </div>
+              <Link
+                href={`/dashboard/channels/${channel.id}/edit#budget`}
+                className="text-sm text-blue-600 hover:text-blue-700 hover:underline"
+              >
+                変更
+              </Link>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* QRコードセクション */}
       <div className="bg-white rounded-xl shadow-sm border p-6">
