@@ -52,6 +52,7 @@ model Channel {
   isActive          Boolean   @default(true) @map("is_active")
   expiresAt         DateTime? @map("expires_at") // 有効期限（nullは無期限）
   scanCount         Int       @default(0) @map("scan_count") // スキャン回数（linkタイプ用）
+  budget            Int?      @map("budget") // 予算（円）
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 

@@ -149,6 +149,7 @@ export interface Channel {
   isActive: boolean;
   expiresAt: Date | null;
   scanCount: number;
+  budget: number | null;
   createdAt: Date;
   updatedAt: Date;
 }
