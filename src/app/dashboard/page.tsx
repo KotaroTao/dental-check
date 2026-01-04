@@ -25,6 +25,7 @@ import {
   Check,
   SquareCheck,
   Square,
+  Wallet,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { LocationSection } from "@/components/dashboard/location-section";
@@ -66,6 +67,7 @@ interface Channel {
   isActive: boolean;
   expiresAt: string | null;
   scanCount: number;
+  budget: number | null;
   createdAt: string;
 }
 
@@ -429,16 +431,70 @@ function EffectivenessSummary({
         </div>
       ) : overallStats && (overallStats.accessCount > 0 || overallStats.completedCount > 0) ? (
         <div className="p-5">
-          {/* メイン指標: QR読み込み回数 */}
-          <div className="text-center p-4 bg-emerald-50 rounded-xl mb-4">
-            <div className="text-xs text-gray-500 mb-1">QR読み込み回数</div>
-            <div className="text-3xl font-bold text-emerald-600">{overallStats.accessCount.toLocaleString()}</div>
-            {overallStats.trends?.accessCount && (
-              <div className={`text-xs mt-1 ${overallStats.trends.accessCount.value >= 0 ? "text-emerald-600" : "text-red-500"}`}>
-                {overallStats.trends.accessCount.isNew ? "NEW" : `前期比 ${overallStats.trends.accessCount.value >= 0 ? "+" : ""}${overallStats.trends.accessCount.value}%`}
+          {/* メイン指標: QR読み込み回数 & 読み込み単価 */}
+          {(() => {
+            // 選択されているチャンネルの総予算を計算
+            const selectedChannels = activeChannels.filter(c => summaryChannelIds.includes(c.id));
+            const totalBudget = selectedChannels.reduce((sum, c) => sum + (c.budget || 0), 0);
+            const isSingleChannel = selectedChannels.length === 1;
+            const singleChannel = isSingleChannel ? selectedChannels[0] : null;
+            const hasBudget = totalBudget > 0;
+            const costPerAccess = hasBudget && overallStats.accessCount > 0
+              ? Math.round(totalBudget / overallStats.accessCount)
+              : null;
+
+            return (
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                {/* QR読み込み回数 */}
+                <div className="text-center p-4 bg-emerald-50 rounded-xl">
+                  <div className="text-xs text-gray-500 mb-1">QR読み込み回数</div>
+                  <div className="text-3xl font-bold text-emerald-600">{overallStats.accessCount.toLocaleString()}</div>
+                  {overallStats.trends?.accessCount && (
+                    <div className={`text-xs mt-1 ${overallStats.trends.accessCount.value >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+                      {overallStats.trends.accessCount.isNew ? "NEW" : `前期比 ${overallStats.trends.accessCount.value >= 0 ? "+" : ""}${overallStats.trends.accessCount.value}%`}
+                    </div>
+                  )}
+                </div>
+
+                {/* QR読み込み単価 */}
+                <div className="text-center p-4 bg-blue-50 rounded-xl">
+                  <div className="text-xs text-gray-500 mb-1 flex items-center justify-center gap-1">
+                    <Wallet className="w-3 h-3" />
+                    読み込み単価
+                  </div>
+                  {hasBudget ? (
+                    <>
+                      <div className="text-3xl font-bold text-blue-600">
+                        ¥{costPerAccess?.toLocaleString() || "-"}
+                      </div>
+                      {!isSingleChannel && (
+                        <div className="text-xs text-gray-500 mt-1">
+                          {selectedChannels.length}個のQRの合計予算
+                        </div>
+                      )}
+                    </>
+                  ) : isSingleChannel && singleChannel ? (
+                    <div className="py-1">
+                      <div className="text-sm text-gray-400 mb-1">予算未設定</div>
+                      <Link
+                        href={`/dashboard/channels/${singleChannel.id}/edit#budget`}
+                        className="text-xs text-blue-600 hover:text-blue-700 hover:underline"
+                      >
+                        予算を設定する →
+                      </Link>
+                    </div>
+                  ) : (
+                    <div className="py-1">
+                      <div className="text-sm text-gray-400">予算未設定</div>
+                      <div className="text-xs text-gray-400 mt-1">
+                        各QRに予算を設定してください
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
-          </div>
+            );
+          })()}
 
           {/* 性別・年齢層 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
