@@ -57,11 +57,13 @@ interface Props {
 }
 
 // データを正規化する関数（不完全なデータでもクラッシュしないように）
+// DBでは "options" フィールド、フォームでは "choices" フィールドを使用する場合がある
 function normalizeQuestions(questions: unknown[] | null | undefined): Question[] {
   if (!Array.isArray(questions)) return [];
   return questions.map((q, index) => {
     const question = q as Record<string, unknown> | null | undefined;
-    const choices = question?.choices as unknown[] | null | undefined;
+    // DBでは "options"、フォームでは "choices" を使用する場合があるため両方対応
+    const choices = (question?.choices ?? question?.options) as unknown[] | null | undefined;
     return {
       id: typeof question?.id === "number" ? question.id : index + 1,
       text: typeof question?.text === "string" ? question.text : "",
