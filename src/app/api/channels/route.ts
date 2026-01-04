@@ -5,11 +5,48 @@ import { canCreateChannel } from "@/lib/subscription";
 import type { Channel } from "@/types/clinic";
 
 // QRコード一覧を取得（アクティブ・非表示両方）
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await getSession();
     if (!session) {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const period = searchParams.get("period") || "all";
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
+
+    // 期間の計算（"all"の場合はフィルタリングしない）
+    let dateFrom: Date | null = null;
+    let dateTo: Date | null = null;
+
+    if (period !== "all") {
+      dateTo = new Date();
+
+      if (period === "custom" && startDate && endDate) {
+        dateFrom = new Date(startDate);
+        dateTo.setTime(new Date(endDate).getTime());
+        dateTo.setHours(23, 59, 59, 999);
+      } else {
+        switch (period) {
+          case "today":
+            dateFrom = new Date();
+            dateFrom.setHours(0, 0, 0, 0);
+            break;
+          case "week":
+            dateFrom = new Date();
+            dateFrom.setDate(dateFrom.getDate() - 7);
+            dateFrom.setHours(0, 0, 0, 0);
+            break;
+          case "month":
+          default:
+            dateFrom = new Date();
+            dateFrom.setMonth(dateFrom.getMonth() - 1);
+            dateFrom.setHours(0, 0, 0, 0);
+            break;
+        }
+      }
     }
 
     const channels = (await prisma.channel.findMany({
@@ -35,6 +72,7 @@ export async function GET() {
     }
 
     // 各チャンネルのアクセスログ数を取得（診断QRの読み込み回数）
+    // 期間フィルターがある場合は期間内のみカウント
     const channelIds = channels.map((c) => c.id);
     const accessCounts = channelIds.length > 0
       ? await prisma.accessLog.groupBy({
@@ -43,6 +81,7 @@ export async function GET() {
             clinicId: session.clinicId,
             channelId: { in: channelIds },
             eventType: { not: "clinic_page_view" },
+            ...(dateFrom && dateTo ? { createdAt: { gte: dateFrom, lte: dateTo } } : {}),
           },
           _count: { id: true },
         })
