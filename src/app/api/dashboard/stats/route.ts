@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const channelId = searchParams.get("channelId");
     const channelIdsParam = searchParams.get("channelIds"); // カンマ区切りで複数指定可能
-    const period = searchParams.get("period") || "month"; // today, week, month, custom
+    const period = searchParams.get("period") || "all"; // today, week, month, all, custom
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
 
@@ -21,14 +21,18 @@ export async function GET(request: NextRequest) {
       ? channelIdsParam.split(",").filter((id) => id.trim())
       : [];
 
-    // 期間の計算
-    let dateFrom: Date;
-    const dateTo = new Date();
-    let prevDateFrom: Date;
-    let prevDateTo: Date;
+    // 期間の計算（"all"の場合は期間フィルターなし）
+    let dateFrom: Date | null = null;
+    let dateTo: Date | null = null;
+    let prevDateFrom: Date | null = null;
+    let prevDateTo: Date | null = null;
 
-    if (period === "custom" && startDate && endDate) {
+    if (period === "all") {
+      // 全期間の場合は日付フィルターを適用しない
+      // 前期比トレンドも計算しない
+    } else if (period === "custom" && startDate && endDate) {
       dateFrom = new Date(startDate);
+      dateTo = new Date();
       dateTo.setTime(new Date(endDate).getTime());
       dateTo.setHours(23, 59, 59, 999);
       // カスタム期間の場合、同じ日数だけ前の期間を計算
@@ -36,6 +40,7 @@ export async function GET(request: NextRequest) {
       prevDateTo = new Date(dateFrom.getTime() - 1);
       prevDateFrom = new Date(prevDateTo.getTime() - durationMs);
     } else {
+      dateTo = new Date();
       switch (period) {
         case "today":
           dateFrom = new Date();
@@ -114,30 +119,21 @@ export async function GET(request: NextRequest) {
     // 共通のフィルター条件
     const baseFilter = {
       clinicId: session.clinicId,
-      createdAt: {
-        gte: dateFrom,
-        lte: dateTo,
-      },
+      ...(dateFrom && dateTo ? { createdAt: { gte: dateFrom, lte: dateTo } } : {}),
       ...channelFilter,
     };
 
     // 前期の共通フィルター条件
     const prevBaseFilter = {
       clinicId: session.clinicId,
-      createdAt: {
-        gte: prevDateFrom,
-        lte: prevDateTo,
-      },
+      ...(prevDateFrom && prevDateTo ? { createdAt: { gte: prevDateFrom, lte: prevDateTo } } : {}),
       ...channelFilter,
     };
 
     // 診断完了者のフィルター条件
     const completedFilter = {
       clinicId: session.clinicId,
-      createdAt: {
-        gte: dateFrom,
-        lte: dateTo,
-      },
+      ...(dateFrom && dateTo ? { createdAt: { gte: dateFrom, lte: dateTo } } : {}),
       ...channelFilter,
       isDemo: false,
       completedAt: { not: null },
@@ -146,10 +142,7 @@ export async function GET(request: NextRequest) {
     // 前期の診断完了者のフィルター条件
     const prevCompletedFilter = {
       clinicId: session.clinicId,
-      createdAt: {
-        gte: prevDateFrom,
-        lte: prevDateTo,
-      },
+      ...(prevDateFrom && prevDateTo ? { createdAt: { gte: prevDateFrom, lte: prevDateTo } } : {}),
       ...channelFilter,
       isDemo: false,
       completedAt: { not: null },
@@ -159,10 +152,7 @@ export async function GET(request: NextRequest) {
     const linkOnlyCompletedFilter = filteredLinkOnlyChannelIds.length > 0
       ? {
           clinicId: session.clinicId,
-          createdAt: {
-            gte: dateFrom,
-            lte: dateTo,
-          },
+          ...(dateFrom && dateTo ? { createdAt: { gte: dateFrom, lte: dateTo } } : {}),
           channelId: { in: filteredLinkOnlyChannelIds },
           isDemo: false,
           completedAt: { not: null },
@@ -222,10 +212,7 @@ export async function GET(request: NextRequest) {
         where: {
           clinicId: session.clinicId,
           eventType: "clinic_page_view",
-          createdAt: {
-            gte: dateFrom,
-            lte: dateTo,
-          },
+          ...(dateFrom && dateTo ? { createdAt: { gte: dateFrom, lte: dateTo } } : {}),
         },
       }),
 
@@ -242,10 +229,7 @@ export async function GET(request: NextRequest) {
         where: {
           clinicId: session.clinicId,
           channelId: null,
-          createdAt: {
-            gte: dateFrom,
-            lte: dateTo,
-          },
+          ...(dateFrom && dateTo ? { createdAt: { gte: dateFrom, lte: dateTo } } : {}),
         },
       }),
 
@@ -456,10 +440,10 @@ export async function GET(request: NextRequest) {
         },
       },
       channels,
-      period: {
+      period: dateFrom && dateTo ? {
         from: dateFrom.toISOString(),
         to: dateTo.toISOString(),
-      },
+      } : null,
     });
   } catch (error) {
     console.error("Dashboard stats error:", error);

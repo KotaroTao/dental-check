@@ -35,6 +35,7 @@ const PERIOD_OPTIONS = [
   { value: "today", label: "今日" },
   { value: "week", label: "今週" },
   { value: "month", label: "今月" },
+  { value: "all", label: "全期間" },
   { value: "custom", label: "期間指定" },
 ];
 
@@ -880,7 +881,7 @@ export default function DashboardPage() {
   });
 
   // フィルター
-  const [period, setPeriod] = useState("month");
+  const [period, setPeriod] = useState("all");
   const [selectedChannelId, setSelectedChannelId] = useState("");
   const [selectedDiagnosisType, setSelectedDiagnosisType] = useState("");
   const [summaryChannelIds, setSummaryChannelIds] = useState<string[]>([]); // 効果測定サマリー用（複数選択）
@@ -914,7 +915,12 @@ export default function DashboardPage() {
   // QRコード一覧取得
   const fetchChannels = useCallback(async () => {
     try {
-      const response = await fetch("/api/channels");
+      const params = new URLSearchParams({ period });
+      if (period === "custom") {
+        params.set("startDate", customStartDate);
+        params.set("endDate", customEndDate);
+      }
+      const response = await fetch(`/api/channels?${params}`);
       if (response.ok) {
         const data = await response.json();
         setChannels(data.channels);
@@ -922,7 +928,7 @@ export default function DashboardPage() {
     } catch (error) {
       console.error("Failed to fetch channels:", error);
     }
-  }, []);
+  }, [period, customStartDate, customEndDate]);
 
   // チャンネル別統計取得
   const fetchChannelStats = useCallback(async () => {
@@ -1033,10 +1039,11 @@ export default function DashboardPage() {
 
   // フィルター変更時
   useEffect(() => {
+    fetchChannels();
     fetchChannelStats();
     fetchOverallStats();
     fetchHistory(0, false);
-  }, [fetchChannelStats, fetchOverallStats, fetchHistory]);
+  }, [fetchChannels, fetchChannelStats, fetchOverallStats, fetchHistory]);
 
   // チャンネル変更時にsummaryChannelIdsを更新
   const [isInitialized, setIsInitialized] = useState(false);

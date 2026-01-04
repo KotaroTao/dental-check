@@ -18,22 +18,26 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const channelId = searchParams.get("channelId");
     const diagnosisType = searchParams.get("diagnosisType");
-    const period = searchParams.get("period") || "month";
+    const period = searchParams.get("period") || "all";
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
     const offset = parseInt(searchParams.get("offset") || "0");
     const limit = parseInt(searchParams.get("limit") || "50");
     const skipCount = searchParams.get("skipCount") === "true"; // 追加読み込み時はカウントをスキップ
 
-    // 期間の計算
-    let dateFrom: Date;
-    const dateTo = new Date();
+    // 期間の計算（"all"の場合は期間フィルターなし）
+    let dateFrom: Date | null = null;
+    let dateTo: Date | null = null;
 
-    if (period === "custom" && startDate && endDate) {
+    if (period === "all") {
+      // 全期間の場合は日付フィルターを適用しない
+    } else if (period === "custom" && startDate && endDate) {
       dateFrom = new Date(startDate);
+      dateTo = new Date();
       dateTo.setTime(new Date(endDate).getTime());
       dateTo.setHours(23, 59, 59, 999);
     } else {
+      dateTo = new Date();
       switch (period) {
         case "today":
           dateFrom = new Date();
@@ -65,7 +69,7 @@ export async function GET(request: NextRequest) {
       clinicId: string;
       isDemo: boolean;
       completedAt: { not: null };
-      createdAt: { gte: Date; lte: Date };
+      createdAt?: { gte: Date; lte: Date };
       channelId?: string | { in: string[] };
       diagnosisType?: { slug: string };
     };
@@ -74,10 +78,7 @@ export async function GET(request: NextRequest) {
       clinicId: session.clinicId,
       isDemo: false,
       completedAt: { not: null },
-      createdAt: {
-        gte: dateFrom,
-        lte: dateTo,
-      },
+      ...(dateFrom && dateTo ? { createdAt: { gte: dateFrom, lte: dateTo } } : {}),
     };
 
     if (channelId) {
@@ -219,17 +220,14 @@ export async function GET(request: NextRequest) {
     type AccessLogFilterType = {
       clinicId: string;
       eventType: string;
-      createdAt: { gte: Date; lte: Date };
+      createdAt?: { gte: Date; lte: Date };
       channelId?: string | { in: string[] };
     };
 
     const accessLogFilter: AccessLogFilterType = {
       clinicId: session.clinicId,
       eventType: "qr_scan",
-      createdAt: {
-        gte: dateFrom,
-        lte: dateTo,
-      },
+      ...(dateFrom && dateTo ? { createdAt: { gte: dateFrom, lte: dateTo } } : {}),
     };
 
     if (channelId) {

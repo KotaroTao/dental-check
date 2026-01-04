@@ -10,19 +10,23 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const period = searchParams.get("period") || "month";
+    const period = searchParams.get("period") || "all";
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
 
-    // 期間の計算
-    let dateFrom: Date;
-    const dateTo = new Date();
+    // 期間の計算（"all"の場合は期間フィルターなし）
+    let dateFrom: Date | null = null;
+    let dateTo: Date | null = null;
 
-    if (period === "custom" && startDate && endDate) {
+    if (period === "all") {
+      // 全期間の場合は日付フィルターを適用しない
+    } else if (period === "custom" && startDate && endDate) {
       dateFrom = new Date(startDate);
+      dateTo = new Date();
       dateTo.setTime(new Date(endDate).getTime());
       dateTo.setHours(23, 59, 59, 999);
     } else {
+      dateTo = new Date();
       switch (period) {
         case "today":
           dateFrom = new Date();
@@ -56,6 +60,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ stats: {} });
     }
 
+    // 日付フィルター条件
+    const dateFilter = dateFrom && dateTo ? { createdAt: { gte: dateFrom, lte: dateTo } } : {};
+
     // 各チャンネルの統計を取得
     const [
       accessCounts,
@@ -72,7 +79,7 @@ export async function GET(request: NextRequest) {
         where: {
           clinicId: session.clinicId,
           channelId: { in: channelIds },
-          createdAt: { gte: dateFrom, lte: dateTo },
+          ...dateFilter,
           eventType: { not: "clinic_page_view" },
         },
         _count: { id: true },
@@ -84,7 +91,7 @@ export async function GET(request: NextRequest) {
         where: {
           clinicId: session.clinicId,
           channelId: { in: channelIds },
-          createdAt: { gte: dateFrom, lte: dateTo },
+          ...dateFilter,
           isDemo: false,
           completedAt: { not: null },
         },
@@ -97,7 +104,7 @@ export async function GET(request: NextRequest) {
         where: {
           clinicId: session.clinicId,
           channelId: { in: channelIds },
-          createdAt: { gte: dateFrom, lte: dateTo },
+          ...dateFilter,
         },
         _count: { id: true },
       }),
@@ -108,7 +115,7 @@ export async function GET(request: NextRequest) {
         where: {
           clinicId: session.clinicId,
           channelId: { in: channelIds },
-          createdAt: { gte: dateFrom, lte: dateTo },
+          ...dateFilter,
         },
         _count: { id: true },
       }),
@@ -119,7 +126,7 @@ export async function GET(request: NextRequest) {
         where: {
           clinicId: session.clinicId,
           channelId: { in: channelIds },
-          createdAt: { gte: dateFrom, lte: dateTo },
+          ...dateFilter,
           isDemo: false,
           completedAt: { not: null },
         },
@@ -131,7 +138,7 @@ export async function GET(request: NextRequest) {
         where: {
           clinicId: session.clinicId,
           channelId: { in: channelIds },
-          createdAt: { gte: dateFrom, lte: dateTo },
+          ...dateFilter,
           isDemo: false,
           completedAt: { not: null },
         },
@@ -143,7 +150,7 @@ export async function GET(request: NextRequest) {
         where: {
           clinicId: session.clinicId,
           channelId: { in: channelIds },
-          createdAt: { gte: dateFrom, lte: dateTo },
+          ...dateFilter,
           eventType: { not: "clinic_page_view" },
         },
         select: { channelId: true, createdAt: true },
