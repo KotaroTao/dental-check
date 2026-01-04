@@ -1031,13 +1031,12 @@ export default function DashboardPage() {
     }
   }, []);
 
-  // 初回読み込み
+  // 初回読み込み（サブスクリプション情報のみ）
   useEffect(() => {
-    fetchChannels();
     fetchSubscription();
-  }, [fetchChannels, fetchSubscription]);
+  }, [fetchSubscription]);
 
-  // フィルター変更時
+  // フィルター変更時（初回含む）
   useEffect(() => {
     fetchChannels();
     fetchChannelStats();
