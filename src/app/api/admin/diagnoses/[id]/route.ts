@@ -2,20 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAdminSession } from "@/lib/admin-auth";
 
-interface RouteParams {
-  params: { id: string };
-}
-
 // 診断詳細取得
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const session = await getAdminSession();
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
+
     const diagnosis = await prisma.diagnosisType.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!diagnosis) {
@@ -36,13 +37,17 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 }
 
 // 診断更新
-export async function PUT(request: NextRequest, { params }: RouteParams) {
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const session = await getAdminSession();
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
     const body = await request.json();
     const { slug, name, description, questions, resultPatterns, isActive } = body;
 
@@ -51,7 +56,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       const existing = await prisma.diagnosisType.findFirst({
         where: {
           slug,
-          NOT: { id: params.id },
+          NOT: { id },
         },
       });
 
@@ -64,7 +69,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     const diagnosis = await prisma.diagnosisType.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...(slug && { slug }),
         ...(name && { name }),
@@ -86,15 +91,20 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 }
 
 // 診断削除
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const session = await getAdminSession();
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
+
     await prisma.diagnosisType.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ success: true });
