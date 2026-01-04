@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, X, Image as ImageIcon, Calendar, Link2, Stethoscope, QrCode } from "lucide-react";
+import { ArrowLeft, X, Image as ImageIcon, Calendar, Link2, Stethoscope, QrCode, Wallet } from "lucide-react";
 
 interface DiagnosisType {
   slug: string;
@@ -30,6 +30,7 @@ export default function NewChannelPage() {
     diagnosisTypeSlug: "",
     redirectUrl: "",
     expiresAt: "",
+    budget: "",
   });
   const [diagnosisTypes, setDiagnosisTypes] = useState<DiagnosisType[]>([]);
   const [isLoadingDiagnoses, setIsLoadingDiagnoses] = useState(true);
@@ -213,6 +214,7 @@ export default function NewChannelPage() {
           diagnosisTypeSlug: channelType === "diagnosis" ? formData.diagnosisTypeSlug : null,
           redirectUrl: channelType === "link" ? formData.redirectUrl : null,
           expiresAt: formData.expiresAt || null,
+          budget: formData.budget ? parseInt(formData.budget, 10) : null,
           imageUrl,
         }),
       });
@@ -411,6 +413,45 @@ export default function NewChannelPage() {
             />
             <p className="text-xs text-gray-500">
               期限を過ぎるとQRコードは無効になります。空欄の場合は無期限です。
+            </p>
+          </div>
+
+          {/* 予算 */}
+          <div className="space-y-2">
+            <Label htmlFor="budget" className="flex items-center gap-2">
+              <Wallet className="w-4 h-4 text-gray-500" />
+              予算（任意）
+            </Label>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">¥</span>
+                <Input
+                  id="budget"
+                  name="budget"
+                  type="number"
+                  min="0"
+                  placeholder="例: 50000"
+                  value={formData.budget}
+                  onChange={handleChange}
+                  disabled={isLoading}
+                  className="pl-7"
+                />
+              </div>
+              {formData.budget && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setFormData((prev) => ({ ...prev, budget: "" }))}
+                  disabled={isLoading}
+                  className="shrink-0"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
+            <p className="text-xs text-gray-500">
+              このQRコードにかけた広告費用を入力すると、QR読み込み単価を確認できます。
             </p>
           </div>
 
