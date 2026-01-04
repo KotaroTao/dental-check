@@ -4,27 +4,14 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { DiagnosisForm } from "@/components/admin/diagnosis-form";
 
-interface Question {
-  id: number;
-  text: string;
-  choices: { text: string; score: number }[];
-}
-
-interface ResultPattern {
-  minScore: number;
-  maxScore: number;
-  category: string;
-  title: string;
-  message: string;
-}
-
+// APIから返されるデータの型（nullableなフィールドを含む）
 interface DiagnosisData {
   id: string;
   slug: string;
   name: string;
-  description: string;
-  questions: Question[];
-  resultPatterns: ResultPattern[];
+  description: string | null;
+  questions: unknown[];
+  resultPatterns: unknown[];
   isActive: boolean;
 }
 

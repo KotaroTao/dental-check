@@ -40,9 +40,55 @@ interface DiagnosisData {
   isActive: boolean;
 }
 
+// APIから受け取るデータ型（より緩い型定義）
+interface InitialData {
+  id?: string;
+  slug?: string;
+  name?: string;
+  description?: string | null;
+  questions?: unknown[] | null;
+  resultPatterns?: unknown[] | null;
+  isActive?: boolean;
+}
+
 interface Props {
-  initialData?: DiagnosisData;
+  initialData?: InitialData;
   isEditing?: boolean;
+}
+
+// データを正規化する関数（不完全なデータでもクラッシュしないように）
+function normalizeQuestions(questions: unknown[] | null | undefined): Question[] {
+  if (!Array.isArray(questions)) return [];
+  return questions.map((q, index) => {
+    const question = q as Record<string, unknown> | null | undefined;
+    const choices = question?.choices as unknown[] | null | undefined;
+    return {
+      id: typeof question?.id === "number" ? question.id : index + 1,
+      text: typeof question?.text === "string" ? question.text : "",
+      imageUrl: typeof question?.imageUrl === "string" ? question.imageUrl : null,
+      choices: Array.isArray(choices) ? choices.map(c => {
+        const choice = c as Record<string, unknown> | null | undefined;
+        return {
+          text: typeof choice?.text === "string" ? choice.text : "",
+          score: typeof choice?.score === "number" ? choice.score : 0,
+        };
+      }) : [{ text: "", score: 0 }],
+    };
+  });
+}
+
+function normalizeResultPatterns(patterns: unknown[] | null | undefined): ResultPattern[] {
+  if (!Array.isArray(patterns)) return [];
+  return patterns.map(p => {
+    const pattern = p as Record<string, unknown> | null | undefined;
+    return {
+      minScore: typeof pattern?.minScore === "number" ? pattern.minScore : 0,
+      maxScore: typeof pattern?.maxScore === "number" ? pattern.maxScore : 100,
+      category: typeof pattern?.category === "string" ? pattern.category : "",
+      title: typeof pattern?.title === "string" ? pattern.title : "",
+      message: typeof pattern?.message === "string" ? pattern.message : "",
+    };
+  });
 }
 
 export function DiagnosisForm({ initialData, isEditing = false }: Props) {
@@ -54,8 +100,8 @@ export function DiagnosisForm({ initialData, isEditing = false }: Props) {
     slug: initialData?.slug || "",
     name: initialData?.name || "",
     description: initialData?.description || "",
-    questions: initialData?.questions || [],
-    resultPatterns: initialData?.resultPatterns || [],
+    questions: normalizeQuestions(initialData?.questions),
+    resultPatterns: normalizeResultPatterns(initialData?.resultPatterns),
     isActive: initialData?.isActive ?? true,
   });
 
