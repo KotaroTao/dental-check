@@ -297,11 +297,15 @@ function EffectivenessSummary({
   overallStats,
   summaryChannelIds,
   setSummaryChannelIds,
+  isDemo,
+  onDemoClick,
 }: {
   channels: Channel[];
   overallStats: OverallStats | null;
   summaryChannelIds: string[];
   setSummaryChannelIds: (ids: string[]) => void;
+  isDemo?: boolean;
+  onDemoClick?: () => void;
 }) {
   const [showDetails, setShowDetails] = useState(false);
 
@@ -477,12 +481,21 @@ function EffectivenessSummary({
                   ) : isSingleChannel && singleChannel ? (
                     <div className="py-1">
                       <div className="text-sm text-gray-400 mb-1">予算未設定</div>
-                      <Link
-                        href={`/dashboard/channels/${singleChannel.id}/edit#budget`}
-                        className="text-xs text-blue-600 hover:text-blue-700 hover:underline"
-                      >
-                        予算を設定する →
-                      </Link>
+                      {isDemo ? (
+                        <button
+                          onClick={onDemoClick}
+                          className="text-xs text-gray-400 hover:text-gray-500"
+                        >
+                          予算を設定する →
+                        </button>
+                      ) : (
+                        <Link
+                          href={`/dashboard/channels/${singleChannel.id}/edit#budget`}
+                          className="text-xs text-blue-600 hover:text-blue-700 hover:underline"
+                        >
+                          予算を設定する →
+                        </Link>
+                      )}
                     </div>
                   ) : (
                     <div className="py-1">
@@ -1437,6 +1450,8 @@ export default function DashboardPage() {
         overallStats={overallStats}
         summaryChannelIds={summaryChannelIds}
         setSummaryChannelIds={setSummaryChannelIds}
+        isDemo={subscription?.isDemo}
+        onDemoClick={() => setShowDemoModal(true)}
       />
 
       {/* QR読み込み履歴 */}
