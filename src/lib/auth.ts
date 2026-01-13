@@ -19,10 +19,14 @@ export async function verifyPassword(
   return bcrypt.compare(password, hashedPassword);
 }
 
-export async function createToken(payload: {
+export interface TokenPayload {
   clinicId: string;
   email: string;
-}): Promise<string> {
+  isAdmin?: boolean;
+  [key: string]: unknown;
+}
+
+export async function createToken(payload: TokenPayload): Promise<string> {
   return new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
@@ -30,22 +34,16 @@ export async function createToken(payload: {
     .sign(JWT_SECRET);
 }
 
-export async function verifyToken(token: string): Promise<{
-  clinicId: string;
-  email: string;
-} | null> {
+export async function verifyToken(token: string): Promise<TokenPayload | null> {
   try {
     const { payload } = await jwtVerify(token, JWT_SECRET);
-    return payload as { clinicId: string; email: string };
+    return payload as TokenPayload;
   } catch {
     return null;
   }
 }
 
-export async function getSession(): Promise<{
-  clinicId: string;
-  email: string;
-} | null> {
+export async function getSession(): Promise<TokenPayload | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(COOKIE_NAME)?.value;
 
