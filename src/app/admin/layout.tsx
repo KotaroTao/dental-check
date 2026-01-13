@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Shield, FileText, LogOut, BarChart3, Building2 } from "lucide-react";
+import { Shield, FileText, LogOut, BarChart3, Building2, Menu, X } from "lucide-react";
 
 interface Admin {
   id: string;
@@ -21,6 +21,7 @@ export default function AdminLayout({
   const pathname = usePathname();
   const [admin, setAdmin] = useState<Admin | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   // ログインページの場合はレイアウトなしで表示
   const isLoginPage = pathname === "/admin/login";
@@ -76,7 +77,7 @@ export default function AdminLayout({
           <div className="flex items-center gap-8">
             <Link href="/admin/diagnoses" className="flex items-center gap-2 font-bold text-xl">
               <Shield className="w-6 h-6" />
-              管理者パネル
+              <span className="hidden sm:inline">管理者パネル</span>
             </Link>
             <nav className="hidden md:flex items-center gap-6">
               <Link
@@ -112,12 +113,68 @@ export default function AdminLayout({
             <span className="text-sm text-gray-400 hidden sm:block">
               {admin?.email}
             </span>
-            <Button variant="ghost" size="sm" onClick={handleLogout} className="text-gray-300 hover:text-white hover:bg-gray-800">
+            <Button variant="ghost" size="sm" onClick={handleLogout} className="text-gray-300 hover:text-white hover:bg-gray-800 hidden md:flex">
               <LogOut className="w-4 h-4 mr-2" />
               ログアウト
             </Button>
+            {/* ハンバーガーメニューボタン */}
+            <button
+              className="md:hidden p-2 text-gray-300 hover:text-white"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+            >
+              {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
           </div>
         </div>
+        {/* モバイルメニュー */}
+        {isMenuOpen && (
+          <nav className="md:hidden bg-gray-800 border-t border-gray-700">
+            <div className="container mx-auto px-4 py-4 flex flex-col gap-4">
+              <Link
+                href="/admin/diagnoses"
+                className={`flex items-center gap-2 py-2 ${
+                  pathname.startsWith("/admin/diagnoses") ? "text-white" : "text-gray-400"
+                }`}
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <FileText className="w-4 h-4" />
+                診断管理
+              </Link>
+              <Link
+                href="/admin/stats"
+                className={`flex items-center gap-2 py-2 ${
+                  pathname.startsWith("/admin/stats") ? "text-white" : "text-gray-400"
+                }`}
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <BarChart3 className="w-4 h-4" />
+                統計
+              </Link>
+              <Link
+                href="/admin/clinics"
+                className={`flex items-center gap-2 py-2 ${
+                  pathname.startsWith("/admin/clinics") ? "text-white" : "text-gray-400"
+                }`}
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <Building2 className="w-4 h-4" />
+                医院管理
+              </Link>
+              <div className="border-t border-gray-700 pt-4 mt-2">
+                <span className="text-sm text-gray-400 block mb-2">
+                  {admin?.email}
+                </span>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 text-gray-300 hover:text-white py-2"
+                >
+                  <LogOut className="w-4 h-4" />
+                  ログアウト
+                </button>
+              </div>
+            </div>
+          </nav>
+        )}
       </header>
 
       {/* メインコンテンツ */}
