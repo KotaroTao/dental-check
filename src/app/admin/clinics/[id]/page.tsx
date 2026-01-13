@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -77,12 +78,9 @@ interface DiagnosisType {
 
 type TabType = "dashboard" | "channels" | "settings" | "diagnosis";
 
-export default function AdminClinicDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id: clinicId } = use(params);
+export default function AdminClinicDetailPage() {
+  const params = useParams();
+  const clinicId = params.id as string;
   const [activeTab, setActiveTab] = useState<TabType>("dashboard");
   const [isLoading, setIsLoading] = useState(true);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
