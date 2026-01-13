@@ -70,7 +70,7 @@ export async function GET(
   }
 }
 
-// 医院のプラン設定を更新
+// 医院のプラン設定・非表示設定を更新
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -83,7 +83,19 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await request.json();
-    const { planType } = body;
+    const { planType, isHidden } = body;
+
+    // 非表示設定の更新
+    if (typeof isHidden === "boolean") {
+      await prisma.clinic.update({
+        where: { id },
+        data: { isHidden },
+      });
+      return NextResponse.json({
+        success: true,
+        message: isHidden ? "医院を非表示にしました" : "医院を表示に戻しました",
+      });
+    }
 
     // プランタイプの検証（管理者は全プラン設定可能）
     const validPlanTypes: PlanType[] = ["starter", "standard", "custom", "managed", "free", "demo"];
@@ -147,6 +159,54 @@ export async function PATCH(
     console.error("Admin clinic update error:", error);
     return NextResponse.json(
       { error: "プランの更新に失敗しました" },
+      { status: 500 }
+    );
+  }
+}
+
+// 医院を完全削除（非表示の医院のみ）
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getAdminSession();
+    if (!session) {
+      return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
+    }
+
+    const { id } = await params;
+
+    const clinic = await prisma.clinic.findUnique({
+      where: { id },
+      select: { isHidden: true, name: true },
+    });
+
+    if (!clinic) {
+      return NextResponse.json({ error: "医院が見つかりません" }, { status: 404 });
+    }
+
+    // 非表示の医院のみ削除可能
+    if (!clinic.isHidden) {
+      return NextResponse.json(
+        { error: "非表示にした医院のみ削除できます。先に非表示にしてください。" },
+        { status: 400 }
+      );
+    }
+
+    // 医院を削除（関連データはCascadeで自動削除）
+    await prisma.clinic.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: `${clinic.name}を完全に削除しました`,
+    });
+  } catch (error) {
+    console.error("Admin clinic delete error:", error);
+    return NextResponse.json(
+      { error: "医院の削除に失敗しました" },
       { status: 500 }
     );
   }

@@ -23,6 +23,7 @@ model Clinic {
   ctaConfig     Json     @default("{}") @map("cta_config")
   clinicPage    Json     @default("{}") @map("clinic_page")
   status        String   @default("trial")
+  isHidden      Boolean  @default(false) @map("is_hidden") // 管理者パネルで非表示
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 

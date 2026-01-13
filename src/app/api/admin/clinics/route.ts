@@ -1,17 +1,21 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
 import { getAllPlans } from "@/lib/plans";
 
 // 医院一覧を取得
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await getAdminSession();
     if (!session) {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
     }
 
+    const { searchParams } = new URL(request.url);
+    const showHidden = searchParams.get("hidden") === "true";
+
     const clinics = await prisma.clinic.findMany({
+      where: { isHidden: showHidden },
       orderBy: { createdAt: "desc" },
       include: {
         subscription: {
@@ -37,6 +41,7 @@ export async function GET() {
       name: clinic.name,
       email: clinic.email,
       status: clinic.status,
+      isHidden: clinic.isHidden,
       createdAt: clinic.createdAt,
       subscription: clinic.subscription
         ? {
