@@ -37,7 +37,13 @@ export async function POST(request: NextRequest) {
       "image/heic",
       "image/heif",
     ];
-    if (!allowedTypes.includes(file.type)) {
+
+    // ファイル拡張子でもチェック（MIMEタイプが空の場合があるため）
+    const fileExt = file.name.split(".").pop()?.toLowerCase() || "";
+    const allowedExtensions = ["jpg", "jpeg", "png", "webp", "gif", "heic", "heif"];
+    const isValidType = allowedTypes.includes(file.type) || allowedExtensions.includes(fileExt);
+
+    if (!isValidType) {
       return NextResponse.json(
         { error: "JPEG、PNG、WebP、GIF、HEIC形式のみアップロードできます" },
         { status: 400 }
