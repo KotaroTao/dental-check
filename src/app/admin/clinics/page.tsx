@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Building2, Users, QrCode, CheckCircle, AlertCircle, Clock, Eye, EyeOff, Trash2, ExternalLink } from "lucide-react";
+import { Building2, Users, QrCode, CheckCircle, AlertCircle, Clock, Eye, EyeOff, Trash2, ExternalLink, LogIn } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface Plan {
   type: string;
@@ -34,6 +35,7 @@ interface Clinic {
 type TabType = "active" | "hidden";
 
 export default function AdminClinicsPage() {
+  const router = useRouter();
   const [clinics, setClinics] = useState<Clinic[]>([]);
   const [availablePlans, setAvailablePlans] = useState<Plan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -43,6 +45,7 @@ export default function AdminClinicsPage() {
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>("active");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [loggingIn, setLoggingIn] = useState<string | null>(null);
 
   const fetchClinics = async () => {
     setIsLoading(true);
@@ -143,6 +146,27 @@ export default function AdminClinicsPage() {
       setMessage({ type: "error", text: "通信エラーが発生しました" });
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  const handleLoginAsClinic = async (clinicId: string) => {
+    setLoggingIn(clinicId);
+    try {
+      const response = await fetch(`/api/admin/clinics/${clinicId}/login`, {
+        method: "POST",
+      });
+
+      if (response.ok) {
+        // ダッシュボードに遷移
+        router.push("/dashboard");
+      } else {
+        const data = await response.json();
+        setMessage({ type: "error", text: data.error || "ログインに失敗しました" });
+      }
+    } catch {
+      setMessage({ type: "error", text: "通信エラーが発生しました" });
+    } finally {
+      setLoggingIn(null);
     }
   };
 
@@ -343,6 +367,15 @@ export default function AdminClinicsPage() {
                         </>
                       ) : (
                         <>
+                          <Button
+                            size="sm"
+                            variant="default"
+                            onClick={() => handleLoginAsClinic(clinic.id)}
+                            disabled={loggingIn === clinic.id}
+                          >
+                            <LogIn className="w-3 h-3 mr-1" />
+                            {loggingIn === clinic.id ? "..." : "ログイン"}
+                          </Button>
                           <Link href={`/admin/clinics/${clinic.id}`}>
                             <Button size="sm" variant="outline">
                               <ExternalLink className="w-3 h-3 mr-1" />
