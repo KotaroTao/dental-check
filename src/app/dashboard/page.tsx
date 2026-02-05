@@ -1507,7 +1507,7 @@ export default function DashboardPage() {
                 <thead>
                   <tr className="border-b bg-gray-50/50">
                     <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">QRコード</th>
-                    <th className="text-center px-3 py-2.5 text-xs font-medium text-gray-500 w-24">読み込み</th>
+                    <th className="text-center px-3 py-2.5 text-xs font-medium text-gray-500 w-24">QR読込</th>
                     <th className="text-center px-3 py-2.5 text-xs font-medium text-gray-500 w-24">予算</th>
                     <th className="text-center px-3 py-2.5 text-xs font-medium text-gray-500 w-20">読込単価</th>
                     <th className="text-center px-3 py-2.5 text-xs font-medium text-gray-500 w-20">CTA</th>
