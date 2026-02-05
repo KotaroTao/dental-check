@@ -144,6 +144,7 @@ export async function GET(request: NextRequest) {
       line: "LINEクリック",
       instagram: "Instagramクリック",
       clinic_page: "医院ページクリック",
+      clinic_homepage: "ホームページクリック",
       direct_link: "直リンク",
     };
 
