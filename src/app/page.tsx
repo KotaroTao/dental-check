@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/logo";
 import {
-  Sparkles,
   QrCode,
   Smartphone,
   LightbulbIcon,
@@ -35,11 +35,8 @@ export default function Home() {
       <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-white/20">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-white" />
-              </div>
-              <span className="font-bold text-lg text-gray-900">くるくるQR<span className="text-[0.5em]"> for Dental</span></span>
+            <Link href="/" className="flex items-center">
+              <Logo />
             </Link>
             <div className="hidden md:flex items-center gap-8">
               <a href="#features" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
@@ -702,11 +699,8 @@ export default function Home() {
       <footer className="bg-gray-900 py-12 border-t border-gray-800">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-white" />
-              </div>
-              <span className="font-bold text-lg text-white">くるくるQR<span className="text-[0.5em]"> for Dental</span></span>
+            <div className="flex items-center">
+              <Logo variant="dark" />
             </div>
             <div className="flex flex-wrap items-center justify-center gap-6 md:gap-8">
               <a href="#features" className="text-sm text-gray-400 hover:text-white transition-colors">
