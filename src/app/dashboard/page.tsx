@@ -102,7 +102,6 @@ export default function DashboardPage() {
   // フィルター
   const [period, setPeriod] = useState("all");
   const [selectedChannelId, setSelectedChannelId] = useState("");
-  const [selectedDiagnosisType, setSelectedDiagnosisType] = useState("");
   const [summaryChannelIds, setSummaryChannelIds] = useState<string[]>([]); // 効果測定サマリー用（複数選択）
 
   // カスタム期間
@@ -203,7 +202,6 @@ export default function DashboardPage() {
           limit: "30",
         });
         if (selectedChannelId) params.set("channelId", selectedChannelId);
-        if (selectedDiagnosisType) params.set("diagnosisType", selectedDiagnosisType);
         if (period === "custom") {
           params.set("startDate", customStartDate);
           params.set("endDate", customEndDate);
@@ -234,7 +232,7 @@ export default function DashboardPage() {
         setIsLoadingMore(false);
       }
     },
-    [period, selectedChannelId, selectedDiagnosisType, customStartDate, customEndDate]
+    [period, selectedChannelId, customStartDate, customEndDate]
   );
 
   // サブスクリプション情報取得
@@ -454,7 +452,6 @@ export default function DashboardPage() {
 
     const params = new URLSearchParams({ period, offset: "0", limit: "10000" });
     if (selectedChannelId) params.set("channelId", selectedChannelId);
-    if (selectedDiagnosisType) params.set("diagnosisType", selectedDiagnosisType);
     if (period === "custom") {
       params.set("startDate", customStartDate);
       params.set("endDate", customEndDate);
@@ -752,15 +749,6 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="flex flex-wrap gap-2 sm:ml-auto">
-              <select
-                value={selectedDiagnosisType}
-                onChange={(e) => setSelectedDiagnosisType(e.target.value)}
-                className="px-3 py-1.5 border rounded-lg text-sm bg-white"
-              >
-                <option value="">全ての診断</option>
-                <option value="oral-age">お口年齢診断</option>
-                <option value="child-orthodontics">矯正チェック</option>
-              </select>
               <select
                 value={selectedChannelId}
                 onChange={(e) => setSelectedChannelId(e.target.value)}
