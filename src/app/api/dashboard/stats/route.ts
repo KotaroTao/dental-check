@@ -215,13 +215,15 @@ export async function GET(request: NextRequest) {
           })
         : Promise.resolve(0),
 
-      // リンクタイプのQR読み込み数（AccessLog qr_scan）
+      // リンクタイプのQR読み込み数（DiagnosisSession - リンク完了時にセッション作成）
       filteredLinkOnlyChannelIds.length > 0
-        ? prisma.accessLog.count({
+        ? prisma.diagnosisSession.count({
             where: {
               clinicId: session.clinicId,
               channelId: { in: filteredLinkOnlyChannelIds },
-              eventType: "qr_scan",
+              sessionType: "link",
+              completedAt: { not: null },
+              isDemo: false,
               isDeleted: false,
               ...(dateFrom && dateTo ? { createdAt: { gte: dateFrom, lte: dateTo } } : {}),
             },
@@ -334,13 +336,15 @@ export async function GET(request: NextRequest) {
           })
         : Promise.resolve(0),
 
-      // 前期リンクタイプのQR読み込み数
+      // 前期リンクタイプのQR読み込み数（DiagnosisSession）
       filteredLinkOnlyChannelIds.length > 0
-        ? prisma.accessLog.count({
+        ? prisma.diagnosisSession.count({
             where: {
               clinicId: session.clinicId,
               channelId: { in: filteredLinkOnlyChannelIds },
-              eventType: "qr_scan",
+              sessionType: "link",
+              completedAt: { not: null },
+              isDemo: false,
               isDeleted: false,
               ...(prevDateFrom && prevDateTo ? { createdAt: { gte: prevDateFrom, lte: prevDateTo } } : {}),
             },
@@ -386,10 +390,10 @@ export async function GET(request: NextRequest) {
     }
     ctaCount += linkOnlyCompletedCount;
 
-    // QR読み込み回数 = 診断タイプ完了数 + リンクタイプスキャン数
+    // QR読み込み回数 = 診断タイプ完了数 + リンクタイプ完了数
+    // （linkQrScanCountはDiagnosisSessionをカウントするため、linkOnlyCompletedCountと同じ）
     const accessCount = diagnosisSessionCount + linkQrScanCount;
-    // リンクのみタイプの診断完了はアクセス数にも加算（完了率計算用）
-    const adjustedAccessCount = accessCount + linkOnlyCompletedCount;
+    const adjustedAccessCount = accessCount;
 
     // 完了率を計算
     const completionRate =

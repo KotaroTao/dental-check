@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
     const diagnosisChannelIds = channels.filter((c) => c.channelType === "diagnosis").map((c) => c.id);
     const linkChannelIds = channels.filter((c) => c.channelType === "link").map((c) => c.id);
 
-    // 診断タイプ: DiagnosisSession（完了分）をカウント（履歴と一致させるため）
+    // 診断タイプ: DiagnosisSession（完了分）をカウント
     const diagnosisSessionCounts = diagnosisChannelIds.length > 0
       ? await prisma.diagnosisSession.groupBy({
           by: ["channelId"],
@@ -91,14 +91,16 @@ export async function GET(request: NextRequest) {
         })
       : [];
 
-    // リンクタイプ: AccessLog（qr_scan）をカウント（履歴と一致させるため）
-    const linkAccessCounts = linkChannelIds.length > 0
-      ? await prisma.accessLog.groupBy({
+    // リンクタイプ: DiagnosisSession（完了分）をカウント（リンク完了時にセッションが作成される）
+    const linkSessionCounts = linkChannelIds.length > 0
+      ? await prisma.diagnosisSession.groupBy({
           by: ["channelId"],
           where: {
             clinicId: session.clinicId,
             channelId: { in: linkChannelIds },
-            eventType: "qr_scan",
+            sessionType: "link",
+            completedAt: { not: null },
+            isDemo: false,
             isDeleted: false,
             ...(dateFrom && dateTo ? { createdAt: { gte: dateFrom, lte: dateTo } } : {}),
           },
@@ -113,9 +115,9 @@ export async function GET(request: NextRequest) {
         countMap[dc.channelId] = dc._count.id;
       }
     }
-    for (const ac of linkAccessCounts) {
-      if (ac.channelId) {
-        countMap[ac.channelId] = ac._count.id;
+    for (const lc of linkSessionCounts) {
+      if (lc.channelId) {
+        countMap[lc.channelId] = lc._count.id;
       }
     }
 
