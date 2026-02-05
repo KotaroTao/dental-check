@@ -12,7 +12,7 @@ export default function PrivacyPage() {
               <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
                 <Sparkles className="w-5 h-5 text-white" />
               </div>
-              <span className="font-bold text-lg text-gray-900">くるくる診断DX<span className="text-[0.5em]"> for Dental</span></span>
+              <span className="font-bold text-lg text-gray-900">くるくるQR<span className="text-[0.5em]"> for Dental</span></span>
             </Link>
           </div>
         </div>
@@ -26,7 +26,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-xl font-bold text-gray-900 mb-4">1. はじめに</h2>
             <p className="text-gray-700 leading-relaxed">
-              株式会社ファンクション・ティ（以下「当社」）は、くるくる診断DX for Dental（以下「本サービス」）において、
+              株式会社ファンクション・ティ（以下「当社」）は、くるくるQR for Dental（以下「本サービス」）において、
               お客様の個人情報の保護に努めております。本プライバシーポリシーは、本サービスにおける個人情報の取り扱いについて定めるものです。
             </p>
           </section>
@@ -143,7 +143,7 @@ export default function PrivacyPage() {
       <footer className="bg-gray-900 py-8 mt-12">
         <div className="container mx-auto px-4 text-center">
           <p className="text-gray-500 text-sm">
-            &copy; 2026 くるくる診断DX for Dental. All rights reserved.
+            &copy; 2026 くるくるQR for Dental. All rights reserved.
           </p>
           <p className="text-gray-500 text-sm mt-1">
             運営: <a href="https://function-t.com/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors">株式会社ファンクション・ティ</a>

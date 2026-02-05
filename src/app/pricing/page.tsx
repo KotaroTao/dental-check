@@ -23,7 +23,7 @@ export default function PricingPage() {
               <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
                 <Sparkles className="w-5 h-5 text-white" />
               </div>
-              <span className="font-bold text-lg text-gray-900">くるくる診断DX<span className="text-[0.5em]"> for Dental</span></span>
+              <span className="font-bold text-lg text-gray-900">くるくるQR<span className="text-[0.5em]"> for Dental</span></span>
             </Link>
             <div className="hidden md:flex items-center gap-8">
               <Link href="/#features" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
@@ -482,7 +482,7 @@ export default function PricingPage() {
               <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
                 <Sparkles className="w-5 h-5 text-white" />
               </div>
-              <span className="font-bold text-lg text-white">くるくる診断DX<span className="text-[0.5em]"> for Dental</span></span>
+              <span className="font-bold text-lg text-white">くるくるQR<span className="text-[0.5em]"> for Dental</span></span>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-6 md:gap-8">
               <Link href="/#features" className="text-sm text-gray-400 hover:text-white transition-colors">
@@ -506,7 +506,7 @@ export default function PricingPage() {
             </div>
             <div className="text-center md:text-right">
               <p className="text-gray-500 text-sm">
-                &copy; 2026 くるくる診断DX for Dental. All rights reserved.
+                &copy; 2026 くるくるQR for Dental. All rights reserved.
               </p>
               <p className="text-gray-500 text-sm mt-1">
                 運営: <a href="https://function-t.com/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors">株式会社ファンクション・ティ</a>
