@@ -94,7 +94,7 @@ export default function DashboardLayout({
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-8">
             <Link href="/dashboard" className="font-bold text-xl">
-              <span className="hidden sm:inline">くるくる診断DX</span>
+              <span className="hidden sm:inline">くるくるQR</span>
               <span className="sm:hidden">くるくる</span>
               <span className="text-[0.5em]"> for Dental</span>
             </Link>
