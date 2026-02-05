@@ -68,6 +68,7 @@ export async function GET(request: NextRequest) {
     type WhereFilterType = {
       clinicId: string;
       isDemo: boolean;
+      isDeleted: boolean;
       completedAt: { not: null };
       createdAt?: { gte: Date; lte: Date };
       channelId?: string | { in: string[] };
@@ -77,6 +78,7 @@ export async function GET(request: NextRequest) {
     const whereFilter: WhereFilterType = {
       clinicId: session.clinicId,
       isDemo: false,
+      isDeleted: false,
       completedAt: { not: null },
       ...(dateFrom && dateTo ? { createdAt: { gte: dateFrom, lte: dateTo } } : {}),
     };
@@ -220,6 +222,7 @@ export async function GET(request: NextRequest) {
     type AccessLogFilterType = {
       clinicId: string;
       eventType: string;
+      isDeleted: boolean;
       createdAt?: { gte: Date; lte: Date };
       channelId?: string | { in: string[] };
     };
@@ -227,6 +230,7 @@ export async function GET(request: NextRequest) {
     const accessLogFilter: AccessLogFilterType = {
       clinicId: session.clinicId,
       eventType: "qr_scan",
+      isDeleted: false,
       ...(dateFrom && dateTo ? { createdAt: { gte: dateFrom, lte: dateTo } } : {}),
     };
 
