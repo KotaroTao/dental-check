@@ -624,9 +624,11 @@ function EffectivenessSummary({
   );
 }
 
-// QRコードカードコンポーネント
-function QRCodeCard({
+// QRコードリスト行コンポーネント
+function QRCodeRow({
   channel,
+  stats,
+  color,
   onHide,
   onRestore,
   onPermanentDelete,
@@ -635,6 +637,8 @@ function QRCodeCard({
   onDemoClick,
 }: {
   channel: Channel;
+  stats?: ChannelStats;
+  color: string;
   onHide: () => void;
   onRestore: () => void;
   onPermanentDelete: () => void;
@@ -644,156 +648,200 @@ function QRCodeCard({
 }) {
   const isExpired = channel.expiresAt && new Date() > new Date(channel.expiresAt);
 
-  return (
-    <div className="bg-white rounded-xl border hover:shadow-md transition-all duration-200 group">
-      {/* カードヘッダー */}
-      <div className="p-4">
-        <div className="flex items-start gap-3">
-          {/* サムネイル */}
+  const menu = (
+    <DropdownMenu
+      trigger={
+        <button className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
+          <MoreVertical className="w-4 h-4 text-gray-500" />
+        </button>
+      }
+    >
+      <Link
+        href={`/dashboard/channels/${channel.id}`}
+        className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+      >
+        <Eye className="w-4 h-4" />
+        QRコード表示
+      </Link>
+      {isDemo ? (
+        <button
+          onClick={onDemoClick}
+          className="flex items-center gap-2 px-3 py-2 text-sm text-gray-400 hover:bg-gray-50 w-full text-left"
+        >
+          <Settings className="w-4 h-4" />
+          編集
+        </button>
+      ) : (
+        <Link
+          href={`/dashboard/channels/${channel.id}/edit`}
+          className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+        >
+          <Settings className="w-4 h-4" />
+          編集
+        </Link>
+      )}
+      <div className="border-t my-1" />
+      {channel.isActive ? (
+        <button
+          onClick={isDemo ? onDemoClick : onHide}
+          className={`flex items-center gap-2 px-3 py-2 text-sm w-full text-left ${isDemo ? "text-gray-400 hover:bg-gray-50" : "text-red-600 hover:bg-red-50"}`}
+        >
+          <Trash2 className="w-4 h-4" />
+          非表示にする
+        </button>
+      ) : (
+        <>
+          <button
+            onClick={isDemo ? onDemoClick : onRestore}
+            className={`flex items-center gap-2 px-3 py-2 text-sm w-full text-left ${isDemo ? "text-gray-400 hover:bg-gray-50" : "text-emerald-600 hover:bg-emerald-50"}`}
+          >
+            <RotateCcw className="w-4 h-4" />
+            復元する
+          </button>
+          <button
+            onClick={isDemo ? onDemoClick : onPermanentDelete}
+            className={`flex items-center gap-2 px-3 py-2 text-sm w-full text-left ${isDemo ? "text-gray-400 hover:bg-gray-50" : "text-red-600 hover:bg-red-50"}`}
+          >
+            <Trash2 className="w-4 h-4" />
+            完全に削除
+          </button>
+        </>
+      )}
+    </DropdownMenu>
+  );
+
+  // PC用: テーブル行
+  const desktopRow = (
+    <tr className="hidden md:table-row hover:bg-gray-50/80 transition-colors group">
+      {/* 名前 */}
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-3">
+          <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
           {channel.imageUrl ? (
             <button
               onClick={() => onImageClick(channel.imageUrl!, channel.name)}
-              className="w-14 h-14 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 hover:opacity-80 transition-opacity"
+              className="w-9 h-9 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 hover:opacity-80 transition-opacity"
             >
-              <img
-                src={channel.imageUrl}
-                alt={channel.name}
-                className="w-full h-full object-cover"
-              />
+              <img src={channel.imageUrl} alt={channel.name} className="w-full h-full object-cover" />
             </button>
           ) : (
-            <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center flex-shrink-0">
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center flex-shrink-0">
               {channel.channelType === "link" ? (
-                <Link2 className="w-6 h-6 text-blue-500" />
+                <Link2 className="w-4 h-4 text-blue-500" />
               ) : (
-                <QrCode className="w-6 h-6 text-blue-500" />
+                <QrCode className="w-4 h-4 text-blue-500" />
               )}
             </div>
           )}
-
-          {/* タイトル・ステータス */}
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-gray-900 truncate">{channel.name}</h3>
-            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+          <div className="min-w-0">
+            <Link href={`/dashboard/channels/${channel.id}`} className="font-medium text-sm text-gray-900 truncate block hover:text-blue-600 transition-colors">
+              {channel.name}
+            </Link>
+            <div className="flex items-center gap-1.5 mt-0.5">
               {channel.channelType === "link" && (
-                <span className="text-[10px] px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded-full font-medium">
-                  リンク
-                </span>
-              )}
-              {channel.isActive ? (
-                <span className="text-[10px] px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-medium">
-                  有効
-                </span>
-              ) : (
-                <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded-full font-medium">
-                  無効
-                </span>
+                <span className="text-[10px] px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded-full font-medium">リンク</span>
               )}
               {isExpired && (
                 <span className="text-[10px] px-1.5 py-0.5 bg-red-100 text-red-600 rounded-full font-medium flex items-center gap-0.5">
-                  <AlertTriangle className="w-2.5 h-2.5" />
-                  期限切れ
+                  <AlertTriangle className="w-2.5 h-2.5" />期限切れ
                 </span>
+              )}
+              {!channel.isActive && (
+                <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded-full font-medium">無効</span>
               )}
             </div>
           </div>
-
-          {/* メニュー */}
-          <DropdownMenu
-            trigger={
-              <button className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
-                <MoreVertical className="w-4 h-4 text-gray-500" />
-              </button>
-            }
-          >
-            <Link
-              href={`/dashboard/channels/${channel.id}`}
-              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-            >
-              <Eye className="w-4 h-4" />
-              QRコード表示
-            </Link>
-            {isDemo ? (
-              <button
-                onClick={onDemoClick}
-                className="flex items-center gap-2 px-3 py-2 text-sm text-gray-400 hover:bg-gray-50 w-full text-left"
-              >
-                <Settings className="w-4 h-4" />
-                編集
-              </button>
-            ) : (
-              <Link
-                href={`/dashboard/channels/${channel.id}/edit`}
-                className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-              >
-                <Settings className="w-4 h-4" />
-                編集
-              </Link>
-            )}
-            <div className="border-t my-1" />
-            {channel.isActive ? (
-              <button
-                onClick={isDemo ? onDemoClick : onHide}
-                className={`flex items-center gap-2 px-3 py-2 text-sm w-full text-left ${isDemo ? "text-gray-400 hover:bg-gray-50" : "text-red-600 hover:bg-red-50"}`}
-              >
-                <Trash2 className="w-4 h-4" />
-                非表示にする
-              </button>
-            ) : (
-              <>
-                <button
-                  onClick={isDemo ? onDemoClick : onRestore}
-                  className={`flex items-center gap-2 px-3 py-2 text-sm w-full text-left ${isDemo ? "text-gray-400 hover:bg-gray-50" : "text-emerald-600 hover:bg-emerald-50"}`}
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  復元する
-                </button>
-                <button
-                  onClick={isDemo ? onDemoClick : onPermanentDelete}
-                  className={`flex items-center gap-2 px-3 py-2 text-sm w-full text-left ${isDemo ? "text-gray-400 hover:bg-gray-50" : "text-red-600 hover:bg-red-50"}`}
-                >
-                  <Trash2 className="w-4 h-4" />
-                  完全に削除
-                </button>
-              </>
-            )}
-          </DropdownMenu>
         </div>
+      </td>
+      {/* QR読み込み */}
+      <td className="px-3 py-3 text-center">
+        <span className="text-sm font-bold text-emerald-600">{channel.scanCount.toLocaleString()}</span>
+      </td>
+      {/* CTA */}
+      <td className="px-3 py-3 text-center">
+        <span className="text-sm font-bold text-purple-600">{stats?.ctaCount?.toLocaleString() ?? "-"}</span>
+      </td>
+      {/* CTA率 */}
+      <td className="px-3 py-3 text-center">
+        <span className="text-sm font-bold text-orange-600">{stats?.ctaRate != null ? `${stats.ctaRate}%` : "-"}</span>
+      </td>
+      {/* 作成日 */}
+      <td className="px-3 py-3 text-center text-xs text-gray-500 whitespace-nowrap">
+        {new Date(channel.createdAt).toLocaleDateString("ja-JP")}
+      </td>
+      {/* メニュー */}
+      <td className="px-2 py-3 text-center">{menu}</td>
+    </tr>
+  );
 
-        {/* 日付情報 */}
-        <div className="flex items-center gap-3 mt-3 text-xs text-gray-500">
-          <span>作成: {new Date(channel.createdAt).toLocaleDateString("ja-JP")}</span>
-          {channel.expiresAt && (
-            <span className="flex items-center gap-1">
-              <Calendar className="w-3 h-3" />
-              {new Date(channel.expiresAt).toLocaleDateString("ja-JP")}まで
-            </span>
-          )}
+  // モバイル用: コンパクトカード
+  const mobileCard = (
+    <div className="md:hidden px-4 py-3 hover:bg-gray-50/80 transition-colors">
+      <div className="flex items-center gap-3">
+        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+        {channel.imageUrl ? (
+          <button
+            onClick={() => onImageClick(channel.imageUrl!, channel.name)}
+            className="w-9 h-9 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 hover:opacity-80 transition-opacity"
+          >
+            <img src={channel.imageUrl} alt={channel.name} className="w-full h-full object-cover" />
+          </button>
+        ) : (
+          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center flex-shrink-0">
+            {channel.channelType === "link" ? (
+              <Link2 className="w-4 h-4 text-blue-500" />
+            ) : (
+              <QrCode className="w-4 h-4 text-blue-500" />
+            )}
+          </div>
+        )}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-2">
+            <Link href={`/dashboard/channels/${channel.id}`} className="font-medium text-sm text-gray-900 truncate hover:text-blue-600 transition-colors">
+              {channel.name}
+            </Link>
+            {menu}
+          </div>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            {channel.channelType === "link" && (
+              <span className="text-[10px] px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded-full font-medium">リンク</span>
+            )}
+            {isExpired && (
+              <span className="text-[10px] px-1.5 py-0.5 bg-red-100 text-red-600 rounded-full font-medium flex items-center gap-0.5">
+                <AlertTriangle className="w-2.5 h-2.5" />期限切れ
+              </span>
+            )}
+            {!channel.isActive && (
+              <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded-full font-medium">無効</span>
+            )}
+          </div>
         </div>
       </div>
-
-      {/* QR読み込み回数（アクティブなチャンネルのみ） */}
+      {/* モバイル: インライン指標 */}
       {channel.isActive && (
-        <div className="border-t bg-gray-50/50 p-4">
-          <div className="flex items-center justify-center gap-2 text-emerald-600">
-            <QrCode className="w-5 h-5" />
-            <span className="text-sm text-gray-500">QR読み込み</span>
-            <span className="text-2xl font-bold">{channel.scanCount}</span>
-            <span className="text-sm text-gray-500">回</span>
+        <div className="flex items-center gap-4 mt-2 ml-[3.125rem] text-xs">
+          <div className="flex items-center gap-1">
+            <span className="text-gray-400">読込</span>
+            <span className="font-bold text-emerald-600">{channel.scanCount.toLocaleString()}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-gray-400">CTA</span>
+            <span className="font-bold text-purple-600">{stats?.ctaCount?.toLocaleString() ?? "-"}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-gray-400">CTA率</span>
+            <span className="font-bold text-orange-600">{stats?.ctaRate != null ? `${stats.ctaRate}%` : "-"}</span>
           </div>
         </div>
       )}
-
-      {/* 詳細リンク（アクティブなチャンネルのみ） */}
-      {channel.isActive && (
-        <Link
-          href={`/dashboard/channels/${channel.id}`}
-          className="block border-t px-4 py-2.5 text-center text-sm font-medium text-blue-600 hover:bg-blue-50 transition-colors"
-        >
-          QRコードを表示
-        </Link>
-      )}
     </div>
+  );
+
+  return (
+    <>
+      {desktopRow}
+      {mobileCard}
+    </>
   );
 }
 
@@ -1383,15 +1431,13 @@ export default function DashboardPage() {
               className="px-3 py-1.5 border rounded-lg text-xs bg-white text-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="createdAt">作成日順</option>
-              <option value="accessCount">アクセス順</option>
-              <option value="completedCount">診断完了順</option>
-              <option value="completionRate">完了率順</option>
+              <option value="accessCount">読み込み順</option>
               <option value="ctaCount">CTA順</option>
             </select>
           )}
         </div>
 
-        {/* QRコードグリッド */}
+        {/* QRコードリスト */}
         {displayChannels.length === 0 ? (
           <div className="p-12 text-center">
             <div className="w-20 h-20 mx-auto bg-gray-100 rounded-2xl flex items-center justify-center mb-4">
@@ -1413,12 +1459,46 @@ export default function DashboardPage() {
             )}
           </div>
         ) : (
-          <div className="p-5">
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {displayChannels.map((channel) => (
-                <QRCodeCard
+          <>
+            {/* PC用テーブル */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b bg-gray-50/50">
+                    <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">QRコード</th>
+                    <th className="text-center px-3 py-2.5 text-xs font-medium text-gray-500 w-24">読み込み</th>
+                    <th className="text-center px-3 py-2.5 text-xs font-medium text-gray-500 w-20">CTA</th>
+                    <th className="text-center px-3 py-2.5 text-xs font-medium text-gray-500 w-20">CTA率</th>
+                    <th className="text-center px-3 py-2.5 text-xs font-medium text-gray-500 w-24">作成日</th>
+                    <th className="w-10"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {displayChannels.map((channel, index) => (
+                    <QRCodeRow
+                      key={channel.id}
+                      channel={channel}
+                      stats={channelStats[channel.id]}
+                      color={CHANNEL_COLORS[index % CHANNEL_COLORS.length]}
+                      onHide={() => handleHideChannel(channel.id)}
+                      onRestore={() => handleRestoreChannel(channel.id)}
+                      onPermanentDelete={() => handlePermanentDeleteChannel(channel.id)}
+                      onImageClick={(url, name) => setSelectedImage({ url, name })}
+                      isDemo={subscription?.isDemo}
+                      onDemoClick={() => setShowDemoModal(true)}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {/* モバイル用リスト */}
+            <div className="md:hidden divide-y">
+              {displayChannels.map((channel, index) => (
+                <QRCodeRow
                   key={channel.id}
                   channel={channel}
+                  stats={channelStats[channel.id]}
+                  color={CHANNEL_COLORS[index % CHANNEL_COLORS.length]}
                   onHide={() => handleHideChannel(channel.id)}
                   onRestore={() => handleRestoreChannel(channel.id)}
                   onPermanentDelete={() => handlePermanentDeleteChannel(channel.id)}
@@ -1428,7 +1508,7 @@ export default function DashboardPage() {
                 />
               ))}
             </div>
-          </div>
+          </>
         )}
       </div>
 
