@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Sparkles } from "lucide-react";
+import { Logo } from "@/components/logo";
 
 export default function LegalPage() {
   return (
@@ -8,11 +8,8 @@ export default function LegalPage() {
       <nav className="bg-white border-b">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-white" />
-              </div>
-              <span className="font-bold text-lg text-gray-900">くるくるQR<span className="text-[0.5em]"> for Dental</span></span>
+            <Link href="/" className="flex items-center">
+              <Logo />
             </Link>
           </div>
         </div>

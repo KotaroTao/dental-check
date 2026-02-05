@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { Menu, X, Eye } from "lucide-react";
 import { CTAAlert } from "@/components/dashboard/cta-alert";
+import { Logo } from "@/components/logo";
 
 interface Clinic {
   id: string;
@@ -93,10 +94,8 @@ export default function DashboardLayout({
       <header className="bg-white border-b sticky top-0 z-20">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-8">
-            <Link href="/dashboard" className="font-bold text-xl">
-              <span className="hidden sm:inline">くるくるQR</span>
-              <span className="sm:hidden">くるくる</span>
-              <span className="text-[0.5em]"> for Dental</span>
+            <Link href="/dashboard" className="flex items-center">
+              <Logo size="lg" />
             </Link>
           </div>
           <div className="flex items-center gap-2">
