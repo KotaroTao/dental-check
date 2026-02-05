@@ -53,6 +53,7 @@ const CTA_TYPE_NAMES: Record<string, string> = {
   google_maps: "マップ",
   clinic_page: "医院ページ",
   qr_link: "QRリンク",
+  direct_link: "直リンク",
 };
 
 interface Channel {
