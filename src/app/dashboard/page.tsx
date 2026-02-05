@@ -758,12 +758,14 @@ function QRCodeRow({
       </td>
       {/* 予算 */}
       <td className="px-3 py-3 text-center">
-        {channel.budget && channel.budget > 0 ? (
-          <span className="text-sm font-medium text-gray-700">¥{channel.budget.toLocaleString()}</span>
-        ) : isDemo ? (
-          <button onClick={onDemoClick} className="text-xs text-blue-500 hover:text-blue-700 hover:underline">予算を設定</button>
+        {isDemo ? (
+          <button onClick={onDemoClick} className={`text-sm hover:underline ${channel.budget && channel.budget > 0 ? "font-medium text-gray-700" : "text-xs text-blue-500 hover:text-blue-700"}`}>
+            {channel.budget && channel.budget > 0 ? `¥${channel.budget.toLocaleString()}` : "予算を設定"}
+          </button>
         ) : (
-          <Link href={`/dashboard/channels/${channel.id}/edit#budget`} className="text-xs text-blue-500 hover:text-blue-700 hover:underline">予算を設定</Link>
+          <Link href={`/dashboard/channels/${channel.id}/edit#budget`} className={`hover:underline ${channel.budget && channel.budget > 0 ? "text-sm font-medium text-gray-700 hover:text-blue-600" : "text-xs text-blue-500 hover:text-blue-700"}`}>
+            {channel.budget && channel.budget > 0 ? `¥${channel.budget.toLocaleString()}` : "予算を設定"}
+          </Link>
         )}
       </td>
       {/* 読込単価 */}
@@ -845,12 +847,14 @@ function QRCodeRow({
           </div>
           <div className="flex items-center gap-1">
             <span className="text-gray-400">予算</span>
-            {channel.budget && channel.budget > 0 ? (
-              <span className="font-medium text-gray-700">¥{channel.budget.toLocaleString()}</span>
-            ) : isDemo ? (
-              <button onClick={onDemoClick} className="text-blue-500 hover:underline">設定</button>
+            {isDemo ? (
+              <button onClick={onDemoClick} className={`hover:underline ${channel.budget && channel.budget > 0 ? "font-medium text-gray-700" : "text-blue-500"}`}>
+                {channel.budget && channel.budget > 0 ? `¥${channel.budget.toLocaleString()}` : "設定"}
+              </button>
             ) : (
-              <Link href={`/dashboard/channels/${channel.id}/edit#budget`} className="text-blue-500 hover:underline">設定</Link>
+              <Link href={`/dashboard/channels/${channel.id}/edit#budget`} className={`hover:underline ${channel.budget && channel.budget > 0 ? "font-medium text-gray-700 hover:text-blue-600" : "text-blue-500"}`}>
+                {channel.budget && channel.budget > 0 ? `¥${channel.budget.toLocaleString()}` : "設定"}
+              </Link>
             )}
           </div>
           <div className="flex items-center gap-1">
