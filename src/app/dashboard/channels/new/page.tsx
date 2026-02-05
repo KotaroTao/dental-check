@@ -403,14 +403,29 @@ export default function NewChannelPage() {
               <Calendar className="w-4 h-4 text-gray-500" />
               有効期限（任意）
             </Label>
-            <Input
-              id="expiresAt"
-              name="expiresAt"
-              type="datetime-local"
-              value={formData.expiresAt}
-              onChange={handleChange}
-              disabled={isLoading}
-            />
+            <div className="flex gap-2">
+              <Input
+                id="expiresAt"
+                name="expiresAt"
+                type="datetime-local"
+                value={formData.expiresAt}
+                onChange={handleChange}
+                disabled={isLoading}
+                className="flex-1"
+              />
+              {formData.expiresAt && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setFormData((prev) => ({ ...prev, expiresAt: "" }))}
+                  disabled={isLoading}
+                  className="shrink-0"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
             <p className="text-xs text-gray-500">
               期限を過ぎるとQRコードは無効になります。空欄の場合は無期限です。
             </p>
