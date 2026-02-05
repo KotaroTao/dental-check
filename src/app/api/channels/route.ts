@@ -71,8 +71,7 @@ export async function GET(request: NextRequest) {
       diagnosisNameMap[dt.slug] = dt.name;
     }
 
-    // チャンネルIDを取得
-    const channelIds = channels.map((c) => c.id);
+    // チャンネルIDをタイプ別に取得
     const diagnosisChannelIds = channels.filter((c) => c.channelType === "diagnosis").map((c) => c.id);
     const linkChannelIds = channels.filter((c) => c.channelType === "link").map((c) => c.id);
 

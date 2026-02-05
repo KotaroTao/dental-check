@@ -132,22 +132,6 @@ export async function GET(request: NextRequest) {
       filteredLinkOnlyChannelIds = linkOnlyChannelIds;
     }
 
-    // 共通のフィルター条件（AccessLog用）
-    const accessLogFilter = {
-      clinicId: session.clinicId,
-      isDeleted: false,
-      ...(dateFrom && dateTo ? { createdAt: { gte: dateFrom, lte: dateTo } } : {}),
-      ...channelFilter,
-    };
-
-    // 前期の共通フィルター条件（AccessLog用）
-    const prevAccessLogFilter = {
-      clinicId: session.clinicId,
-      isDeleted: false,
-      ...(prevDateFrom && prevDateTo ? { createdAt: { gte: prevDateFrom, lte: prevDateTo } } : {}),
-      ...channelFilter,
-    };
-
     // CTAClick用のフィルター（isDeletedなし）
     const ctaFilter = {
       clinicId: session.clinicId,
