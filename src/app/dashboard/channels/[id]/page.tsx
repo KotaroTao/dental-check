@@ -5,12 +5,15 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import QRCode from "qrcode";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Download, Copy, ExternalLink, Edit, Image as ImageIcon, X, Calendar, AlertTriangle, Link2, MousePointerClick, Code, Check, Eye } from "lucide-react";
+import { ArrowLeft, Download, Copy, ExternalLink, Edit, Image as ImageIcon, X, Calendar, AlertTriangle, Link2, Code, Check, Eye } from "lucide-react";
 
 // 診断タイプの表示名
 const DIAGNOSIS_TYPE_NAMES: Record<string, string> = {
   "oral-age": "お口年齢診断",
   "child-orthodontics": "子供の矯正タイミングチェック",
+  "periodontal-risk": "歯周病リスク診断",
+  "cavity-risk": "虫歯リスク診断",
+  "whitening-check": "ホワイトニング適正診断",
 };
 
 interface Channel {
@@ -34,7 +37,25 @@ interface ChannelStats {
   completionRate: number;
   ctaCount: number;
   ctaRate: number;
+  ctaByType?: Record<string, number>;
 }
+
+// CTAタイプの表示名
+const CTA_TYPE_NAMES: Record<string, string> = {
+  booking: "予約",
+  phone: "電話",
+  line: "LINE",
+  instagram: "Instagram",
+  youtube: "YouTube",
+  facebook: "Facebook",
+  tiktok: "TikTok",
+  threads: "Threads",
+  x: "X",
+  google_maps: "マップ",
+  clinic_page: "医院ページ",
+  clinic_homepage: "ホームページ",
+  direct_link: "直リンク",
+};
 
 interface SubscriptionInfo {
   isDemo?: boolean;
@@ -80,7 +101,7 @@ export default function ChannelDetailPage() {
 
     const fetchStats = async () => {
       try {
-        const response = await fetch(`/api/dashboard/channel-stats?period=month`);
+        const response = await fetch(`/api/dashboard/channel-stats?period=all`);
         if (response.ok) {
           const data = await response.json();
           if (data.stats && params.id && data.stats[params.id as string]) {
@@ -296,9 +317,60 @@ export default function ChannelDetailPage() {
           </div>
         </div>
 
+        {/* 診断タイプの場合: 統計情報を表示 */}
+        {channel.channelType === "diagnosis" && stats && (
+          <div className="border-t pt-4 mt-4 space-y-4">
+            {/* 統計情報（ダッシュボードと同じ形式） */}
+            <div className="grid grid-cols-3 gap-3">
+              {/* QR読み込み回数 */}
+              <div className="text-center p-3 bg-emerald-50 rounded-xl">
+                <div className="text-xs text-gray-500 mb-1">QR読み込み</div>
+                <div className="text-xl font-bold text-emerald-600">{stats.accessCount?.toLocaleString() || 0}</div>
+              </div>
+
+              {/* CTAクリック数 */}
+              <div className="text-center p-3 bg-purple-50 rounded-xl">
+                <div className="text-xs text-gray-500 mb-1">CTAクリック</div>
+                <div className="text-xl font-bold text-purple-600">{stats.ctaCount?.toLocaleString() || 0}</div>
+              </div>
+
+              {/* CTA率 */}
+              <div className="text-center p-3 bg-orange-50 rounded-xl">
+                <div className="text-xs text-gray-500 mb-1">CTA率</div>
+                <div className="text-xl font-bold text-orange-600">{stats.ctaRate || 0}%</div>
+              </div>
+            </div>
+
+            {/* CTA内訳 */}
+            {stats.ctaByType && Object.keys(stats.ctaByType).length > 0 && (
+              <div className="p-4 bg-gray-50 rounded-xl">
+                <div className="text-sm font-medium text-gray-700 mb-3">CTA内訳</div>
+                <div className="space-y-2">
+                  {Object.entries(stats.ctaByType)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([type, count]) => (
+                      <div key={type} className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">{CTA_TYPE_NAMES[type] || type}</span>
+                        <div className="flex items-center gap-2">
+                          <div className="w-20 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-purple-500 rounded-full"
+                              style={{ width: `${stats.ctaCount > 0 ? (count / stats.ctaCount) * 100 : 0}%` }}
+                            />
+                          </div>
+                          <span className="text-sm font-medium text-purple-600 w-8 text-right">{count}</span>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* リンクタイプの場合: リダイレクト先とスキャン数を表示 */}
         {channel.channelType === "link" && (
-          <div className="border-t pt-4 mt-4 space-y-3">
+          <div className="border-t pt-4 mt-4 space-y-4">
             <div>
               <div className="text-sm text-gray-500 mb-1">リダイレクト先URL</div>
               <div className="flex items-center gap-2">
@@ -312,11 +384,52 @@ export default function ChannelDetailPage() {
                 </a>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <MousePointerClick className="w-4 h-4 text-gray-500" />
-              <span className="text-sm text-gray-500">QR読み込み回数:</span>
-              <span className="text-lg font-bold text-purple-600">{channel.scanCount}</span>
+
+            {/* 統計情報（ダッシュボードと同じ形式） */}
+            <div className="grid grid-cols-3 gap-3">
+              {/* QR読み込み回数 */}
+              <div className="text-center p-3 bg-emerald-50 rounded-xl">
+                <div className="text-xs text-gray-500 mb-1">QR読み込み</div>
+                <div className="text-xl font-bold text-emerald-600">{channel.scanCount.toLocaleString()}</div>
+              </div>
+
+              {/* CTAクリック数 */}
+              <div className="text-center p-3 bg-purple-50 rounded-xl">
+                <div className="text-xs text-gray-500 mb-1">CTAクリック</div>
+                <div className="text-xl font-bold text-purple-600">{stats?.ctaCount?.toLocaleString() || 0}</div>
+              </div>
+
+              {/* CTA率 */}
+              <div className="text-center p-3 bg-orange-50 rounded-xl">
+                <div className="text-xs text-gray-500 mb-1">CTA率</div>
+                <div className="text-xl font-bold text-orange-600">{stats?.ctaRate || 0}%</div>
+              </div>
             </div>
+
+            {/* CTA内訳 */}
+            {stats?.ctaByType && Object.keys(stats.ctaByType).length > 0 && (
+              <div className="p-4 bg-gray-50 rounded-xl">
+                <div className="text-sm font-medium text-gray-700 mb-3">CTA内訳</div>
+                <div className="space-y-2">
+                  {Object.entries(stats.ctaByType)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([type, count]) => (
+                      <div key={type} className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">{CTA_TYPE_NAMES[type] || type}</span>
+                        <div className="flex items-center gap-2">
+                          <div className="w-20 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-purple-500 rounded-full"
+                              style={{ width: `${stats.ctaCount > 0 ? (count / stats.ctaCount) * 100 : 0}%` }}
+                            />
+                          </div>
+                          <span className="text-sm font-medium text-purple-600 w-8 text-right">{count}</span>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

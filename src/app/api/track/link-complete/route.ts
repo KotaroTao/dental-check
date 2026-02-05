@@ -116,6 +116,16 @@ export async function POST(request: NextRequest) {
       });
       sessionId = session.id;
 
+      // 直リンクのCTAクリックを記録
+      await prisma.cTAClick.create({
+        data: {
+          clinicId: channel.clinicId,
+          channelId: channel.id,
+          ctaType: "direct_link",
+          sessionId: session.id,
+        },
+      });
+
       // スキャン回数をインクリメント
       await prisma.channel.update({
         where: { id: channel.id },

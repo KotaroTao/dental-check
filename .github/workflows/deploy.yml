@@ -1,46 +1,32 @@
-name: Deploy to VPS
+name: Deploy to Production
 
 on:
   push:
     branches:
       - main
-      - master
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to deploy'
+        required: false
+        default: 'main'
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Deploy to VPS
+      - name: Deploy to server
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          port: ${{ secrets.VPS_PORT }}
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
             cd /var/www/dental-check
-
-            # 最新コード取得
             git fetch origin
-            git reset --hard origin/main || git reset --hard origin/master
-
-            # 依存関係インストール（ビルドにdevDependenciesが必要）
-            npm install
-
-            # Prismaクライアント生成
-            npx prisma generate
-
-            # ビルド
+            git checkout ${{ github.event.inputs.branch || 'main' }}
+            git pull origin ${{ github.event.inputs.branch || 'main' }}
+            npm install --production=false
             npm run build
-
-            # アプリ再起動
-            pm2 restart dental-app || pm2 start npm --name "dental-app" -- start
-
-            # 状態確認
-            pm2 status
-
-            echo "Deploy completed successfully!"
+            pm2 restart dental-app
+            echo "Deployed successfully at $(date)"

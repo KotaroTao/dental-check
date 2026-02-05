@@ -81,6 +81,7 @@ export async function GET(request: NextRequest) {
           channelId: { in: channelIds },
           ...dateFilter,
           eventType: { not: "clinic_page_view" },
+          isDeleted: false,
         },
         _count: { id: true },
       }),
@@ -93,29 +94,38 @@ export async function GET(request: NextRequest) {
           channelId: { in: channelIds },
           ...dateFilter,
           isDemo: false,
+          isDeleted: false,
           completedAt: { not: null },
         },
         _count: { id: true },
       }),
 
-      // CTAクリック数（チャンネル別）
+      // CTAクリック数（チャンネル別）- 削除されていないセッションのみ
       prisma.cTAClick.groupBy({
         by: ["channelId"],
         where: {
           clinicId: session.clinicId,
           channelId: { in: channelIds },
           ...dateFilter,
+          OR: [
+            { sessionId: null },
+            { session: { isDeleted: false } },
+          ],
         },
         _count: { id: true },
       }),
 
-      // CTA内訳（チャンネル・タイプ別）
+      // CTA内訳（チャンネル・タイプ別）- 削除されていないセッションのみ
       prisma.cTAClick.groupBy({
         by: ["channelId", "ctaType"],
         where: {
           clinicId: session.clinicId,
           channelId: { in: channelIds },
           ...dateFilter,
+          OR: [
+            { sessionId: null },
+            { session: { isDeleted: false } },
+          ],
         },
         _count: { id: true },
       }),
@@ -128,6 +138,7 @@ export async function GET(request: NextRequest) {
           channelId: { in: channelIds },
           ...dateFilter,
           isDemo: false,
+          isDeleted: false,
           completedAt: { not: null },
         },
         _count: { id: true },
@@ -140,6 +151,7 @@ export async function GET(request: NextRequest) {
           channelId: { in: channelIds },
           ...dateFilter,
           isDemo: false,
+          isDeleted: false,
           completedAt: { not: null },
         },
         select: { channelId: true, userAge: true },
@@ -152,6 +164,7 @@ export async function GET(request: NextRequest) {
           channelId: { in: channelIds },
           ...dateFilter,
           eventType: { not: "clinic_page_view" },
+          isDeleted: false,
         },
         select: { channelId: true, createdAt: true },
         orderBy: { createdAt: "desc" },

@@ -31,7 +31,25 @@ export async function GET(
       );
     }
 
-    return NextResponse.json({ channel });
+    // リンクタイプの場合、scanCountをDiagnosisSessionの件数から動的に計算
+    let dynamicScanCount = channel.scanCount;
+    if (channel.channelType === "link") {
+      dynamicScanCount = await prisma.diagnosisSession.count({
+        where: {
+          channelId: id,
+          sessionType: "link",
+          isDeleted: false,
+          completedAt: { not: null },
+        },
+      });
+    }
+
+    return NextResponse.json({
+      channel: {
+        ...channel,
+        scanCount: dynamicScanCount,
+      },
+    });
   } catch (error) {
     console.error("Get channel error:", error);
     return NextResponse.json(

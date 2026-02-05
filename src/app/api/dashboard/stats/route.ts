@@ -116,18 +116,32 @@ export async function GET(request: NextRequest) {
       filteredLinkOnlyChannelIds = linkOnlyChannelIds;
     }
 
-    // 共通のフィルター条件（AccessLog用）
-    const baseFilter = {
+    // 共通のフィルター条件（AccessLog用 - isDeletedあり）
+    const accessLogFilter = {
       clinicId: session.clinicId,
       isDeleted: false,
       ...(dateFrom && dateTo ? { createdAt: { gte: dateFrom, lte: dateTo } } : {}),
       ...channelFilter,
     };
 
-    // 前期の共通フィルター条件（AccessLog用）
-    const prevBaseFilter = {
+    // 前期の共通フィルター条件（AccessLog用 - isDeletedあり）
+    const prevAccessLogFilter = {
       clinicId: session.clinicId,
       isDeleted: false,
+      ...(prevDateFrom && prevDateTo ? { createdAt: { gte: prevDateFrom, lte: prevDateTo } } : {}),
+      ...channelFilter,
+    };
+
+    // CTAClick用のフィルター条件（isDeletedなし）
+    const ctaFilter = {
+      clinicId: session.clinicId,
+      ...(dateFrom && dateTo ? { createdAt: { gte: dateFrom, lte: dateTo } } : {}),
+      ...channelFilter,
+    };
+
+    // 前期のCTAClick用フィルター条件
+    const prevCtaFilter = {
+      clinicId: session.clinicId,
       ...(prevDateFrom && prevDateTo ? { createdAt: { gte: prevDateFrom, lte: prevDateTo } } : {}),
       ...channelFilter,
     };
@@ -188,7 +202,7 @@ export async function GET(request: NextRequest) {
       // アクセス数（診断ページ）
       prisma.accessLog.count({
         where: {
-          ...baseFilter,
+          ...accessLogFilter,
           eventType: { not: "clinic_page_view" },
         },
       }),
@@ -198,10 +212,16 @@ export async function GET(request: NextRequest) {
         where: completedFilter,
       }),
 
-      // CTAクリック（タイプ別に集計）
+      // CTAクリック（タイプ別に集計）- 削除されていないセッションのみ
       prisma.cTAClick.groupBy({
         by: ['ctaType'],
-        where: baseFilter,
+        where: {
+          ...ctaFilter,
+          OR: [
+            { sessionId: null }, // 医院ページからのCTA
+            { session: { isDeleted: false } }, // セッションが削除されていない
+          ],
+        },
         _count: { id: true },
       }),
 
@@ -222,11 +242,15 @@ export async function GET(request: NextRequest) {
         },
       }),
 
-      // 診断結果からのCTAクリック（channelIdがある）
+      // 診断結果からのCTAクリック（channelIdがある）- 削除されていないセッションのみ
       prisma.cTAClick.count({
         where: {
-          ...baseFilter,
+          ...ctaFilter,
           channelId: { not: null },
+          OR: [
+            { sessionId: null },
+            { session: { isDeleted: false } },
+          ],
         },
       }),
 
@@ -259,11 +283,12 @@ export async function GET(request: NextRequest) {
         _count: { id: true },
       }),
 
-      // セッションに紐づくCTAクリック（結果カテゴリ別CTA率計算用）
+      // セッションに紐づくCTAクリック（結果カテゴリ別CTA率計算用）- 削除されていないセッションのみ
       prisma.cTAClick.findMany({
         where: {
-          ...baseFilter,
+          ...ctaFilter,
           sessionId: { not: null },
+          session: { isDeleted: false },
         },
         select: {
           sessionId: true,
@@ -277,7 +302,7 @@ export async function GET(request: NextRequest) {
       // 前期アクセス数
       prisma.accessLog.count({
         where: {
-          ...prevBaseFilter,
+          ...prevAccessLogFilter,
           eventType: { not: "clinic_page_view" },
         },
       }),
@@ -287,9 +312,15 @@ export async function GET(request: NextRequest) {
         where: prevCompletedFilter,
       }),
 
-      // 前期CTAクリック数
+      // 前期CTAクリック数 - 削除されていないセッションのみ
       prisma.cTAClick.count({
-        where: prevBaseFilter,
+        where: {
+          ...prevCtaFilter,
+          OR: [
+            { sessionId: null },
+            { session: { isDeleted: false } },
+          ],
+        },
       }),
 
       // リンクのみタイプの診断完了数（完了率100%、CTA=1として計算するため）
@@ -308,13 +339,8 @@ export async function GET(request: NextRequest) {
       ctaCount += cta._count.id;
     }
 
-    // リンクのみタイプの診断完了はCTAとしてカウント（QRリンクとして内訳に追加）
-    if (linkOnlyCompletedCount > 0) {
-      ctaByType["qr_link"] = linkOnlyCompletedCount;
-    }
-    ctaCount += linkOnlyCompletedCount;
-
     // リンクのみタイプの診断完了はアクセス数にも加算（完了率100%を実現）
+    // CTAはdirect_linkとしてCTAClickに記録されるため、ctaCountへの加算は不要
     const adjustedAccessCount = accessCount + linkOnlyCompletedCount;
 
     // 完了率を計算

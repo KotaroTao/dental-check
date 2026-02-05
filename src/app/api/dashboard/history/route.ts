@@ -5,7 +5,10 @@ import { prisma } from "@/lib/prisma";
 // 診断タイプの表示名
 const DIAGNOSIS_TYPE_NAMES: Record<string, string> = {
   "oral-age": "お口年齢診断",
-  "child-orthodontics": "矯正チェック",
+  "child-orthodontics": "子供の矯正タイミングチェック",
+  "periodontal-risk": "歯周病リスク診断",
+  "cavity-risk": "虫歯リスク診断",
+  "whitening-check": "ホワイトニング適正診断",
 };
 
 export async function GET(request: NextRequest) {
@@ -144,6 +147,8 @@ export async function GET(request: NextRequest) {
       line: "LINEクリック",
       instagram: "Instagramクリック",
       clinic_page: "医院ページクリック",
+      clinic_homepage: "ホームページクリック",
+      direct_link: "直リンク",
     };
 
     // 性別の表示名

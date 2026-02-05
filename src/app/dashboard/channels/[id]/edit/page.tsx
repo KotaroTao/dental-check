@@ -12,6 +12,9 @@ import { ArrowLeft, Upload, X, Loader2, Image as ImageIcon, Calendar, Link2, Wal
 const DIAGNOSIS_TYPE_NAMES: Record<string, string> = {
   "oral-age": "お口年齢診断",
   "child-orthodontics": "子供の矯正タイミングチェック",
+  "periodontal-risk": "歯周病リスク診断",
+  "cavity-risk": "虫歯リスク診断",
+  "whitening-check": "ホワイトニング適正診断",
 };
 
 interface Channel {
