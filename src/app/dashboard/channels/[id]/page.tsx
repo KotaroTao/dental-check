@@ -11,6 +11,9 @@ import { ArrowLeft, Download, Copy, ExternalLink, Edit, Image as ImageIcon, X, C
 const DIAGNOSIS_TYPE_NAMES: Record<string, string> = {
   "oral-age": "お口年齢診断",
   "child-orthodontics": "子供の矯正タイミングチェック",
+  "periodontal-risk": "歯周病リスク診断",
+  "cavity-risk": "虫歯リスク診断",
+  "whitening-check": "ホワイトニング適正診断",
 };
 
 interface Channel {
@@ -98,7 +101,7 @@ export default function ChannelDetailPage() {
 
     const fetchStats = async () => {
       try {
-        const response = await fetch(`/api/dashboard/channel-stats?period=month`);
+        const response = await fetch(`/api/dashboard/channel-stats?period=all`);
         if (response.ok) {
           const data = await response.json();
           if (data.stats && params.id && data.stats[params.id as string]) {
