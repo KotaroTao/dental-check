@@ -309,7 +309,6 @@ function EffectivenessSummary({
   isDemo?: boolean;
   onDemoClick?: () => void;
 }) {
-  const [showDetails, setShowDetails] = useState(false);
 
   const activeChannels = channels.filter((c) => c.isActive);
 
@@ -437,8 +436,8 @@ function EffectivenessSummary({
           </p>
         </div>
       ) : overallStats && (overallStats.accessCount > 0 || overallStats.completedCount > 0) ? (
-        <div className="p-5">
-          {/* メイン指標: QR読み込み回数 & 読み込み単価 */}
+        <div className="p-5 space-y-4">
+          {/* メイン指標: QR読み込み回数 & 読み込み単価 & CTAクリック数 & CTA率 */}
           {(() => {
             // 選択されているチャンネルの総予算を計算
             const selectedChannels = activeChannels.filter(c => summaryChannelIds.includes(c.id));
@@ -451,7 +450,7 @@ function EffectivenessSummary({
               : null;
 
             return (
-              <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {/* QR読み込み回数 */}
                 <div className="text-center p-4 bg-emerald-50 rounded-xl">
                   <div className="text-xs text-gray-500 mb-1">QR読み込み回数</div>
@@ -508,12 +507,29 @@ function EffectivenessSummary({
                     </div>
                   )}
                 </div>
+
+                {/* CTAクリック数 */}
+                <div className="text-center p-4 bg-purple-50 rounded-xl">
+                  <div className="text-xs text-gray-500 mb-1">CTAクリック数</div>
+                  <div className="text-3xl font-bold text-purple-600">{overallStats.ctaCount.toLocaleString()}</div>
+                  {overallStats.trends?.ctaCount && (
+                    <div className={`text-xs mt-1 ${overallStats.trends.ctaCount.value >= 0 ? "text-purple-600" : "text-red-500"}`}>
+                      {overallStats.trends.ctaCount.isNew ? "NEW" : `前期比 ${overallStats.trends.ctaCount.value >= 0 ? "+" : ""}${overallStats.trends.ctaCount.value}%`}
+                    </div>
+                  )}
+                </div>
+
+                {/* CTA率 */}
+                <div className="text-center p-4 bg-orange-50 rounded-xl">
+                  <div className="text-xs text-gray-500 mb-1">CTA率</div>
+                  <div className="text-3xl font-bold text-orange-600">{overallStats.ctaRate}%</div>
+                </div>
               </div>
             );
           })()}
 
-          {/* 性別・年齢層 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          {/* 性別・年齢層・CTA内訳 */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* 性別 */}
             {overallStats.genderByType && (
               <div className="p-4 bg-gray-50 rounded-xl">
@@ -562,82 +578,32 @@ function EffectivenessSummary({
                 </div>
               </div>
             )}
-          </div>
 
-          {/* 詳細表示ボタン */}
-          <button
-            onClick={() => setShowDetails(!showDetails)}
-            className="w-full py-2 text-sm text-emerald-600 hover:text-emerald-800 flex items-center justify-center gap-1 border-t"
-          >
-            {showDetails ? (
-              <>
-                <ChevronUp className="w-4 h-4" />
-                詳細を閉じる
-              </>
-            ) : (
-              <>
-                <ChevronDown className="w-4 h-4" />
-                詳細を表示
-              </>
-            )}
-          </button>
-
-          {/* 折りたたみ部分: 診断完了、完了率、CTAクリック数、CTA率、CTA内訳 */}
-          {showDetails && (
-            <div className="pt-4 border-t mt-4 space-y-4">
-              {/* 診断関連指標 */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {/* 診断完了 */}
-                <div className="text-center p-3 bg-emerald-50 rounded-xl">
-                  <div className="text-xs text-gray-500 mb-1">診断完了</div>
-                  <div className="text-xl font-bold text-emerald-600">{overallStats.completedCount.toLocaleString()}</div>
-                </div>
-
-                {/* 完了率 */}
-                <div className="text-center p-3 bg-blue-50 rounded-xl">
-                  <div className="text-xs text-gray-500 mb-1">完了率</div>
-                  <div className="text-xl font-bold text-blue-600">{overallStats.completionRate}%</div>
-                </div>
-
-                {/* CTAクリック数 */}
-                <div className="text-center p-3 bg-purple-50 rounded-xl">
-                  <div className="text-xs text-gray-500 mb-1">CTAクリック数</div>
-                  <div className="text-xl font-bold text-purple-600">{overallStats.ctaCount.toLocaleString()}</div>
-                </div>
-
-                {/* CTA率 */}
-                <div className="text-center p-3 bg-orange-50 rounded-xl">
-                  <div className="text-xs text-gray-500 mb-1">CTA率</div>
-                  <div className="text-xl font-bold text-orange-600">{overallStats.ctaRate}%</div>
+            {/* CTA内訳 */}
+            {overallStats.ctaByType && Object.keys(overallStats.ctaByType).length > 0 && (
+              <div className="p-4 bg-gray-50 rounded-xl">
+                <div className="text-sm font-medium text-gray-700 mb-3">CTA内訳</div>
+                <div className="space-y-2">
+                  {Object.entries(overallStats.ctaByType)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([type, count]) => (
+                      <div key={type} className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">{CTA_TYPE_NAMES[type] || type}</span>
+                        <div className="flex items-center gap-2">
+                          <div className="w-20 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-purple-500 rounded-full"
+                              style={{ width: `${overallStats.ctaCount > 0 ? (count / overallStats.ctaCount) * 100 : 0}%` }}
+                            />
+                          </div>
+                          <span className="text-sm font-medium text-purple-600 w-8 text-right">{count}</span>
+                        </div>
+                      </div>
+                    ))}
                 </div>
               </div>
-
-              {/* CTA内訳 */}
-              {overallStats.ctaByType && Object.keys(overallStats.ctaByType).length > 0 && (
-                <div className="p-4 bg-gray-50 rounded-xl">
-                  <div className="text-sm font-medium text-gray-700 mb-3">CTA内訳</div>
-                  <div className="space-y-2">
-                    {Object.entries(overallStats.ctaByType)
-                      .sort((a, b) => b[1] - a[1])
-                      .map(([type, count]) => (
-                        <div key={type} className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600">{CTA_TYPE_NAMES[type] || type}</span>
-                          <div className="flex items-center gap-2">
-                            <div className="w-20 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-purple-500 rounded-full"
-                                style={{ width: `${overallStats.ctaCount > 0 ? (count / overallStats.ctaCount) * 100 : 0}%` }}
-                              />
-                            </div>
-                            <span className="text-sm font-medium text-purple-600 w-8 text-right">{count}</span>
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+            )}
+          </div>
         </div>
       ) : (
         <div className="p-8 text-center">
