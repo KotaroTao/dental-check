@@ -81,6 +81,7 @@ export async function GET(request: NextRequest) {
             clinicId: session.clinicId,
             channelId: { in: channelIds },
             eventType: { not: "clinic_page_view" },
+            isDeleted: false,
             ...(dateFrom && dateTo ? { createdAt: { gte: dateFrom, lte: dateTo } } : {}),
           },
           _count: { id: true },
