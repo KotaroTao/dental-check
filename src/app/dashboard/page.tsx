@@ -756,6 +756,18 @@ function QRCodeRow({
       <td className="px-3 py-3 text-center">
         <span className="text-sm font-bold text-emerald-600">{channel.scanCount.toLocaleString()}</span>
       </td>
+      {/* 読み込み単価 */}
+      <td className="px-3 py-3 text-center">
+        {channel.budget && channel.budget > 0 ? (
+          <span className="text-sm font-bold text-blue-600">
+            ¥{channel.scanCount > 0 ? Math.round(channel.budget / channel.scanCount).toLocaleString() : "-"}
+          </span>
+        ) : isDemo ? (
+          <button onClick={onDemoClick} className="text-xs text-blue-500 hover:text-blue-700 hover:underline">予算を設定</button>
+        ) : (
+          <Link href={`/dashboard/channels/${channel.id}/edit#budget`} className="text-xs text-blue-500 hover:text-blue-700 hover:underline">予算を設定</Link>
+        )}
+      </td>
       {/* CTA */}
       <td className="px-3 py-3 text-center">
         <span className="text-sm font-bold text-purple-600">{stats?.ctaCount?.toLocaleString() ?? "-"}</span>
@@ -818,10 +830,20 @@ function QRCodeRow({
       </div>
       {/* モバイル: インライン指標 */}
       {channel.isActive && (
-        <div className="flex items-center gap-4 mt-2 ml-[3.125rem] text-xs">
+        <div className="flex items-center gap-4 mt-2 ml-[3.125rem] text-xs flex-wrap">
           <div className="flex items-center gap-1">
             <span className="text-gray-400">読込</span>
             <span className="font-bold text-emerald-600">{channel.scanCount.toLocaleString()}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-gray-400">単価</span>
+            {channel.budget && channel.budget > 0 ? (
+              <span className="font-bold text-blue-600">¥{channel.scanCount > 0 ? Math.round(channel.budget / channel.scanCount).toLocaleString() : "-"}</span>
+            ) : isDemo ? (
+              <button onClick={onDemoClick} className="text-blue-500 hover:underline">設定</button>
+            ) : (
+              <Link href={`/dashboard/channels/${channel.id}/edit#budget`} className="text-blue-500 hover:underline">設定</Link>
+            )}
           </div>
           <div className="flex items-center gap-1">
             <span className="text-gray-400">CTA</span>
@@ -1466,6 +1488,7 @@ export default function DashboardPage() {
                   <tr className="border-b bg-gray-50/50">
                     <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">QRコード</th>
                     <th className="text-center px-3 py-2.5 text-xs font-medium text-gray-500 w-24">読み込み</th>
+                    <th className="text-center px-3 py-2.5 text-xs font-medium text-gray-500 w-20">単価</th>
                     <th className="text-center px-3 py-2.5 text-xs font-medium text-gray-500 w-20">CTA</th>
                     <th className="text-center px-3 py-2.5 text-xs font-medium text-gray-500 w-20">CTA率</th>
                     <th className="text-center px-3 py-2.5 text-xs font-medium text-gray-500 w-24">作成日</th>
