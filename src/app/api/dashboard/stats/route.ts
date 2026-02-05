@@ -80,6 +80,10 @@ export async function GET(request: NextRequest) {
       select: { id: true, channelType: true },
     });
     const activeChannelIds = activeChannels.map((c: { id: string }) => c.id);
+    // 診断タイプのチャンネルID
+    const diagnosisChannelIds = activeChannels
+      .filter((c: { id: string; channelType: string }) => c.channelType === "diagnosis")
+      .map((c: { id: string }) => c.id);
     // リンクのみタイプのチャンネルID
     const linkOnlyChannelIds = activeChannels
       .filter((c: { id: string; channelType: string }) => c.channelType === "link")
@@ -99,6 +103,18 @@ export async function GET(request: NextRequest) {
     } else if (activeChannelIds.length > 0) {
       // デフォルト: すべてのアクティブチャンネル
       channelFilter = { channelId: { in: activeChannelIds } };
+    }
+
+    // フィルター適用後の診断タイプのチャンネルIDを計算
+    let filteredDiagnosisChannelIds: string[] = [];
+    if (channelId) {
+      if (diagnosisChannelIds.includes(channelId)) {
+        filteredDiagnosisChannelIds = [channelId];
+      }
+    } else if (selectedChannelIds.length > 0) {
+      filteredDiagnosisChannelIds = selectedChannelIds.filter((id) => diagnosisChannelIds.includes(id));
+    } else {
+      filteredDiagnosisChannelIds = diagnosisChannelIds;
     }
 
     // フィルター適用後のリンクのみタイプのチャンネルIDを計算
@@ -180,7 +196,8 @@ export async function GET(request: NextRequest) {
 
     // 統計データを並行取得（現期間 + 前期間）
     const [
-      accessCount,
+      diagnosisSessionCount,
+      linkQrScanCount,
       completedCount,
       ctaClicks,
       channels,
@@ -193,21 +210,41 @@ export async function GET(request: NextRequest) {
       sessionsWithCategory,
       ctaClicksWithSession,
       // 前期データ
-      prevAccessCount,
+      prevDiagnosisSessionCount,
+      prevLinkQrScanCount,
       prevCompletedCount,
       prevCtaCount,
       // リンクのみタイプの診断完了数
       linkOnlyCompletedCount,
     ] = await Promise.all([
-      // アクセス数（診断ページ）
-      prisma.accessLog.count({
-        where: {
-          ...accessLogFilter,
-          eventType: { not: "clinic_page_view" },
-        },
-      }),
+      // 診断タイプのQR読み込み数（DiagnosisSession完了分）
+      filteredDiagnosisChannelIds.length > 0
+        ? prisma.diagnosisSession.count({
+            where: {
+              clinicId: session.clinicId,
+              channelId: { in: filteredDiagnosisChannelIds },
+              completedAt: { not: null },
+              isDemo: false,
+              isDeleted: false,
+              ...(dateFrom && dateTo ? { createdAt: { gte: dateFrom, lte: dateTo } } : {}),
+            },
+          })
+        : Promise.resolve(0),
 
-      // 診断完了数
+      // リンクタイプのQR読み込み数（AccessLog qr_scan）
+      filteredLinkOnlyChannelIds.length > 0
+        ? prisma.accessLog.count({
+            where: {
+              clinicId: session.clinicId,
+              channelId: { in: filteredLinkOnlyChannelIds },
+              eventType: "qr_scan",
+              isDeleted: false,
+              ...(dateFrom && dateTo ? { createdAt: { gte: dateFrom, lte: dateTo } } : {}),
+            },
+          })
+        : Promise.resolve(0),
+
+      // 診断完了数（全チャンネル）
       prisma.diagnosisSession.count({
         where: completedFilter,
       }),
@@ -299,13 +336,32 @@ export async function GET(request: NextRequest) {
       }),
 
       // --- 前期データ ---
-      // 前期アクセス数
-      prisma.accessLog.count({
-        where: {
-          ...prevAccessLogFilter,
-          eventType: { not: "clinic_page_view" },
-        },
-      }),
+      // 前期診断タイプのQR読み込み数
+      filteredDiagnosisChannelIds.length > 0
+        ? prisma.diagnosisSession.count({
+            where: {
+              clinicId: session.clinicId,
+              channelId: { in: filteredDiagnosisChannelIds },
+              completedAt: { not: null },
+              isDemo: false,
+              isDeleted: false,
+              ...(prevDateFrom && prevDateTo ? { createdAt: { gte: prevDateFrom, lte: prevDateTo } } : {}),
+            },
+          })
+        : Promise.resolve(0),
+
+      // 前期リンクタイプのQR読み込み数
+      filteredLinkOnlyChannelIds.length > 0
+        ? prisma.accessLog.count({
+            where: {
+              clinicId: session.clinicId,
+              channelId: { in: filteredLinkOnlyChannelIds },
+              eventType: "qr_scan",
+              isDeleted: false,
+              ...(prevDateFrom && prevDateTo ? { createdAt: { gte: prevDateFrom, lte: prevDateTo } } : {}),
+            },
+          })
+        : Promise.resolve(0),
 
       // 前期診断完了数
       prisma.diagnosisSession.count({
@@ -346,7 +402,9 @@ export async function GET(request: NextRequest) {
     }
     ctaCount += linkOnlyCompletedCount;
 
-    // リンクのみタイプの診断完了はアクセス数にも加算（完了率100%を実現）
+    // QR読み込み回数 = 診断タイプ完了数 + リンクタイプスキャン数
+    const accessCount = diagnosisSessionCount + linkQrScanCount;
+    // リンクのみタイプの診断完了はアクセス数にも加算（完了率計算用）
     const adjustedAccessCount = accessCount + linkOnlyCompletedCount;
 
     // 完了率を計算
@@ -438,6 +496,9 @@ export async function GET(request: NextRequest) {
       }
       return { value: Math.round(((current - previous) / previous) * 100), isNew: false };
     };
+
+    // 前期のQR読み込み回数
+    const prevAccessCount = prevDiagnosisSessionCount + prevLinkQrScanCount;
 
     const trends = {
       accessCount: calcTrend(adjustedAccessCount, prevAccessCount),

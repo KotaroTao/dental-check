@@ -71,16 +71,20 @@ export async function GET(request: NextRequest) {
       diagnosisNameMap[dt.slug] = dt.name;
     }
 
-    // 各チャンネルのアクセスログ数を取得（診断QRの読み込み回数）
-    // 期間フィルターがある場合は期間内のみカウント
+    // チャンネルIDを取得
     const channelIds = channels.map((c) => c.id);
-    const accessCounts = channelIds.length > 0
-      ? await prisma.accessLog.groupBy({
+    const diagnosisChannelIds = channels.filter((c) => c.channelType === "diagnosis").map((c) => c.id);
+    const linkChannelIds = channels.filter((c) => c.channelType === "link").map((c) => c.id);
+
+    // 診断タイプ: DiagnosisSession（完了分）をカウント（履歴と一致させるため）
+    const diagnosisSessionCounts = diagnosisChannelIds.length > 0
+      ? await prisma.diagnosisSession.groupBy({
           by: ["channelId"],
           where: {
             clinicId: session.clinicId,
-            channelId: { in: channelIds },
-            eventType: { not: "clinic_page_view" },
+            channelId: { in: diagnosisChannelIds },
+            completedAt: { not: null },
+            isDemo: false,
             isDeleted: false,
             ...(dateFrom && dateTo ? { createdAt: { gte: dateFrom, lte: dateTo } } : {}),
           },
@@ -88,25 +92,41 @@ export async function GET(request: NextRequest) {
         })
       : [];
 
-    // アクセスカウントをマップに変換
-    const accessCountMap: Record<string, number> = {};
-    for (const ac of accessCounts) {
+    // リンクタイプ: AccessLog（qr_scan）をカウント（履歴と一致させるため）
+    const linkAccessCounts = linkChannelIds.length > 0
+      ? await prisma.accessLog.groupBy({
+          by: ["channelId"],
+          where: {
+            clinicId: session.clinicId,
+            channelId: { in: linkChannelIds },
+            eventType: "qr_scan",
+            isDeleted: false,
+            ...(dateFrom && dateTo ? { createdAt: { gte: dateFrom, lte: dateTo } } : {}),
+          },
+          _count: { id: true },
+        })
+      : [];
+
+    // カウントをマップに変換
+    const countMap: Record<string, number> = {};
+    for (const dc of diagnosisSessionCounts) {
+      if (dc.channelId) {
+        countMap[dc.channelId] = dc._count.id;
+      }
+    }
+    for (const ac of linkAccessCounts) {
       if (ac.channelId) {
-        accessCountMap[ac.channelId] = ac._count.id;
+        countMap[ac.channelId] = ac._count.id;
       }
     }
 
     // チャンネルに診断名とスキャン数を追加
-    // 期間フィルター適用時はAccessLogから取得、全期間時はリンクタイプのみscanCountを使用
     const channelsWithDiagnosisName = channels.map((c) => ({
       ...c,
       diagnosisTypeName: c.diagnosisTypeSlug
         ? diagnosisNameMap[c.diagnosisTypeSlug] || c.diagnosisTypeSlug
         : null,
-      // 全期間の場合はリンクタイプはscanCountを使用、それ以外はAccessLogから
-      scanCount: (period === "all" && c.channelType === "link")
-        ? c.scanCount
-        : (accessCountMap[c.id] || 0),
+      scanCount: countMap[c.id] || 0,
     }));
 
     const activeCount = channels.filter((c) => c.isActive).length;
