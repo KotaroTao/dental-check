@@ -116,18 +116,32 @@ export async function GET(request: NextRequest) {
       filteredLinkOnlyChannelIds = linkOnlyChannelIds;
     }
 
-    // 共通のフィルター条件（AccessLog用）
-    const baseFilter = {
+    // 共通のフィルター条件（AccessLog用 - isDeletedあり）
+    const accessLogFilter = {
       clinicId: session.clinicId,
       isDeleted: false,
       ...(dateFrom && dateTo ? { createdAt: { gte: dateFrom, lte: dateTo } } : {}),
       ...channelFilter,
     };
 
-    // 前期の共通フィルター条件（AccessLog用）
-    const prevBaseFilter = {
+    // 前期の共通フィルター条件（AccessLog用 - isDeletedあり）
+    const prevAccessLogFilter = {
       clinicId: session.clinicId,
       isDeleted: false,
+      ...(prevDateFrom && prevDateTo ? { createdAt: { gte: prevDateFrom, lte: prevDateTo } } : {}),
+      ...channelFilter,
+    };
+
+    // CTAClick用のフィルター条件（isDeletedなし）
+    const ctaFilter = {
+      clinicId: session.clinicId,
+      ...(dateFrom && dateTo ? { createdAt: { gte: dateFrom, lte: dateTo } } : {}),
+      ...channelFilter,
+    };
+
+    // 前期のCTAClick用フィルター条件
+    const prevCtaFilter = {
+      clinicId: session.clinicId,
       ...(prevDateFrom && prevDateTo ? { createdAt: { gte: prevDateFrom, lte: prevDateTo } } : {}),
       ...channelFilter,
     };
@@ -188,7 +202,7 @@ export async function GET(request: NextRequest) {
       // アクセス数（診断ページ）
       prisma.accessLog.count({
         where: {
-          ...baseFilter,
+          ...accessLogFilter,
           eventType: { not: "clinic_page_view" },
         },
       }),
@@ -201,7 +215,7 @@ export async function GET(request: NextRequest) {
       // CTAクリック（タイプ別に集計）
       prisma.cTAClick.groupBy({
         by: ['ctaType'],
-        where: baseFilter,
+        where: ctaFilter,
         _count: { id: true },
       }),
 
@@ -225,7 +239,7 @@ export async function GET(request: NextRequest) {
       // 診断結果からのCTAクリック（channelIdがある）
       prisma.cTAClick.count({
         where: {
-          ...baseFilter,
+          ...ctaFilter,
           channelId: { not: null },
         },
       }),
@@ -262,7 +276,7 @@ export async function GET(request: NextRequest) {
       // セッションに紐づくCTAクリック（結果カテゴリ別CTA率計算用）
       prisma.cTAClick.findMany({
         where: {
-          ...baseFilter,
+          ...ctaFilter,
           sessionId: { not: null },
         },
         select: {
@@ -277,7 +291,7 @@ export async function GET(request: NextRequest) {
       // 前期アクセス数
       prisma.accessLog.count({
         where: {
-          ...prevBaseFilter,
+          ...prevAccessLogFilter,
           eventType: { not: "clinic_page_view" },
         },
       }),
@@ -289,7 +303,7 @@ export async function GET(request: NextRequest) {
 
       // 前期CTAクリック数
       prisma.cTAClick.count({
-        where: prevBaseFilter,
+        where: prevCtaFilter,
       }),
 
       // リンクのみタイプの診断完了数（完了率100%、CTA=1として計算するため）
