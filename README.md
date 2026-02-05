@@ -174,7 +174,7 @@ git pull origin main
 npm install
 npx prisma migrate deploy
 npm run build
-pm2 restart dental-check
+pm2 restart dental-app
 ```
 
 ### シード実行（本番）
