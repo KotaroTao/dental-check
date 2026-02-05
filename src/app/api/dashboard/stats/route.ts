@@ -212,10 +212,16 @@ export async function GET(request: NextRequest) {
         where: completedFilter,
       }),
 
-      // CTAクリック（タイプ別に集計）
+      // CTAクリック（タイプ別に集計）- 削除されていないセッションのみ
       prisma.cTAClick.groupBy({
         by: ['ctaType'],
-        where: ctaFilter,
+        where: {
+          ...ctaFilter,
+          OR: [
+            { sessionId: null }, // 医院ページからのCTA
+            { session: { isDeleted: false } }, // セッションが削除されていない
+          ],
+        },
         _count: { id: true },
       }),
 
@@ -236,11 +242,15 @@ export async function GET(request: NextRequest) {
         },
       }),
 
-      // 診断結果からのCTAクリック（channelIdがある）
+      // 診断結果からのCTAクリック（channelIdがある）- 削除されていないセッションのみ
       prisma.cTAClick.count({
         where: {
           ...ctaFilter,
           channelId: { not: null },
+          OR: [
+            { sessionId: null },
+            { session: { isDeleted: false } },
+          ],
         },
       }),
 
@@ -273,11 +283,12 @@ export async function GET(request: NextRequest) {
         _count: { id: true },
       }),
 
-      // セッションに紐づくCTAクリック（結果カテゴリ別CTA率計算用）
+      // セッションに紐づくCTAクリック（結果カテゴリ別CTA率計算用）- 削除されていないセッションのみ
       prisma.cTAClick.findMany({
         where: {
           ...ctaFilter,
           sessionId: { not: null },
+          session: { isDeleted: false },
         },
         select: {
           sessionId: true,
@@ -301,9 +312,15 @@ export async function GET(request: NextRequest) {
         where: prevCompletedFilter,
       }),
 
-      // 前期CTAクリック数
+      // 前期CTAクリック数 - 削除されていないセッションのみ
       prisma.cTAClick.count({
-        where: prevCtaFilter,
+        where: {
+          ...prevCtaFilter,
+          OR: [
+            { sessionId: null },
+            { session: { isDeleted: false } },
+          ],
+        },
       }),
 
       // リンクのみタイプの診断完了数（完了率100%、CTA=1として計算するため）
