@@ -905,7 +905,7 @@ export default function DashboardPage() {
   const [showDemoModal, setShowDemoModal] = useState(false);
 
   // QRコードソート
-  type ChannelSortField = "createdAt" | "accessCount" | "completedCount" | "completionRate" | "ctaCount";
+  type ChannelSortField = "createdAt" | "accessCount" | "budget" | "costPerAccess" | "ctaCount" | "ctaRate";
   const [channelSortField, setChannelSortField] = useState<ChannelSortField>("createdAt");
 
   // ソート
@@ -1263,20 +1263,27 @@ export default function DashboardPage() {
       if (channelSortField === "createdAt") {
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       }
+      if (channelSortField === "accessCount") {
+        return b.scanCount - a.scanCount;
+      }
+      if (channelSortField === "budget") {
+        return (b.budget || 0) - (a.budget || 0);
+      }
+      if (channelSortField === "costPerAccess") {
+        const costA = a.budget && a.scanCount > 0 ? a.budget / a.scanCount : Infinity;
+        const costB = b.budget && b.scanCount > 0 ? b.budget / b.scanCount : Infinity;
+        return costA - costB;
+      }
 
       const statsA = channelStats[a.id];
       const statsB = channelStats[b.id];
       if (!statsA || !statsB) return 0;
 
       switch (channelSortField) {
-        case "accessCount":
-          return statsB.accessCount - statsA.accessCount;
-        case "completedCount":
-          return statsB.completedCount - statsA.completedCount;
-        case "completionRate":
-          return statsB.completionRate - statsA.completionRate;
         case "ctaCount":
           return statsB.ctaCount - statsA.ctaCount;
+        case "ctaRate":
+          return statsB.ctaRate - statsA.ctaRate;
         default:
           return 0;
       }
@@ -1472,8 +1479,11 @@ export default function DashboardPage() {
               className="px-3 py-1.5 border rounded-lg text-xs bg-white text-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="createdAt">作成日順</option>
-              <option value="accessCount">読み込み順</option>
+              <option value="accessCount">QR読込順</option>
+              <option value="budget">予算順</option>
+              <option value="costPerAccess">読込単価順</option>
               <option value="ctaCount">CTA順</option>
+              <option value="ctaRate">CTA率順</option>
             </select>
           )}
         </div>
