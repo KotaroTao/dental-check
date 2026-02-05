@@ -116,16 +116,18 @@ export async function GET(request: NextRequest) {
       filteredLinkOnlyChannelIds = linkOnlyChannelIds;
     }
 
-    // 共通のフィルター条件
+    // 共通のフィルター条件（AccessLog用）
     const baseFilter = {
       clinicId: session.clinicId,
+      isDeleted: false,
       ...(dateFrom && dateTo ? { createdAt: { gte: dateFrom, lte: dateTo } } : {}),
       ...channelFilter,
     };
 
-    // 前期の共通フィルター条件
+    // 前期の共通フィルター条件（AccessLog用）
     const prevBaseFilter = {
       clinicId: session.clinicId,
+      isDeleted: false,
       ...(prevDateFrom && prevDateTo ? { createdAt: { gte: prevDateFrom, lte: prevDateTo } } : {}),
       ...channelFilter,
     };
@@ -136,6 +138,7 @@ export async function GET(request: NextRequest) {
       ...(dateFrom && dateTo ? { createdAt: { gte: dateFrom, lte: dateTo } } : {}),
       ...channelFilter,
       isDemo: false,
+      isDeleted: false,
       completedAt: { not: null },
     };
 
@@ -145,6 +148,7 @@ export async function GET(request: NextRequest) {
       ...(prevDateFrom && prevDateTo ? { createdAt: { gte: prevDateFrom, lte: prevDateTo } } : {}),
       ...channelFilter,
       isDemo: false,
+      isDeleted: false,
       completedAt: { not: null },
     };
 
@@ -155,6 +159,7 @@ export async function GET(request: NextRequest) {
           ...(dateFrom && dateTo ? { createdAt: { gte: dateFrom, lte: dateTo } } : {}),
           channelId: { in: filteredLinkOnlyChannelIds },
           isDemo: false,
+          isDeleted: false,
           completedAt: { not: null },
         }
       : null;
@@ -212,6 +217,7 @@ export async function GET(request: NextRequest) {
         where: {
           clinicId: session.clinicId,
           eventType: "clinic_page_view",
+          isDeleted: false,
           ...(dateFrom && dateTo ? { createdAt: { gte: dateFrom, lte: dateTo } } : {}),
         },
       }),

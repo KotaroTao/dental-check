@@ -130,6 +130,7 @@ model DiagnosisSession {
   diagnosisTypeId String?   @map("diagnosis_type_id")  // linkタイプはnull
   sessionType     String    @default("diagnosis") @map("session_type")  // "diagnosis" | "link"
   isDemo          Boolean   @default(false) @map("is_demo")
+  isDeleted       Boolean   @default(false) @map("is_deleted")  // 履歴から論理削除
   userAge         Int?      @map("user_age")
   userGender      String?   @map("user_gender")
   answers         Json?
@@ -157,6 +158,7 @@ model DiagnosisSession {
   @@index([clinicId, createdAt]) // 期間検索の高速化
   @@index([clinicId, completedAt, isDemo, createdAt]) // ダッシュボード集計の高速化
   @@index([clinicId, sessionType]) // セッションタイプ別集計
+  @@index([clinicId, isDeleted]) // 削除済みフィルタリング用
   @@map("diagnosis_sessions")
 }
 
@@ -169,6 +171,7 @@ model AccessLog {
   eventType         String   @map("event_type")
   userAgent         String?  @map("user_agent")
   referer           String?
+  isDeleted         Boolean  @default(false) @map("is_deleted")  // 履歴から論理削除
   createdAt         DateTime @default(now()) @map("created_at")
 
   // 位置情報（IPベース）
@@ -182,6 +185,7 @@ model AccessLog {
 
   @@index([clinicId, createdAt])
   @@index([channelId, createdAt])
+  @@index([clinicId, isDeleted]) // 削除済みフィルタリング用
   @@map("access_logs")
 }
 

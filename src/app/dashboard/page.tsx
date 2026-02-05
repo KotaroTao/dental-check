@@ -86,6 +86,7 @@ interface ChannelStats {
 
 interface HistoryItem {
   id: string;
+  type: "diagnosis" | "link" | "qr_scan";
   createdAt: string;
   userAge: number | null;
   userGender: string | null;
@@ -1147,6 +1148,34 @@ export default function DashboardPage() {
     }
   };
 
+  // 履歴削除
+  const handleDeleteHistory = async (item: HistoryItem) => {
+    if (!confirm("この履歴を削除しますか？削除後は効果測定サマリーやQR読み込みエリアにも反映されなくなります。")) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `/api/dashboard/history/${item.id}?type=${item.type}`,
+        { method: "DELETE" }
+      );
+
+      if (response.ok) {
+        // ローカルステートから削除
+        setHistory((prev) => prev.filter((h) => h.id !== item.id));
+        setTotalCount((prev) => Math.max(0, prev - 1));
+        // 統計を更新
+        fetchOverallStats();
+      } else {
+        const data = await response.json();
+        alert(data.error || "削除に失敗しました");
+      }
+    } catch (error) {
+      console.error("Failed to delete history:", error);
+      alert("削除に失敗しました");
+    }
+  };
+
   // 新規作成ボタンクリック
   const handleNewQRCodeClick = () => {
     if (!subscription) {
@@ -1552,11 +1581,12 @@ export default function DashboardPage() {
                     <th className="text-left px-3 py-3 text-sm font-medium text-gray-500">QRコード</th>
                     <th className="text-center px-2 py-3 text-sm font-medium text-gray-500">CTA</th>
                     <th className="text-left px-3 py-3 text-sm font-medium text-gray-500">エリア</th>
+                    <th className="text-center px-2 py-3 text-sm font-medium text-gray-500 w-10"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
                   {sortedHistory.map((item) => (
-                    <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                    <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
                       <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                         {formatDate(item.createdAt)}
                       </td>
@@ -1585,6 +1615,15 @@ export default function DashboardPage() {
                         <HistoryCTAPopover ctaClickCount={item.ctaClickCount} ctaByType={item.ctaByType} />
                       </td>
                       <td className="px-3 py-3 text-sm text-gray-600">{item.area}</td>
+                      <td className="px-2 py-3 text-center">
+                        <button
+                          onClick={() => subscription?.isDemo ? setShowDemoModal(true) : handleDeleteHistory(item)}
+                          className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                          title="この履歴を削除"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -1606,6 +1645,13 @@ export default function DashboardPage() {
                           {item.resultCategory}
                         </span>
                       )}
+                      <button
+                        onClick={() => subscription?.isDemo ? setShowDemoModal(true) : handleDeleteHistory(item)}
+                        className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded"
+                        title="この履歴を削除"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
                   <div className="flex items-center justify-between mb-2">

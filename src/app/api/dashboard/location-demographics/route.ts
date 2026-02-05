@@ -65,6 +65,7 @@ export async function GET(request: NextRequest) {
       clinicId: session.clinicId,
       completedAt: { not: null },
       isDemo: false,
+      isDeleted: false,
       createdAt: {
         gte: dateFrom,
         lte: dateTo,

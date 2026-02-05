@@ -81,6 +81,7 @@ export async function GET(request: NextRequest) {
         clinicId: session.clinicId,
         completedAt: { not: null },
         isDemo: false,
+        isDeleted: false,
         createdAt: {
           gte: dateFrom,
           lte: dateTo,
@@ -122,6 +123,7 @@ export async function GET(request: NextRequest) {
       where: {
         clinicId: session.clinicId,
         eventType: "qr_scan",
+        isDeleted: false,
         createdAt: {
           gte: dateFrom,
           lte: dateTo,
@@ -163,6 +165,7 @@ export async function GET(request: NextRequest) {
         clinicId: session.clinicId,
         completedAt: { not: null },
         isDemo: false,
+        isDeleted: false,
         createdAt: {
           gte: dateFrom,
           lte: dateTo,
@@ -186,6 +189,7 @@ export async function GET(request: NextRequest) {
       where: {
         clinicId: session.clinicId,
         eventType: "qr_scan",
+        isDeleted: false,
         createdAt: {
           gte: dateFrom,
           lte: dateTo,
@@ -221,6 +225,7 @@ export async function GET(request: NextRequest) {
           clinicId: session.clinicId,
           completedAt: { not: null },
           isDemo: false,
+          isDeleted: false,
           createdAt: {
             gte: dateFrom,
             lte: dateTo,
@@ -232,6 +237,7 @@ export async function GET(request: NextRequest) {
         where: {
           clinicId: session.clinicId,
           eventType: "qr_scan",
+          isDeleted: false,
           createdAt: {
             gte: dateFrom,
             lte: dateTo,
