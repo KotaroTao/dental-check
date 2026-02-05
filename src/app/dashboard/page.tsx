@@ -490,7 +490,7 @@ function EffectivenessSummary({
                         </button>
                       ) : (
                         <Link
-                          href={`/dashboard/channels/${singleChannel.id}/edit#budget`}
+                          href={`/dashboard/channels/${singleChannel.id}#budget`}
                           className="text-xs text-blue-600 hover:text-blue-700 hover:underline"
                         >
                           予算を設定する →
@@ -672,7 +672,7 @@ function QRCodeRow({
         </button>
       ) : (
         <Link
-          href={`/dashboard/channels/${channel.id}/edit`}
+          href={`/dashboard/channels/${channel.id}`}
           className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
         >
           <Settings className="w-4 h-4" />
@@ -763,7 +763,7 @@ function QRCodeRow({
             {channel.budget && channel.budget > 0 ? `¥${channel.budget.toLocaleString()}` : "予算を設定"}
           </button>
         ) : (
-          <Link href={`/dashboard/channels/${channel.id}/edit#budget`} className={`hover:underline ${channel.budget && channel.budget > 0 ? "text-sm font-medium text-gray-700 hover:text-blue-600" : "text-xs text-blue-500 hover:text-blue-700"}`}>
+          <Link href={`/dashboard/channels/${channel.id}#budget`} className={`hover:underline ${channel.budget && channel.budget > 0 ? "text-sm font-medium text-gray-700 hover:text-blue-600" : "text-xs text-blue-500 hover:text-blue-700"}`}>
             {channel.budget && channel.budget > 0 ? `¥${channel.budget.toLocaleString()}` : "予算を設定"}
           </Link>
         )}
@@ -852,7 +852,7 @@ function QRCodeRow({
                 {channel.budget && channel.budget > 0 ? `¥${channel.budget.toLocaleString()}` : "設定"}
               </button>
             ) : (
-              <Link href={`/dashboard/channels/${channel.id}/edit#budget`} className={`hover:underline ${channel.budget && channel.budget > 0 ? "font-medium text-gray-700 hover:text-blue-600" : "text-blue-500"}`}>
+              <Link href={`/dashboard/channels/${channel.id}#budget`} className={`hover:underline ${channel.budget && channel.budget > 0 ? "font-medium text-gray-700 hover:text-blue-600" : "text-blue-500"}`}>
                 {channel.budget && channel.budget > 0 ? `¥${channel.budget.toLocaleString()}` : "設定"}
               </Link>
             )}
