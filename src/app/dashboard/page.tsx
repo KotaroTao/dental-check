@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
+import QRCode from "qrcode";
 import { Button } from "@/components/ui/button";
 import {
   BarChart3,
@@ -647,6 +648,27 @@ function QRCodeRow({
 }) {
   const isExpired = channel.expiresAt && new Date() > new Date(channel.expiresAt);
 
+  // QRコードURL生成
+  const baseUrl = typeof window !== "undefined"
+    ? (process.env.NEXT_PUBLIC_APP_URL || window.location.origin)
+    : "";
+  const qrUrl = channel.channelType === "diagnosis"
+    ? `${baseUrl}/c/${channel.code}/${channel.diagnosisTypeSlug}`
+    : `${baseUrl}/c/${channel.code}`;
+
+  const handleDownloadQR = async () => {
+    try {
+      const canvas = document.createElement("canvas");
+      await QRCode.toCanvas(canvas, qrUrl, { width: 256, margin: 2 });
+      const link = document.createElement("a");
+      link.download = `qr-${channel.name}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    } catch (error) {
+      console.error("QR download error:", error);
+    }
+  };
+
   const menu = (
     <DropdownMenu
       trigger={
@@ -655,20 +677,13 @@ function QRCodeRow({
         </button>
       }
     >
-      <Link
-        href={`/dashboard/channels/${channel.id}`}
-        className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-      >
-        <Eye className="w-4 h-4" />
-        QRコード表示
-      </Link>
       {isDemo ? (
         <button
           onClick={onDemoClick}
           className="flex items-center gap-2 px-3 py-2 text-sm text-gray-400 hover:bg-gray-50 w-full text-left"
         >
           <Settings className="w-4 h-4" />
-          編集
+          詳細・編集
         </button>
       ) : (
         <Link
@@ -676,9 +691,16 @@ function QRCodeRow({
           className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
         >
           <Settings className="w-4 h-4" />
-          編集
+          詳細・編集
         </Link>
       )}
+      <button
+        onClick={handleDownloadQR}
+        className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 w-full text-left"
+      >
+        <Download className="w-4 h-4" />
+        QRダウンロード
+      </button>
       <div className="border-t my-1" />
       {channel.isActive ? (
         <button
@@ -754,7 +776,7 @@ function QRCodeRow({
       </td>
       {/* QR読み込み */}
       <td className="px-3 py-3 text-center">
-        <span className="text-sm font-bold text-emerald-600">{channel.scanCount.toLocaleString()}</span>
+        <span className="text-sm font-bold text-emerald-600">{(stats?.accessCount ?? channel.scanCount).toLocaleString()}</span>
       </td>
       {/* 予算 */}
       <td className="px-3 py-3 text-center">
@@ -772,7 +794,7 @@ function QRCodeRow({
       <td className="px-3 py-3 text-center">
         {channel.budget && channel.budget > 0 ? (
           <span className="text-sm font-bold text-blue-600">
-            ¥{channel.scanCount > 0 ? Math.round(channel.budget / channel.scanCount).toLocaleString() : "-"}
+            ¥{(stats?.accessCount ?? channel.scanCount) > 0 ? Math.round(channel.budget / (stats?.accessCount ?? channel.scanCount)).toLocaleString() : "-"}
           </span>
         ) : (
           <span className="text-sm text-gray-400">-</span>
@@ -784,7 +806,7 @@ function QRCodeRow({
       </td>
       {/* CTA率 */}
       <td className="px-3 py-3 text-center">
-        <span className="text-sm font-bold text-orange-600">{stats?.ctaRate != null ? `${stats.ctaRate}%` : "-"}</span>
+        <span className="text-sm font-bold text-orange-600">{stats && stats.accessCount > 0 ? `${stats.ctaRate}%` : "-"}</span>
       </td>
       {/* 作成日 */}
       <td className="px-3 py-3 text-center text-xs text-gray-500 whitespace-nowrap">
@@ -843,7 +865,7 @@ function QRCodeRow({
         <div className="flex items-center gap-4 mt-2 ml-[3.125rem] text-xs flex-wrap">
           <div className="flex items-center gap-1">
             <span className="text-gray-400">読込</span>
-            <span className="font-bold text-emerald-600">{channel.scanCount.toLocaleString()}</span>
+            <span className="font-bold text-emerald-600">{(stats?.accessCount ?? channel.scanCount).toLocaleString()}</span>
           </div>
           <div className="flex items-center gap-1">
             <span className="text-gray-400">予算</span>
@@ -860,7 +882,7 @@ function QRCodeRow({
           <div className="flex items-center gap-1">
             <span className="text-gray-400">単価</span>
             {channel.budget && channel.budget > 0 ? (
-              <span className="font-bold text-blue-600">¥{channel.scanCount > 0 ? Math.round(channel.budget / channel.scanCount).toLocaleString() : "-"}</span>
+              <span className="font-bold text-blue-600">¥{(stats?.accessCount ?? channel.scanCount) > 0 ? Math.round(channel.budget / (stats?.accessCount ?? channel.scanCount)).toLocaleString() : "-"}</span>
             ) : (
               <span className="text-gray-400">-</span>
             )}
@@ -871,7 +893,7 @@ function QRCodeRow({
           </div>
           <div className="flex items-center gap-1">
             <span className="text-gray-400">CTA率</span>
-            <span className="font-bold text-orange-600">{stats?.ctaRate != null ? `${stats.ctaRate}%` : "-"}</span>
+            <span className="font-bold text-orange-600">{stats && stats.accessCount > 0 ? `${stats.ctaRate}%` : "-"}</span>
           </div>
         </div>
       )}
@@ -1260,23 +1282,26 @@ export default function DashboardPage() {
   // QRコードのソート済みリスト
   const getSortedChannels = (channelList: Channel[]) => {
     return [...channelList].sort((a, b) => {
+      const statsA = channelStats[a.id];
+      const statsB = channelStats[b.id];
+      const accessA = statsA?.accessCount ?? a.scanCount;
+      const accessB = statsB?.accessCount ?? b.scanCount;
+
       if (channelSortField === "createdAt") {
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       }
       if (channelSortField === "accessCount") {
-        return b.scanCount - a.scanCount;
+        return accessB - accessA;
       }
       if (channelSortField === "budget") {
         return (b.budget || 0) - (a.budget || 0);
       }
       if (channelSortField === "costPerAccess") {
-        const costA = a.budget && a.scanCount > 0 ? a.budget / a.scanCount : Infinity;
-        const costB = b.budget && b.scanCount > 0 ? b.budget / b.scanCount : Infinity;
+        const costA = a.budget && accessA > 0 ? a.budget / accessA : Infinity;
+        const costB = b.budget && accessB > 0 ? b.budget / accessB : Infinity;
         return costA - costB;
       }
 
-      const statsA = channelStats[a.id];
-      const statsB = channelStats[b.id];
       if (!statsA || !statsB) return 0;
 
       switch (channelSortField) {
@@ -1421,6 +1446,16 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* 効果測定サマリー */}
+      <EffectivenessSummary
+        channels={channels}
+        overallStats={overallStats}
+        summaryChannelIds={summaryChannelIds}
+        setSummaryChannelIds={setSummaryChannelIds}
+        isDemo={subscription?.isDemo}
+        onDemoClick={() => setShowDemoModal(true)}
+      />
 
       {/* QRコードセクション */}
       <div className="bg-white rounded-2xl shadow-sm border">
@@ -1573,15 +1608,6 @@ export default function DashboardPage() {
         customEndDate={period === "custom" ? customEndDate : undefined}
       />
 
-      {/* 効果測定サマリー */}
-      <EffectivenessSummary
-        channels={channels}
-        overallStats={overallStats}
-        summaryChannelIds={summaryChannelIds}
-        setSummaryChannelIds={setSummaryChannelIds}
-        isDemo={subscription?.isDemo}
-        onDemoClick={() => setShowDemoModal(true)}
-      />
 
       {/* QR読み込み履歴 */}
       <div className="bg-white rounded-2xl shadow-sm border">
