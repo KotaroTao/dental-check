@@ -933,42 +933,6 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* クイックスタートガイド */}
-      {channels.length === 0 && (
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100">
-          <h2 className="text-lg font-bold text-gray-900 mb-4">はじめての方へ</h2>
-          <div className="grid md:grid-cols-3 gap-4">
-            <div className="bg-white rounded-xl p-4 shadow-sm">
-              <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 font-bold mb-3">
-                1
-              </div>
-              <h3 className="font-semibold mb-1">QRコードを作成</h3>
-              <p className="text-sm text-gray-600">
-                「チラシ①」「医院前看板」など、計測したいQRコードを登録
-              </p>
-            </div>
-            <div className="bg-white rounded-xl p-4 shadow-sm">
-              <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 font-bold mb-3">
-                2
-              </div>
-              <h3 className="font-semibold mb-1">QRコードを印刷</h3>
-              <p className="text-sm text-gray-600">
-                発行されたQRコードをチラシや看板に印刷
-              </p>
-            </div>
-            <div className="bg-white rounded-xl p-4 shadow-sm">
-              <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 font-bold mb-3">
-                3
-              </div>
-              <h3 className="font-semibold mb-1">効果を確認</h3>
-              <p className="text-sm text-gray-600">
-                ダッシュボードでQRコード別の効果を比較
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* 画像モーダル */}
       {selectedImage && (
         <div
