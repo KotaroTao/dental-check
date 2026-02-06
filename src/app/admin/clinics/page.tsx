@@ -31,6 +31,7 @@ interface Clinic {
   channelCount: number;
   sessionCount: number;
   ctaConfigured: boolean;
+  excludeFromAnalysis: boolean;
   invitationStatus: "none" | "pending" | "used";
   inviteUrl: string | null;
 }
@@ -251,6 +252,26 @@ https://qrqr-dental.com/login
     }
   };
 
+  const handleToggleExcludeFromAnalysis = async (clinicId: string, currentValue: boolean) => {
+    try {
+      const response = await fetch(`/api/admin/clinics/${clinicId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ excludeFromAnalysis: !currentValue }),
+      });
+
+      if (response.ok) {
+        setClinics((prev) =>
+          prev.map((c) =>
+            c.id === clinicId ? { ...c, excludeFromAnalysis: !currentValue } : c
+          )
+        );
+      }
+    } catch {
+      setMessage({ type: "error", text: "更新に失敗しました" });
+    }
+  };
+
   const getCtaBadge = (clinic: Clinic) => {
     if (clinic.ctaConfigured) {
       return (
@@ -370,6 +391,16 @@ https://qrqr-dental.com/login
                 <span className="text-xs text-gray-500">{getPlanName(clinic.subscription?.planType || "starter")}</span>
               </div>
               <div className="flex items-center gap-2 mb-3 flex-wrap">
+                <button
+                  onClick={() => handleToggleExcludeFromAnalysis(clinic.id, clinic.excludeFromAnalysis)}
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs cursor-pointer ${
+                    clinic.excludeFromAnalysis
+                      ? "bg-gray-100 text-gray-500"
+                      : "bg-green-100 text-green-700"
+                  }`}
+                >
+                  {clinic.excludeFromAnalysis ? "分析対象外" : "分析対象"}
+                </button>
                 {getCtaBadge(clinic)}
                 {getInviteBadge(clinic)}
                 {clinic.invitationStatus === "pending" && clinic.inviteUrl && (
@@ -445,6 +476,7 @@ https://qrqr-dental.com/login
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">プラン</th>
                 <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">CTA</th>
                 <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">招待</th>
+                <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">分析</th>
                 <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">
                   <QrCode className="w-4 h-4 inline" />
                 </th>
@@ -500,6 +532,18 @@ https://qrqr-dental.com/login
                         </button>
                       )}
                     </div>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <button
+                      onClick={() => handleToggleExcludeFromAnalysis(clinic.id, clinic.excludeFromAnalysis)}
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs cursor-pointer ${
+                        clinic.excludeFromAnalysis
+                          ? "bg-gray-100 text-gray-500"
+                          : "bg-green-100 text-green-700"
+                      }`}
+                    >
+                      {clinic.excludeFromAnalysis ? "対象外" : "対象"}
+                    </button>
                   </td>
                   <td className="px-4 py-3 text-center text-sm">{clinic.channelCount}</td>
                   <td className="px-4 py-3 text-center text-sm">{clinic.sessionCount}</td>
