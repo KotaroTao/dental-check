@@ -31,11 +31,14 @@ export async function GET(
       return NextResponse.json({ error: "このURLの有効期限が切れています" }, { status: 400 });
     }
 
+    const needsEmail = invitation.clinic.email.endsWith("@placeholder.internal");
+
     return NextResponse.json({
       valid: true,
       type: invitation.type,
       clinicName: invitation.clinic.name,
-      clinicEmail: invitation.clinic.email,
+      clinicEmail: needsEmail ? null : invitation.clinic.email,
+      needsEmail,
     });
   } catch (error) {
     console.error("Verify invitation error:", error);
@@ -54,7 +57,7 @@ export async function POST(
   try {
     const { token } = await params;
     const body = await request.json();
-    const { password } = body;
+    const { password, email } = body;
 
     if (!password || password.length < 8) {
       return NextResponse.json(
@@ -84,15 +87,40 @@ export async function POST(
       return NextResponse.json({ error: "このURLの有効期限が切れています" }, { status: 400 });
     }
 
+    // メールアドレスがプレースホルダーの場合、新しいメールが必須
+    const needsEmail = invitation.clinic.email.endsWith("@placeholder.internal");
+    let finalEmail = invitation.clinic.email;
+
+    if (needsEmail) {
+      if (!email || !email.includes("@")) {
+        return NextResponse.json(
+          { error: "メールアドレスを入力してください" },
+          { status: 400 }
+        );
+      }
+      // 新しいメールアドレスの重複チェック
+      const existing = await prisma.clinic.findUnique({
+        where: { email },
+      });
+      if (existing) {
+        return NextResponse.json(
+          { error: "このメールアドレスは既に使用されています" },
+          { status: 400 }
+        );
+      }
+      finalEmail = email;
+    }
+
     // パスワードをハッシュ化して更新
     const passwordHash = await hashPassword(password);
 
     await prisma.$transaction([
-      // パスワードを設定 & ステータスを更新
+      // パスワードを設定 & ステータス・メールを更新
       prisma.clinic.update({
         where: { id: invitation.clinic.id },
         data: {
           passwordHash,
+          ...(needsEmail ? { email: finalEmail } : {}),
           ...(invitation.clinic.status === "pending" ? { status: "active" } : {}),
         },
       }),
@@ -106,7 +134,7 @@ export async function POST(
     // 自動ログイン用トークンを発行
     const authToken = await createToken({
       clinicId: invitation.clinic.id,
-      email: invitation.clinic.email,
+      email: finalEmail,
     });
 
     const response = NextResponse.json({

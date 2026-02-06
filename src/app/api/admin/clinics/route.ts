@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
         id: clinic.id,
         slug: clinic.slug,
         name: clinic.name,
-        email: clinic.email,
+        email: clinic.email.endsWith("@placeholder.internal") ? null : clinic.email,
         status: clinic.status,
         isHidden: clinic.isHidden,
         createdAt: clinic.createdAt,
@@ -113,22 +113,28 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { name, email, phone, planType } = body;
 
-    if (!name || !email) {
+    if (!name) {
       return NextResponse.json(
-        { error: "医院名とメールアドレスは必須です" },
+        { error: "医院名は必須です" },
         { status: 400 }
       );
     }
 
-    // メールアドレスの重複チェック
-    const existing = await prisma.clinic.findUnique({
-      where: { email },
-    });
-    if (existing) {
-      return NextResponse.json(
-        { error: "このメールアドレスは既に登録されています" },
-        { status: 400 }
-      );
+    // メールアドレスが指定された場合は重複チェック
+    let clinicEmail = email;
+    if (clinicEmail) {
+      const existing = await prisma.clinic.findUnique({
+        where: { email: clinicEmail },
+      });
+      if (existing) {
+        return NextResponse.json(
+          { error: "このメールアドレスは既に登録されています" },
+          { status: 400 }
+        );
+      }
+    } else {
+      // メール未指定の場合はプレースホルダーを生成
+      clinicEmail = `pending-${crypto.randomUUID()}@placeholder.internal`;
     }
 
     // スラッグ生成
@@ -146,7 +152,7 @@ export async function POST(request: NextRequest) {
     const clinic = await prisma.clinic.create({
       data: {
         name,
-        email,
+        email: clinicEmail,
         passwordHash: dummyPasswordHash,
         phone: phone || null,
         slug,
@@ -192,7 +198,7 @@ export async function POST(request: NextRequest) {
         clinic: {
           id: clinic.id,
           name: clinic.name,
-          email: clinic.email,
+          email: clinic.email.endsWith("@placeholder.internal") ? null : clinic.email,
           slug: clinic.slug,
         },
         inviteUrl,

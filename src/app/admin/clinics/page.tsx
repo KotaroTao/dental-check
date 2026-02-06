@@ -19,7 +19,7 @@ interface Clinic {
   id: string;
   slug: string;
   name: string;
-  email: string;
+  email: string | null;
   status: string;
   isHidden: boolean;
   createdAt: string;
@@ -50,7 +50,7 @@ export default function AdminClinicsPage() {
 
   // 新規作成モーダル
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [createForm, setCreateForm] = useState({ name: "", email: "", phone: "", planType: "starter" });
+  const [createForm, setCreateForm] = useState({ name: "", phone: "", planType: "starter" });
   const [isCreating, setIsCreating] = useState(false);
   const [createResult, setCreateResult] = useState<{ inviteUrl: string; clinicName: string } | null>(null);
 
@@ -327,7 +327,7 @@ export default function AdminClinicsPage() {
 
   const closeCreateModal = () => {
     setShowCreateModal(false);
-    setCreateForm({ name: "", email: "", phone: "", planType: "starter" });
+    setCreateForm({ name: "", phone: "", planType: "starter" });
     setCreateResult(null);
   };
 
@@ -416,7 +416,7 @@ export default function AdminClinicsPage() {
                           {clinic.name}
                         </Link>
                       </div>
-                      <div className="text-sm text-gray-500">{clinic.email}</div>
+                      <div className="text-sm text-gray-500">{clinic.email || "メール未設定"}</div>
                     </div>
                   </td>
                   <td className="px-4 py-3">
@@ -637,7 +637,7 @@ export default function AdminClinicsPage() {
                 </div>
 
                 <p className="text-xs text-gray-500 mb-4">
-                  クライアントがこのURLを開くとパスワード設定画面が表示されます。
+                  クライアントがこのURLを開くとメールアドレスとパスワードの設定画面が表示されます。
                   設定完了後、ログインできるようになります。
                 </p>
 
@@ -672,20 +672,6 @@ export default function AdminClinicsPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="create-email">
-                      メールアドレス <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="create-email"
-                      type="email"
-                      placeholder="example@clinic.com"
-                      value={createForm.email}
-                      onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
-                      disabled={isCreating}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
                     <Label htmlFor="create-phone">電話番号（任意）</Label>
                     <Input
                       id="create-phone"
@@ -714,8 +700,8 @@ export default function AdminClinicsPage() {
                   </div>
 
                   <div className="bg-blue-50 rounded-lg p-3 text-sm text-blue-800">
-                    作成後、パスワード設定用の招待URLが発行されます。
-                    URLをクライアントに共有してください。
+                    作成後、招待URLが発行されます。クライアントがURLを開くと、
+                    メールアドレスとパスワードを設定してログインできるようになります。
                   </div>
 
                   <div className="flex gap-2">
