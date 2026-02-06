@@ -670,7 +670,7 @@ export default function DashboardPage() {
         ) : (
           <>
             {/* PC用テーブル */}
-            <div className="hidden md:block overflow-x-auto">
+            <div className="hidden md:block">
               <table className="w-full">
                 <thead>
                   <tr className="border-b bg-gray-50/50">
@@ -792,7 +792,7 @@ export default function DashboardPage() {
         ) : (
           <>
             {/* PC用テーブル */}
-            <div className="hidden md:block overflow-x-auto">
+            <div className="hidden md:block">
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
