@@ -23,7 +23,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-xl font-bold text-gray-900 mb-4">第1条（適用）</h2>
             <p className="text-gray-700 leading-relaxed">
-              本規約は、株式会社ファンクション・ティ（以下「当社」）が提供する「くるくるQR for Dental」（以下「本サービス」）の
+              本規約は、株式会社ファンクション・ティ（以下「当社」）が提供する「QRくるくる診断DX」（以下「本サービス」）の
               利用に関する条件を定めるものです。ユーザーは本規約に同意した上で本サービスを利用するものとします。
             </p>
           </section>
@@ -137,7 +137,7 @@ export default function TermsPage() {
       <footer className="bg-gray-900 py-8 mt-12">
         <div className="container mx-auto px-4 text-center">
           <p className="text-gray-500 text-sm">
-            &copy; 2026 くるくるQR for Dental. All rights reserved.
+            &copy; 2026 QRくるくる診断DX. All rights reserved.
           </p>
           <p className="text-gray-500 text-sm mt-1">
             運営: <a href="https://function-t.com/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors">株式会社ファンクション・ティ</a>

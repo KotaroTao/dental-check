@@ -34,7 +34,7 @@ export default function AdminLoginPage() {
         return;
       }
 
-      router.push("/admin/diagnoses");
+      router.push("/admin/clinics");
     } catch {
       setError("ログインに失敗しました");
     } finally {

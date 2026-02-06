@@ -1,11 +1,16 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import QRCode from "qrcode";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Download, Copy, ExternalLink, Edit, Image as ImageIcon, X, Calendar, AlertTriangle, Link2, Code, Check, Eye } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  ArrowLeft, Download, Copy, ExternalLink, Image as ImageIcon, X,
+  Calendar, Link2, Wallet, Upload, Loader2, Eye, Check,
+} from "lucide-react";
 
 // 診断タイプの表示名
 const DIAGNOSIS_TYPE_NAMES: Record<string, string> = {
@@ -31,53 +36,42 @@ interface Channel {
   budget: number | null;
 }
 
-interface ChannelStats {
-  accessCount: number;
-  completedCount: number;
-  completionRate: number;
-  ctaCount: number;
-  ctaRate: number;
-  ctaByType?: Record<string, number>;
-}
-
-// CTAタイプの表示名
-const CTA_TYPE_NAMES: Record<string, string> = {
-  booking: "予約",
-  phone: "電話",
-  line: "LINE",
-  instagram: "Instagram",
-  youtube: "YouTube",
-  facebook: "Facebook",
-  tiktok: "TikTok",
-  threads: "Threads",
-  x: "X",
-  google_maps: "マップ",
-  clinic_page: "医院ページ",
-  clinic_homepage: "ホームページ",
-  direct_link: "直リンク",
-};
-
 interface SubscriptionInfo {
   isDemo?: boolean;
 }
 
 export default function ChannelDetailPage() {
   const params = useParams();
+  const id = params.id as string;
   const [channel, setChannel] = useState<Channel | null>(null);
-  const [stats, setStats] = useState<ChannelStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [copied, setCopied] = useState(false);
-  const [copiedEmbed, setCopiedEmbed] = useState<string | null>(null);
   const [showImageModal, setShowImageModal] = useState(false);
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
   const [showDemoModal, setShowDemoModal] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // 本番環境では環境変数を優先、それ以外はwindow.location.originを使用
+  // Form state
+  const [formData, setFormData] = useState({
+    name: "",
+    description: "",
+    isActive: true,
+    imageUrl: "" as string | null,
+    redirectUrl: "",
+    expiresAt: "",
+    budget: "",
+  });
+  const [error, setError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  const isDemo = subscription?.isDemo;
+
   const baseUrl = typeof window !== "undefined"
     ? (process.env.NEXT_PUBLIC_APP_URL || window.location.origin)
     : "";
-  // 診断タイプ: /c/{code}/{diagnosisTypeSlug}、リンクタイプ: /c/{code}
   const qrUrl = channel
     ? channel.channelType === "diagnosis"
       ? `${baseUrl}/c/${channel.code}/${channel.diagnosisTypeSlug}`
@@ -87,29 +81,31 @@ export default function ChannelDetailPage() {
   useEffect(() => {
     const fetchChannel = async () => {
       try {
-        const response = await fetch(`/api/channels/${params.id}`);
+        const response = await fetch(`/api/channels/${id}`);
         if (response.ok) {
           const data = await response.json();
           setChannel(data.channel);
+
+          let expiresAtValue = "";
+          if (data.channel.expiresAt) {
+            const date = new Date(data.channel.expiresAt);
+            expiresAtValue = date.toISOString().slice(0, 16);
+          }
+
+          setFormData({
+            name: data.channel.name,
+            description: data.channel.description || "",
+            isActive: data.channel.isActive,
+            imageUrl: data.channel.imageUrl || null,
+            redirectUrl: data.channel.redirectUrl || "",
+            expiresAt: expiresAtValue,
+            budget: data.channel.budget !== null ? String(data.channel.budget) : "",
+          });
         }
       } catch (error) {
         console.error("Failed to fetch channel:", error);
       } finally {
         setIsLoading(false);
-      }
-    };
-
-    const fetchStats = async () => {
-      try {
-        const response = await fetch(`/api/dashboard/channel-stats?period=all`);
-        if (response.ok) {
-          const data = await response.json();
-          if (data.stats && params.id && data.stats[params.id as string]) {
-            setStats(data.stats[params.id as string]);
-          }
-        }
-      } catch (error) {
-        console.error("Failed to fetch stats:", error);
       }
     };
 
@@ -125,32 +121,28 @@ export default function ChannelDetailPage() {
       }
     };
 
-    if (params.id) {
+    if (id) {
       fetchChannel();
-      fetchStats();
       fetchSubscription();
     }
-  }, [params.id]);
+  }, [id]);
 
+  // QR code rendering
   useEffect(() => {
     if (channel && canvasRef.current) {
       QRCode.toCanvas(canvasRef.current, qrUrl, {
         width: 256,
         margin: 2,
-        color: {
-          dark: "#000000",
-          light: "#ffffff",
-        },
+        color: { dark: "#000000", light: "#ffffff" },
       });
     }
   }, [channel, qrUrl]);
 
-  // ハッシュアンカーへのスクロール対応
+  // Hash scroll
   useEffect(() => {
-    if (stats && typeof window !== "undefined") {
+    if (!isLoading && channel && typeof window !== "undefined") {
       const hash = window.location.hash;
       if (hash) {
-        // 少し遅延させてDOMが確実にレンダリングされた後にスクロール
         setTimeout(() => {
           const element = document.querySelector(hash);
           if (element) {
@@ -159,11 +151,11 @@ export default function ChannelDetailPage() {
         }, 100);
       }
     }
-  }, [stats]);
+  }, [isLoading, channel]);
 
+  // QR download handlers
   const handleDownloadPNG = () => {
     if (!canvasRef.current || !channel) return;
-
     const link = document.createElement("a");
     link.download = `qr-${channel.name}.png`;
     link.href = canvasRef.current.toDataURL("image/png");
@@ -172,14 +164,12 @@ export default function ChannelDetailPage() {
 
   const handleDownloadSVG = async () => {
     if (!channel) return;
-
     try {
       const svgString = await QRCode.toString(qrUrl, {
         type: "svg",
         width: 256,
         margin: 2,
       });
-
       const blob = new Blob([svgString], { type: "image/svg+xml" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -198,29 +188,173 @@ export default function ChannelDetailPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleCopyEmbed = async (type: string, code: string) => {
-    await navigator.clipboard.writeText(code);
-    setCopiedEmbed(type);
-    setTimeout(() => setCopiedEmbed(null), 2000);
+  // Form handlers
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value, type } = e.target;
+    if (type === "checkbox") {
+      setFormData({ ...formData, [name]: (e.target as HTMLInputElement).checked });
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
   };
 
-  // 埋め込み用HTMLコード
-  const embedButton = channel
-    ? `<a href="${qrUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background: linear-gradient(135deg, #3b82f6, #6366f1); color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">
-  ${channel.channelType === "diagnosis" ? "診断を始める" : "詳しくはこちら"}
-</a>`
-    : "";
+  const compressImage = (file: File, maxWidth = 800, quality = 0.8): Promise<File> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
+        }
+        canvas.width = width;
+        canvas.height = height;
+        ctx?.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              resolve(new File([blob], file.name, { type: "image/jpeg" }));
+            } else {
+              resolve(file);
+            }
+          },
+          "image/jpeg",
+          quality
+        );
+      };
+      img.src = URL.createObjectURL(file);
+    });
+  };
 
-  const embedButtonSimple = channel
-    ? `<a href="${qrUrl}" target="_blank" rel="noopener noreferrer">${channel.channelType === "diagnosis" ? "診断を始める" : "詳しくはこちら"}</a>`
-    : "";
+  const handleImageUpload = useCallback(async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      setError("画像ファイルを選択してください");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError("ファイルサイズは5MB以下にしてください");
+      return;
+    }
+    setIsUploading(true);
+    setError("");
+    try {
+      const compressedFile = await compressImage(file);
+      const uploadFormData = new FormData();
+      uploadFormData.append("file", compressedFile);
+      uploadFormData.append("folder", "channels");
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: uploadFormData,
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "アップロードに失敗しました");
+      }
+      const { url } = await response.json();
+      setFormData((prev) => ({ ...prev, imageUrl: url }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "アップロードに失敗しました");
+    } finally {
+      setIsUploading(false);
+    }
+  }, []);
+
+  const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); setIsDragOver(true); };
+  const handleDragLeave = (e: React.DragEvent) => { e.preventDefault(); setIsDragOver(false); };
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleImageUpload(file);
+  };
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleImageUpload(file);
+  };
+  const handleRemoveImage = () => {
+    setFormData((prev) => ({ ...prev, imageUrl: null }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setSaveSuccess(false);
+
+    if (isDemo) {
+      setShowDemoModal(true);
+      return;
+    }
+
+    if (!formData.name.trim()) {
+      setError("QRコード名を入力してください");
+      return;
+    }
+
+    if (channel?.channelType === "link") {
+      if (!formData.redirectUrl.trim()) {
+        setError("リダイレクト先URLを入力してください");
+        return;
+      }
+      try {
+        new URL(formData.redirectUrl);
+      } catch {
+        setError("有効なURLを入力してください（https://で始まる形式）");
+        return;
+      }
+    }
+
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/api/channels/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: formData.name,
+          description: formData.description,
+          isActive: formData.isActive,
+          imageUrl: formData.imageUrl,
+          expiresAt: formData.expiresAt || null,
+          redirectUrl: channel?.channelType === "link" ? formData.redirectUrl : null,
+          budget: formData.budget || null,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || "QRコードの更新に失敗しました");
+        return;
+      }
+
+      // Update local channel data
+      setChannel((prev) => prev ? { ...prev, ...data.channel } : data.channel);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch {
+      setError("通信エラーが発生しました");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   if (isLoading) {
     return <div className="text-gray-500">読み込み中...</div>;
   }
 
   if (!channel) {
-    return <div className="text-gray-500">QRコードが見つかりません</div>;
+    return (
+      <div className="max-w-2xl mx-auto">
+        <Link href="/dashboard" className="inline-flex items-center text-gray-500 hover:text-gray-700 mb-6">
+          <ArrowLeft className="w-4 h-4 mr-1" />
+          ダッシュボードに戻る
+        </Link>
+        <div className="bg-white rounded-xl shadow-sm border p-6">
+          <p className="text-red-600">{error || "QRコードが見つかりません"}</p>
+        </div>
+      </div>
+    );
   }
 
   const diagnosisTypeName = channel.diagnosisTypeSlug
@@ -229,246 +363,13 @@ export default function ChannelDetailPage() {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <Link
-        href="/dashboard"
-        className="inline-flex items-center text-gray-500 hover:text-gray-700 mb-6"
-      >
+      <Link href="/dashboard" className="inline-flex items-center text-gray-500 hover:text-gray-700 mb-6">
         <ArrowLeft className="w-4 h-4 mr-1" />
         ダッシュボードに戻る
       </Link>
 
+      {/* QR Code Section */}
       <div className="bg-white rounded-xl shadow-sm border p-6 mb-6">
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-start gap-4">
-            {/* サムネイル画像 */}
-            {channel.imageUrl ? (
-              <button
-                onClick={() => setShowImageModal(true)}
-                className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 hover:opacity-80 transition-opacity"
-              >
-                <img
-                  src={channel.imageUrl}
-                  alt={channel.name}
-                  className="w-full h-full object-cover"
-                />
-              </button>
-            ) : (
-              <div className="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
-                <ImageIcon className="w-6 h-6 text-gray-400" />
-              </div>
-            )}
-            <div>
-              <h1 className="text-xl font-bold">{channel.name}</h1>
-              {channel.description && (
-                <p className="text-gray-500 mt-1">{channel.description}</p>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <span
-              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                channel.isActive
-                  ? "bg-green-100 text-green-800"
-                  : "bg-gray-100 text-gray-800"
-              }`}
-            >
-              {channel.isActive ? "有効" : "無効"}
-            </span>
-            {subscription?.isDemo ? (
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1"
-                onClick={() => setShowDemoModal(true)}
-              >
-                <Edit className="w-4 h-4" />
-                編集
-              </Button>
-            ) : (
-              <Link href={`/dashboard/channels/${channel.id}/edit`}>
-                <Button variant="outline" size="sm" className="gap-1">
-                  <Edit className="w-4 h-4" />
-                  編集
-                </Button>
-              </Link>
-            )}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4 border-t pt-4">
-          <div>
-            <div className="text-sm text-gray-500 mb-1">QRコード</div>
-            <code className="bg-gray-100 px-3 py-1.5 rounded text-sm font-mono">
-              {channel.code}
-            </code>
-          </div>
-          <div>
-            <div className="text-sm text-gray-500 mb-1">タイプ</div>
-            {channel.channelType === "diagnosis" ? (
-              <span className="inline-flex items-center px-3 py-1.5 rounded text-sm font-medium bg-blue-50 text-blue-700">
-                {diagnosisTypeName}
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded text-sm font-medium bg-purple-50 text-purple-700">
-                <Link2 className="w-4 h-4" />
-                リンクのみ
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* 診断タイプの場合: 統計情報を表示 */}
-        {channel.channelType === "diagnosis" && stats && (
-          <div className="border-t pt-4 mt-4 space-y-4">
-            {/* 統計情報（ダッシュボードと同じ形式） */}
-            <div className="grid grid-cols-3 gap-3">
-              {/* QR読み込み回数 */}
-              <div className="text-center p-3 bg-emerald-50 rounded-xl">
-                <div className="text-xs text-gray-500 mb-1">QR読み込み</div>
-                <div className="text-xl font-bold text-emerald-600">{stats.accessCount?.toLocaleString() || 0}</div>
-              </div>
-
-              {/* CTAクリック数 */}
-              <div className="text-center p-3 bg-purple-50 rounded-xl">
-                <div className="text-xs text-gray-500 mb-1">CTAクリック</div>
-                <div className="text-xl font-bold text-purple-600">{stats.ctaCount?.toLocaleString() || 0}</div>
-              </div>
-
-              {/* CTA率 */}
-              <div className="text-center p-3 bg-orange-50 rounded-xl">
-                <div className="text-xs text-gray-500 mb-1">CTA率</div>
-                <div className="text-xl font-bold text-orange-600">{stats.ctaRate || 0}%</div>
-              </div>
-            </div>
-
-            {/* CTA内訳 */}
-            {stats.ctaByType && Object.keys(stats.ctaByType).length > 0 && (
-              <div className="p-4 bg-gray-50 rounded-xl">
-                <div className="text-sm font-medium text-gray-700 mb-3">CTA内訳</div>
-                <div className="space-y-2">
-                  {Object.entries(stats.ctaByType)
-                    .sort((a, b) => b[1] - a[1])
-                    .map(([type, count]) => (
-                      <div key={type} className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">{CTA_TYPE_NAMES[type] || type}</span>
-                        <div className="flex items-center gap-2">
-                          <div className="w-20 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-purple-500 rounded-full"
-                              style={{ width: `${stats.ctaCount > 0 ? (count / stats.ctaCount) * 100 : 0}%` }}
-                            />
-                          </div>
-                          <span className="text-sm font-medium text-purple-600 w-8 text-right">{count}</span>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* リンクタイプの場合: リダイレクト先とスキャン数を表示 */}
-        {channel.channelType === "link" && (
-          <div className="border-t pt-4 mt-4 space-y-4">
-            <div>
-              <div className="text-sm text-gray-500 mb-1">リダイレクト先URL</div>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 bg-gray-100 px-3 py-1.5 rounded text-sm break-all">
-                  {channel.redirectUrl}
-                </code>
-                <a href={channel.redirectUrl || "#"} target="_blank" rel="noopener noreferrer">
-                  <Button variant="ghost" size="sm">
-                    <ExternalLink className="w-4 h-4" />
-                  </Button>
-                </a>
-              </div>
-            </div>
-
-            {/* 統計情報（ダッシュボードと同じ形式） */}
-            <div className="grid grid-cols-3 gap-3">
-              {/* QR読み込み回数 */}
-              <div className="text-center p-3 bg-emerald-50 rounded-xl">
-                <div className="text-xs text-gray-500 mb-1">QR読み込み</div>
-                <div className="text-xl font-bold text-emerald-600">{channel.scanCount.toLocaleString()}</div>
-              </div>
-
-              {/* CTAクリック数 */}
-              <div className="text-center p-3 bg-purple-50 rounded-xl">
-                <div className="text-xs text-gray-500 mb-1">CTAクリック</div>
-                <div className="text-xl font-bold text-purple-600">{stats?.ctaCount?.toLocaleString() || 0}</div>
-              </div>
-
-              {/* CTA率 */}
-              <div className="text-center p-3 bg-orange-50 rounded-xl">
-                <div className="text-xs text-gray-500 mb-1">CTA率</div>
-                <div className="text-xl font-bold text-orange-600">{stats?.ctaRate || 0}%</div>
-              </div>
-            </div>
-
-            {/* CTA内訳 */}
-            {stats?.ctaByType && Object.keys(stats.ctaByType).length > 0 && (
-              <div className="p-4 bg-gray-50 rounded-xl">
-                <div className="text-sm font-medium text-gray-700 mb-3">CTA内訳</div>
-                <div className="space-y-2">
-                  {Object.entries(stats.ctaByType)
-                    .sort((a, b) => b[1] - a[1])
-                    .map(([type, count]) => (
-                      <div key={type} className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">{CTA_TYPE_NAMES[type] || type}</span>
-                        <div className="flex items-center gap-2">
-                          <div className="w-20 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-purple-500 rounded-full"
-                              style={{ width: `${stats.ctaCount > 0 ? (count / stats.ctaCount) * 100 : 0}%` }}
-                            />
-                          </div>
-                          <span className="text-sm font-medium text-purple-600 w-8 text-right">{count}</span>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* 有効期限表示 */}
-        {channel.expiresAt && (
-          <div className="border-t pt-4 mt-4">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-gray-500" />
-              <span className="text-sm text-gray-500">有効期限:</span>
-              {(() => {
-                const expiresAt = new Date(channel.expiresAt);
-                const isExpired = new Date() > expiresAt;
-                const formatted = expiresAt.toLocaleString("ja-JP", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                });
-                return isExpired ? (
-                  <span className="inline-flex items-center gap-1 text-sm font-medium text-red-600">
-                    <AlertTriangle className="w-4 h-4" />
-                    {formatted}（期限切れ）
-                  </span>
-                ) : (
-                  <span className="text-sm font-medium text-gray-700">
-                    {formatted}
-                  </span>
-                );
-              })()}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* QRコードセクション */}
-      <div className="bg-white rounded-xl shadow-sm border p-6">
-        <h2 className="text-lg font-bold mb-4">QRコード</h2>
-
         <div className="flex flex-col items-center">
           <div className="bg-white p-4 rounded-lg border mb-4">
             <canvas ref={canvasRef} />
@@ -490,8 +391,17 @@ export default function ChannelDetailPage() {
               SVG
             </Button>
             <Button variant="outline" onClick={handleCopy} className="gap-2">
-              <Copy className="w-4 h-4" />
-              {copied ? "コピーしました！" : "URLをコピー"}
+              {copied ? (
+                <>
+                  <Check className="w-4 h-4" />
+                  コピーしました
+                </>
+              ) : (
+                <>
+                  <Copy className="w-4 h-4" />
+                  URLをコピー
+                </>
+              )}
             </Button>
           </div>
 
@@ -513,128 +423,271 @@ export default function ChannelDetailPage() {
         </div>
       </div>
 
-      {/* ホームページ埋め込みセクション */}
-      <div className="bg-white rounded-xl shadow-sm border p-6 mt-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Code className="w-5 h-5 text-blue-600" />
-          <h2 className="text-lg font-bold">ホームページに埋め込む</h2>
-        </div>
+      {/* Edit Form Section */}
+      <div className="bg-white rounded-xl shadow-sm border p-6">
+        <h2 className="text-lg font-bold mb-6">設定</h2>
 
-        <p className="text-sm text-gray-600 mb-6">
-          以下のHTMLコードをコピーして、ホームページやブログに貼り付けてください。
-        </p>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {error && (
+            <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">{error}</div>
+          )}
 
-        <div className="space-y-6">
-          {/* ボタンリンク（スタイル付き） */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <h3 className="font-medium text-gray-900">リンクボタン（スタイル付き）</h3>
-                <p className="text-xs text-gray-500">装飾されたボタンとして表示されます</p>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleCopyEmbed("button", embedButton)}
-                className="gap-1"
-              >
-                {copiedEmbed === "button" ? (
-                  <>
-                    <Check className="w-4 h-4 text-green-600" />
-                    コピーしました
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-4 h-4" />
-                    コピー
-                  </>
-                )}
-              </Button>
+          {saveSuccess && (
+            <div className="bg-green-50 text-green-600 p-3 rounded-lg text-sm flex items-center gap-2">
+              <Check className="w-4 h-4" />
+              保存しました
             </div>
-            <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto">
-              <code>{embedButton}</code>
-            </pre>
-            <div className="mt-3 p-4 bg-gray-50 rounded-lg">
-              <p className="text-xs text-gray-500 mb-2">プレビュー:</p>
-              <a
-                href={qrUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  display: "inline-block",
-                  background: "linear-gradient(135deg, #3b82f6, #6366f1)",
-                  color: "white",
-                  padding: "12px 24px",
-                  borderRadius: "8px",
-                  textDecoration: "none",
-                  fontWeight: "bold",
-                }}
-              >
-                {channel.channelType === "diagnosis" ? "診断を始める" : "詳しくはこちら"}
-              </a>
-            </div>
-          </div>
+          )}
 
-          {/* シンプルリンク */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <h3 className="font-medium text-gray-900">シンプルリンク</h3>
-                <p className="text-xs text-gray-500">テキストリンクとして表示されます</p>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleCopyEmbed("simple", embedButtonSimple)}
-                className="gap-1"
-              >
-                {copiedEmbed === "simple" ? (
-                  <>
-                    <Check className="w-4 h-4 text-green-600" />
-                    コピーしました
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-4 h-4" />
-                    コピー
-                  </>
-                )}
-              </Button>
-            </div>
-            <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto">
-              <code>{embedButtonSimple}</code>
-            </pre>
-            <div className="mt-3 p-4 bg-gray-50 rounded-lg">
-              <p className="text-xs text-gray-500 mb-2">プレビュー:</p>
-              <a
-                href={qrUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:underline"
-              >
-                {channel.channelType === "diagnosis" ? "診断を始める" : "詳しくはこちら"}
-              </a>
+          {/* Image upload */}
+          <div className="space-y-2">
+            <Label>画像</Label>
+            <div
+              className={`relative border-2 border-dashed rounded-lg transition-colors ${
+                isDragOver ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300"
+              }`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              {formData.imageUrl ? (
+                <div className="relative aspect-video">
+                  <img
+                    src={formData.imageUrl}
+                    alt="プレビュー"
+                    className="w-full h-full object-cover rounded-lg cursor-pointer"
+                    onClick={() => setShowImageModal(true)}
+                  />
+                  {isUploading && (
+                    <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                      <Loader2 className="w-8 h-8 text-white animate-spin" />
+                    </div>
+                  )}
+                  {!isDemo && (
+                    <div className="absolute top-2 right-2 flex gap-2">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => document.getElementById("image-input")?.click()}
+                        disabled={isUploading}
+                        className="bg-white/90 hover:bg-white"
+                      >
+                        変更
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={handleRemoveImage}
+                        disabled={isUploading}
+                        className="bg-white/90 hover:bg-white text-red-600 hover:text-red-700"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="p-8 text-center">
+                  {isUploading ? (
+                    <Loader2 className="w-10 h-10 mx-auto text-gray-400 animate-spin mb-2" />
+                  ) : (
+                    <div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-3">
+                      <ImageIcon className="w-8 h-8 text-gray-400" />
+                    </div>
+                  )}
+                  <p className="text-sm text-gray-600 mb-2">
+                    {isUploading ? "アップロード中..." : "ドラッグ&ドロップ または"}
+                  </p>
+                  {!isUploading && !isDemo && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => document.getElementById("image-input")?.click()}
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      ファイルを選択
+                    </Button>
+                  )}
+                  <p className="text-xs text-gray-400 mt-3">JPG, PNG, GIF / 最大5MB</p>
+                </div>
+              )}
+              <input
+                id="image-input"
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                onChange={handleFileSelect}
+                className="hidden"
+                disabled={isUploading || !!isDemo}
+              />
             </div>
           </div>
-        </div>
 
-        {/* 使い方の説明 */}
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
-          <h3 className="font-medium text-blue-900 mb-2">埋め込み方法</h3>
-          <ol className="text-sm text-blue-800 space-y-2 list-decimal list-inside">
-            <li>上のコードから使用したい形式を選び「コピー」ボタンをクリック</li>
-            <li>ホームページの編集画面を開く（WordPress、Wix、ペライチなど）</li>
-            <li>HTMLを編集できるブロックまたはウィジェットを追加</li>
-            <li>コピーしたコードを貼り付けて保存</li>
-          </ol>
-          <p className="text-xs text-blue-600 mt-3">
-            ※ ホームページの作成ツールによって操作方法が異なります。詳しくは各ツールのヘルプをご確認ください。
-          </p>
-        </div>
+          {/* Name */}
+          <div className="space-y-2">
+            <Label htmlFor="name">
+              QRコード名 <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="name"
+              name="name"
+              type="text"
+              placeholder="例: チラシ①（駅前配布）"
+              value={formData.name}
+              onChange={handleChange}
+              disabled={isSaving || !!isDemo}
+            />
+          </div>
+
+          {/* Diagnosis type (read-only) */}
+          {channel.channelType === "diagnosis" && channel.diagnosisTypeSlug && (
+            <div className="space-y-2">
+              <Label>診断タイプ</Label>
+              <div className="px-3 py-2 bg-gray-50 rounded-md text-sm text-gray-600">
+                {DIAGNOSIS_TYPE_NAMES[channel.diagnosisTypeSlug] || channel.diagnosisTypeSlug}
+              </div>
+              <p className="text-xs text-gray-500">診断タイプは変更できません</p>
+            </div>
+          )}
+
+          {/* Redirect URL (link type) */}
+          {channel.channelType === "link" && (
+            <div className="space-y-2">
+              <Label htmlFor="redirectUrl" className="flex items-center gap-2">
+                <Link2 className="w-4 h-4 text-gray-500" />
+                リダイレクト先URL <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="redirectUrl"
+                name="redirectUrl"
+                type="url"
+                placeholder="https://example.com/page"
+                value={formData.redirectUrl}
+                onChange={handleChange}
+                disabled={isSaving || !!isDemo}
+              />
+              <p className="text-xs text-gray-500">QRコードをスキャンした際のリダイレクト先URL</p>
+            </div>
+          )}
+
+          {/* Description */}
+          <div className="space-y-2">
+            <Label htmlFor="description">説明（任意）</Label>
+            <textarea
+              id="description"
+              name="description"
+              className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              placeholder="例: 2024年1月から駅前で配布するチラシ用"
+              value={formData.description}
+              onChange={handleChange}
+              disabled={isSaving || !!isDemo}
+            />
+          </div>
+
+          {/* Expires at */}
+          <div className="space-y-2">
+            <Label htmlFor="expiresAt" className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-gray-500" />
+              有効期限（任意）
+            </Label>
+            <div className="flex gap-2">
+              <Input
+                id="expiresAt"
+                name="expiresAt"
+                type="datetime-local"
+                value={formData.expiresAt}
+                onChange={handleChange}
+                disabled={isSaving || !!isDemo}
+                className="flex-1"
+              />
+              {formData.expiresAt && !isDemo && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setFormData((prev) => ({ ...prev, expiresAt: "" }))}
+                  disabled={isSaving}
+                  className="shrink-0"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
+            <p className="text-xs text-gray-500">
+              期限を過ぎるとQRコードは無効になります。空欄の場合は無期限です。
+            </p>
+          </div>
+
+          {/* Budget */}
+          <div id="budget" className="space-y-2">
+            <Label htmlFor="budget" className="flex items-center gap-2">
+              <Wallet className="w-4 h-4 text-gray-500" />
+              予算（任意）
+            </Label>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">¥</span>
+                <Input
+                  id="budget"
+                  name="budget"
+                  type="number"
+                  min="0"
+                  placeholder="例: 50000"
+                  value={formData.budget}
+                  onChange={handleChange}
+                  disabled={isSaving || !!isDemo}
+                  className="pl-7"
+                />
+              </div>
+              {formData.budget && !isDemo && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setFormData((prev) => ({ ...prev, budget: "" }))}
+                  disabled={isSaving}
+                  className="shrink-0"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
+            <p className="text-xs text-gray-500">
+              このQRコードにかけた広告費用を入力すると、QR読み込み単価を確認できます。
+            </p>
+          </div>
+
+          {/* Active toggle */}
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="isActive"
+              name="isActive"
+              checked={formData.isActive}
+              onChange={handleChange}
+              disabled={isSaving || !!isDemo}
+              className="h-4 w-4 rounded border-gray-300"
+            />
+            <Label htmlFor="isActive" className="cursor-pointer">
+              このQRコードを有効にする
+            </Label>
+          </div>
+
+          {/* Submit */}
+          {!isDemo && (
+            <div className="pt-4">
+              <Button type="submit" disabled={isSaving || isUploading} className="w-full">
+                {isSaving ? "保存中..." : "変更を保存"}
+              </Button>
+            </div>
+          )}
+        </form>
       </div>
 
-      {/* 画像モーダル */}
-      {showImageModal && channel.imageUrl && (
+      {/* Image modal */}
+      {showImageModal && formData.imageUrl && (
         <div
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
           onClick={() => setShowImageModal(false)}
@@ -647,7 +700,7 @@ export default function ChannelDetailPage() {
               <X className="w-5 h-5" />
             </button>
             <img
-              src={channel.imageUrl}
+              src={formData.imageUrl}
               alt={channel.name}
               className="max-w-full max-h-[90vh] rounded-lg"
               onClick={(e) => e.stopPropagation()}
@@ -656,7 +709,7 @@ export default function ChannelDetailPage() {
         </div>
       )}
 
-      {/* デモアカウント制限モーダル */}
+      {/* Demo modal */}
       {showDemoModal && (
         <div
           className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
@@ -671,28 +724,20 @@ export default function ChannelDetailPage() {
                 <Eye className="w-6 h-6 text-blue-600" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-gray-900">
-                  デモアカウントです
-                </h3>
+                <h3 className="text-lg font-bold text-gray-900">デモアカウントです</h3>
                 <p className="text-sm text-gray-600 mt-1">
                   デモアカウントでは、データの閲覧のみ可能です。
                 </p>
               </div>
             </div>
-
             <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-4">
               <p className="text-sm text-blue-800">
                 QRコードの編集を行うには、正式なアカウントでのご登録が必要です。
               </p>
             </div>
-
-            <Button
-              className="w-full"
-              onClick={() => setShowDemoModal(false)}
-            >
+            <Button className="w-full" onClick={() => setShowDemoModal(false)}>
               閉じる
             </Button>
-
             <button
               onClick={() => setShowDemoModal(false)}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"

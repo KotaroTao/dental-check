@@ -27,13 +27,14 @@ model Clinic {
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
-  subscription     Subscription?
-  clinicDiagnoses  ClinicDiagnosis[]
-  diagnosisTypes   DiagnosisType[]   // クリニック固有の診断タイプ
-  sessions         DiagnosisSession[]
-  accessLogs       AccessLog[]
-  ctaClicks        CTAClick[]
-  channels         Channel[]
+  subscription      Subscription?
+  clinicDiagnoses   ClinicDiagnosis[]
+  diagnosisTypes    DiagnosisType[]   // クリニック固有の診断タイプ
+  sessions          DiagnosisSession[]
+  accessLogs        AccessLog[]
+  ctaClicks         CTAClick[]
+  channels          Channel[]
+  invitationTokens  InvitationToken[]
 
   @@map("clinics")
 }
@@ -205,6 +206,22 @@ model CTAClick {
   @@index([clinicId, createdAt])
   @@index([channelId, createdAt])
   @@map("cta_clicks")
+}
+
+// 招待・パスワードリセットトークン
+model InvitationToken {
+  id        String    @id @default(uuid())
+  clinicId  String    @map("clinic_id")
+  token     String    @unique
+  type      String    @default("invitation") // "invitation" | "password_reset"
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  clinic Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@map("invitation_tokens")
 }
 
 // 管理者

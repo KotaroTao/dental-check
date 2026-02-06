@@ -22,6 +22,9 @@ export async function GET() {
         mainColor: true,
         clinicPage: true,
         ctaConfig: true,
+        _count: {
+          select: { channels: true },
+        },
       },
     });
 
@@ -29,7 +32,13 @@ export async function GET() {
       return NextResponse.json({ error: "医院が見つかりません" }, { status: 404 });
     }
 
-    return NextResponse.json({ clinic });
+    return NextResponse.json({
+      clinic: {
+        ...clinic,
+        channelCount: clinic._count.channels,
+        _count: undefined,
+      },
+    });
   } catch (error) {
     console.error("Get clinic page error:", error);
     return NextResponse.json(

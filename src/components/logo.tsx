@@ -37,7 +37,7 @@ export function Logo({ variant = 'light', showIcon = true, size = 'md' }: LogoPr
         </span>
       )}
       <span>
-        くるくるQR<span className="ml-2 text-[0.5em]">for Dental</span>
+        QRくるくる<span className="ml-2 text-[0.5em]">診断DX</span>
       </span>
     </span>
   );

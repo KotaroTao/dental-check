@@ -1,4 +1,4 @@
-# くるくるQR for Dental - 運用手順書
+# QRくるくる診断DX - 運用手順書
 
 ## 本番環境構成（Xserver VPS）
 

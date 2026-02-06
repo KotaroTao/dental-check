@@ -11,7 +11,7 @@ export default function DemoPage() {
       <div className="container mx-auto px-4 py-8 max-w-lg">
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            くるくるQR<span className="text-[0.5em]"> for Dental</span>
+            QRくるくる<span className="text-[0.5em]"> 診断DX</span>
           </h1>
           <p className="text-gray-600">
             簡単な質問に答えて、お口の健康をチェックしましょう

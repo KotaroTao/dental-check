@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,26 +9,22 @@ import {
   ChevronUp,
   QrCode,
   Plus,
-  Settings,
   Trash2,
   Download,
   ArrowUpDown,
   X,
-  RotateCcw,
-  Calendar,
   AlertTriangle,
-  Link2,
   CreditCard,
-  MoreVertical,
   Eye,
-  Target,
-  Check,
-  SquareCheck,
-  Square,
-  Wallet,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { LocationSection } from "@/components/dashboard/location-section";
+import { EffectivenessSummary } from "@/components/dashboard/effectiveness-summary";
+import { QRCodeRow } from "@/components/dashboard/qr-code-row";
+import { HistoryCTAPopover } from "@/components/dashboard/history-cta-popover";
+import { Skeleton } from "@/components/dashboard/skeleton";
+import type { Channel, ChannelStats, OverallStats, HistoryItem, SubscriptionInfo } from "@/components/dashboard/types";
+import { CTA_TYPE_NAMES, CHANNEL_COLORS } from "@/components/dashboard/types";
 
 // 期間の選択肢
 const PERIOD_OPTIONS = [
@@ -38,798 +34,6 @@ const PERIOD_OPTIONS = [
   { value: "all", label: "全期間" },
   { value: "custom", label: "期間指定" },
 ];
-
-// CTAタイプの表示名
-const CTA_TYPE_NAMES: Record<string, string> = {
-  booking: "予約",
-  phone: "電話",
-  line: "LINE",
-  instagram: "Instagram",
-  youtube: "YouTube",
-  facebook: "Facebook",
-  tiktok: "TikTok",
-  threads: "Threads",
-  x: "X",
-  google_maps: "マップ",
-  clinic_page: "医院ページ",
-  clinic_homepage: "ホームページ",
-  direct_link: "直リンク",
-};
-
-interface Channel {
-  id: string;
-  code: string;
-  name: string;
-  description: string | null;
-  imageUrl: string | null;
-  channelType: "diagnosis" | "link";
-  diagnosisTypeSlug: string | null;
-  diagnosisTypeName: string | null;
-  redirectUrl: string | null;
-  isActive: boolean;
-  expiresAt: string | null;
-  scanCount: number;
-  budget: number | null;
-  createdAt: string;
-}
-
-interface ChannelStats {
-  accessCount: number;
-  completedCount: number;
-  completionRate: number;
-  ctaCount: number;
-  ctaRate: number;
-  ctaByType: Record<string, number>;
-  genderByType: Record<string, number>;
-  ageRanges: Record<string, number>;
-  accessByDate: { date: string; count: number }[];
-}
-
-interface HistoryItem {
-  id: string;
-  type: "diagnosis" | "link" | "qr_scan";
-  createdAt: string;
-  userAge: number | null;
-  userGender: string | null;
-  diagnosisType: string;
-  diagnosisTypeSlug: string;
-  resultCategory: string | null;
-  channelName: string;
-  channelId: string;
-  area: string;
-  ctaType: string | null;
-  ctaClickCount: number;
-  ctaByType: Record<string, number>;
-}
-
-interface OverallStats {
-  accessCount: number;
-  completedCount: number;
-  completionRate: number;
-  ctaCount: number;
-  ctaRate: number;
-  ctaByType: Record<string, number>;
-  categoryStats: Record<string, { count: number; ctaCount: number; ctaRate: number }>;
-  genderByType: Record<string, number>;
-  ageRanges: Record<string, number>;
-  trends: {
-    accessCount: { value: number; isNew: boolean };
-    completedCount: { value: number; isNew: boolean };
-    ctaCount: { value: number; isNew: boolean };
-  };
-}
-
-// 履歴用CTAポップオーバーコンポーネント（コンパクト版）
-function HistoryCTAPopover({
-  ctaClickCount,
-  ctaByType,
-}: {
-  ctaClickCount: number;
-  ctaByType: Record<string, number>;
-}) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
-  const popoverRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (popoverRef.current && !popoverRef.current.contains(event.target as Node) &&
-          buttonRef.current && !buttonRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    if (ctaClickCount === 0) return;
-
-    const rect = event.currentTarget.getBoundingClientRect();
-    // Calculate position above the button, centered horizontally
-    setPosition({
-      x: rect.left + rect.width / 2,
-      y: rect.top,
-    });
-    setIsOpen(!isOpen);
-  };
-
-  return (
-    <div className="relative inline-block">
-      <button
-        ref={buttonRef}
-        onClick={handleClick}
-        className={`px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${
-          ctaClickCount > 0
-            ? "bg-purple-100 text-purple-700 hover:bg-purple-200 cursor-pointer"
-            : "bg-gray-100 text-gray-400 cursor-default"
-        }`}
-      >
-        {ctaClickCount}
-      </button>
-      {isOpen && position && (
-        <div
-          ref={popoverRef}
-          className="fixed z-[9999] min-w-[120px] bg-white rounded-lg shadow-lg border p-2"
-          style={{
-            left: position.x,
-            top: position.y - 8,
-            transform: "translate(-50%, -100%)",
-          }}
-        >
-          <div className="text-[10px] font-medium text-gray-500 mb-1">CTA内訳</div>
-          <div className="space-y-0.5">
-            {Object.entries(ctaByType)
-              .sort((a, b) => b[1] - a[1])
-              .map(([type, count]) => (
-                <div key={type} className="flex justify-between text-xs text-gray-600">
-                  <span>{CTA_TYPE_NAMES[type] || type}</span>
-                  <span className="font-medium">{count}</span>
-                </div>
-              ))}
-          </div>
-          <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[5px] border-t-white" />
-        </div>
-      )}
-    </div>
-  );
-}
-
-interface SubscriptionInfo {
-  status: string;
-  planType: string;
-  planName: string;
-  qrCodeLimit: number | null;
-  qrCodeCount: number;
-  remainingQRCodes: number | null;
-  canCreateQR: boolean;
-  canEditQR: boolean;
-  canEditDiagnosis: boolean;
-  isDemo: boolean;
-}
-
-// ドロップダウンメニューコンポーネント
-function DropdownMenu({
-  trigger,
-  children,
-  align = "right",
-}: {
-  trigger: React.ReactNode;
-  children: React.ReactNode;
-  align?: "left" | "right";
-}) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [openUp, setOpenUp] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const handleToggle = () => {
-    if (!isOpen && triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect();
-      const spaceBelow = window.innerHeight - rect.bottom;
-      // メニューの高さが約250pxと仮定し、下に250px未満のスペースしかない場合は上に開く
-      setOpenUp(spaceBelow < 250);
-    }
-    setIsOpen(!isOpen);
-  };
-
-  return (
-    <div className="relative" ref={menuRef}>
-      <div ref={triggerRef} onClick={handleToggle}>{trigger}</div>
-      {isOpen && (
-        <div
-          className={`absolute z-[9999] min-w-[160px] bg-white rounded-lg shadow-lg border py-1 ${
-            align === "right" ? "right-0" : "left-0"
-          } ${openUp ? "bottom-full mb-1" : "top-full mt-1"}`}
-          onClick={() => setIsOpen(false)}
-        >
-          {children}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// スケルトンコンポーネント
-function Skeleton({ className = "" }: { className?: string }) {
-  return <div className={`animate-pulse bg-gray-200 rounded ${className}`} />;
-}
-
-// チャンネルごとの色を定義（LocationSectionと同じ）
-const CHANNEL_COLORS = [
-  "#3b82f6", // blue
-  "#ef4444", // red
-  "#22c55e", // green
-  "#f59e0b", // amber
-  "#8b5cf6", // violet
-  "#ec4899", // pink
-  "#06b6d4", // cyan
-  "#f97316", // orange
-  "#84cc16", // lime
-  "#6366f1", // indigo
-];
-
-// 年齢層のラベル
-const AGE_RANGE_LABELS = [
-  "0-9",
-  "10-19",
-  "20-29",
-  "30-39",
-  "40-49",
-  "50-59",
-  "60-69",
-  "70-79",
-  "80+",
-];
-
-// 効果測定サマリーコンポーネント
-function EffectivenessSummary({
-  channels,
-  overallStats,
-  summaryChannelIds,
-  setSummaryChannelIds,
-  isDemo,
-  onDemoClick,
-}: {
-  channels: Channel[];
-  overallStats: OverallStats | null;
-  summaryChannelIds: string[];
-  setSummaryChannelIds: (ids: string[]) => void;
-  isDemo?: boolean;
-  onDemoClick?: () => void;
-}) {
-  const [showDetails, setShowDetails] = useState(false);
-
-  const activeChannels = channels.filter((c) => c.isActive);
-
-  // チャンネルIDと色のマッピング
-  const channelColorMap: Record<string, string> = {};
-  activeChannels.forEach((channel, index) => {
-    channelColorMap[channel.id] = CHANNEL_COLORS[index % CHANNEL_COLORS.length];
-  });
-
-  const isAllSelected = summaryChannelIds.length === activeChannels.length;
-  const isNoneSelected = summaryChannelIds.length === 0;
-
-  const toggleChannel = (channelId: string) => {
-    if (summaryChannelIds.includes(channelId)) {
-      // 選択を解除（最後の1つも解除可能）
-      const newIds = summaryChannelIds.filter((id) => id !== channelId);
-      setSummaryChannelIds(newIds);
-    } else {
-      // 選択を追加
-      const newIds = [...summaryChannelIds, channelId];
-      setSummaryChannelIds(newIds);
-    }
-  };
-
-  const selectAll = () => {
-    setSummaryChannelIds(activeChannels.map((c) => c.id));
-  };
-
-  const deselectAll = () => {
-    setSummaryChannelIds([]);
-  };
-
-  const isChannelSelected = (channelId: string) => {
-    return summaryChannelIds.includes(channelId);
-  };
-
-  return (
-    <div className="bg-white rounded-2xl shadow-sm border">
-      <div className="p-5 border-b bg-gradient-to-r from-emerald-50 to-teal-50">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center">
-            <Target className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h2 className="text-lg font-bold text-gray-900">効果測定サマリー</h2>
-            <p className="text-xs text-gray-500">
-              {isNoneSelected
-                ? "QRコードを選択してください"
-                : isAllSelected
-                  ? "全QRコードの集計データ"
-                  : `${summaryChannelIds.length}個のQRコードを選択中`}
-            </p>
-          </div>
-        </div>
-
-        {/* チャンネル選択バナー */}
-        {activeChannels.length > 0 ? (
-        <div>
-          <div className="flex flex-wrap items-center gap-2 mb-2">
-            <span className="text-sm text-gray-600 font-medium">QRコード:</span>
-            <button
-              onClick={selectAll}
-              className={`text-xs px-2 py-1 rounded bg-white/80 hover:bg-white text-gray-700 flex items-center gap-1 ${isAllSelected ? "ring-1 ring-emerald-500" : ""}`}
-            >
-              <SquareCheck className="w-3 h-3" />
-              全選択
-            </button>
-            <button
-              onClick={deselectAll}
-              className={`text-xs px-2 py-1 rounded bg-white/80 hover:bg-white text-gray-700 flex items-center gap-1 ${isNoneSelected ? "ring-1 ring-gray-400" : ""}`}
-            >
-              <Square className="w-3 h-3" />
-              全解除
-            </button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {activeChannels.map((channel) => {
-              const isSelected = isChannelSelected(channel.id);
-              const color = channelColorMap[channel.id];
-              return (
-                <button
-                  key={channel.id}
-                  onClick={() => toggleChannel(channel.id)}
-                  className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs border transition-colors ${
-                    isSelected
-                      ? "border-current bg-white"
-                      : "border-gray-200 text-gray-400 bg-white/50"
-                  }`}
-                  style={isSelected ? { color, backgroundColor: "white" } : {}}
-                >
-                  <span
-                    className="w-2.5 h-2.5 rounded-full"
-                    style={{ backgroundColor: isSelected ? color : "#d1d5db" }}
-                  />
-                  {channel.name}
-                  {isSelected && <Check className="w-3 h-3" />}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-        ) : (
-          <p className="text-sm text-gray-500">表示できるQRコードがありません</p>
-        )}
-      </div>
-
-      {activeChannels.length === 0 ? (
-        <div className="p-8 text-center">
-          <div className="text-gray-400 mb-2">
-            <Target className="w-12 h-12 mx-auto opacity-50" />
-          </div>
-          <p className="text-sm text-gray-500">有効なQRコードがありません</p>
-          <p className="text-xs text-gray-400 mt-1">
-            QRコードを作成するか、非表示のQRコードを復元してください
-          </p>
-        </div>
-      ) : isNoneSelected ? (
-        <div className="p-8 text-center">
-          <div className="text-gray-400 mb-2">
-            <Target className="w-12 h-12 mx-auto opacity-50" />
-          </div>
-          <p className="text-sm text-gray-500">QRコードを選択してください</p>
-          <p className="text-xs text-gray-400 mt-1">
-            上のQRコードラベルをクリックして選択できます
-          </p>
-        </div>
-      ) : overallStats && (overallStats.accessCount > 0 || overallStats.completedCount > 0) ? (
-        <div className="p-5">
-          {/* メイン指標: QR読み込み回数 & 読み込み単価 */}
-          {(() => {
-            // 選択されているチャンネルの総予算を計算
-            const selectedChannels = activeChannels.filter(c => summaryChannelIds.includes(c.id));
-            const totalBudget = selectedChannels.reduce((sum, c) => sum + (c.budget || 0), 0);
-            const isSingleChannel = selectedChannels.length === 1;
-            const singleChannel = isSingleChannel ? selectedChannels[0] : null;
-            const hasBudget = totalBudget > 0;
-            const costPerAccess = hasBudget && overallStats.accessCount > 0
-              ? Math.round(totalBudget / overallStats.accessCount)
-              : null;
-
-            return (
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                {/* QR読み込み回数 */}
-                <div className="text-center p-4 bg-emerald-50 rounded-xl">
-                  <div className="text-xs text-gray-500 mb-1">QR読み込み回数</div>
-                  <div className="text-3xl font-bold text-emerald-600">{overallStats.accessCount.toLocaleString()}</div>
-                  {overallStats.trends?.accessCount && (
-                    <div className={`text-xs mt-1 ${overallStats.trends.accessCount.value >= 0 ? "text-emerald-600" : "text-red-500"}`}>
-                      {overallStats.trends.accessCount.isNew ? "NEW" : `前期比 ${overallStats.trends.accessCount.value >= 0 ? "+" : ""}${overallStats.trends.accessCount.value}%`}
-                    </div>
-                  )}
-                </div>
-
-                {/* QR読み込み単価 */}
-                <div className="text-center p-4 bg-blue-50 rounded-xl">
-                  <div className="text-xs text-gray-500 mb-1 flex items-center justify-center gap-1">
-                    <Wallet className="w-3 h-3" />
-                    読み込み単価
-                  </div>
-                  {hasBudget ? (
-                    <>
-                      <div className="text-3xl font-bold text-blue-600">
-                        ¥{costPerAccess?.toLocaleString() || "-"}
-                      </div>
-                      {!isSingleChannel && (
-                        <div className="text-xs text-gray-500 mt-1">
-                          {selectedChannels.length}個のQRの合計予算
-                        </div>
-                      )}
-                    </>
-                  ) : isSingleChannel && singleChannel ? (
-                    <div className="py-1">
-                      <div className="text-sm text-gray-400 mb-1">予算未設定</div>
-                      {isDemo ? (
-                        <button
-                          onClick={onDemoClick}
-                          className="text-xs text-gray-400 hover:text-gray-500"
-                        >
-                          予算を設定する →
-                        </button>
-                      ) : (
-                        <Link
-                          href={`/dashboard/channels/${singleChannel.id}/edit#budget`}
-                          className="text-xs text-blue-600 hover:text-blue-700 hover:underline"
-                        >
-                          予算を設定する →
-                        </Link>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="py-1">
-                      <div className="text-sm text-gray-400">予算未設定</div>
-                      <div className="text-xs text-gray-400 mt-1">
-                        各QRに予算を設定してください
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* 性別・年齢層 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            {/* 性別 */}
-            {overallStats.genderByType && (
-              <div className="p-4 bg-gray-50 rounded-xl">
-                <div className="text-sm font-medium text-gray-700 mb-3">性別</div>
-                <div className="flex gap-3">
-                  <div className="flex-1 text-center p-2 bg-blue-100 rounded-lg">
-                    <div className="text-lg font-bold text-blue-600">{overallStats.genderByType.male || 0}</div>
-                    <div className="text-xs text-gray-500">男性</div>
-                  </div>
-                  <div className="flex-1 text-center p-2 bg-pink-100 rounded-lg">
-                    <div className="text-lg font-bold text-pink-600">{overallStats.genderByType.female || 0}</div>
-                    <div className="text-xs text-gray-500">女性</div>
-                  </div>
-                  {(overallStats.genderByType.other || 0) > 0 && (
-                    <div className="flex-1 text-center p-2 bg-gray-100 rounded-lg">
-                      <div className="text-lg font-bold text-gray-600">{overallStats.genderByType.other}</div>
-                      <div className="text-xs text-gray-500">その他</div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* 年齢層 */}
-            {overallStats.ageRanges && Object.keys(overallStats.ageRanges).length > 0 && (
-              <div className="p-4 bg-gray-50 rounded-xl">
-                <div className="text-sm font-medium text-gray-700 mb-3">年齢層</div>
-                <div className="space-y-1">
-                  {AGE_RANGE_LABELS.filter(range => (overallStats.ageRanges[range] || 0) > 0).map((range) => {
-                    const count = overallStats.ageRanges[range] || 0;
-                    const maxCount = Math.max(...Object.values(overallStats.ageRanges), 1);
-                    const percentage = (count / maxCount) * 100;
-                    return (
-                      <div key={range} className="flex items-center gap-2">
-                        <span className="text-xs text-gray-500 w-12">{range}歳</span>
-                        <div className="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-emerald-500 rounded-full transition-all duration-300"
-                            style={{ width: `${percentage}%` }}
-                          />
-                        </div>
-                        <span className="text-xs font-medium text-gray-700 w-6 text-right">{count}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* 詳細表示ボタン */}
-          <button
-            onClick={() => setShowDetails(!showDetails)}
-            className="w-full py-2 text-sm text-emerald-600 hover:text-emerald-800 flex items-center justify-center gap-1 border-t"
-          >
-            {showDetails ? (
-              <>
-                <ChevronUp className="w-4 h-4" />
-                詳細を閉じる
-              </>
-            ) : (
-              <>
-                <ChevronDown className="w-4 h-4" />
-                詳細を表示
-              </>
-            )}
-          </button>
-
-          {/* 折りたたみ部分: 診断完了、完了率、CTAクリック数、CTA率、CTA内訳 */}
-          {showDetails && (
-            <div className="pt-4 border-t mt-4 space-y-4">
-              {/* 診断関連指標 */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {/* 診断完了 */}
-                <div className="text-center p-3 bg-emerald-50 rounded-xl">
-                  <div className="text-xs text-gray-500 mb-1">診断完了</div>
-                  <div className="text-xl font-bold text-emerald-600">{overallStats.completedCount.toLocaleString()}</div>
-                </div>
-
-                {/* 完了率 */}
-                <div className="text-center p-3 bg-blue-50 rounded-xl">
-                  <div className="text-xs text-gray-500 mb-1">完了率</div>
-                  <div className="text-xl font-bold text-blue-600">{overallStats.completionRate}%</div>
-                </div>
-
-                {/* CTAクリック数 */}
-                <div className="text-center p-3 bg-purple-50 rounded-xl">
-                  <div className="text-xs text-gray-500 mb-1">CTAクリック数</div>
-                  <div className="text-xl font-bold text-purple-600">{overallStats.ctaCount.toLocaleString()}</div>
-                </div>
-
-                {/* CTA率 */}
-                <div className="text-center p-3 bg-orange-50 rounded-xl">
-                  <div className="text-xs text-gray-500 mb-1">CTA率</div>
-                  <div className="text-xl font-bold text-orange-600">{overallStats.ctaRate}%</div>
-                </div>
-              </div>
-
-              {/* CTA内訳 */}
-              {overallStats.ctaByType && Object.keys(overallStats.ctaByType).length > 0 && (
-                <div className="p-4 bg-gray-50 rounded-xl">
-                  <div className="text-sm font-medium text-gray-700 mb-3">CTA内訳</div>
-                  <div className="space-y-2">
-                    {Object.entries(overallStats.ctaByType)
-                      .sort((a, b) => b[1] - a[1])
-                      .map(([type, count]) => (
-                        <div key={type} className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600">{CTA_TYPE_NAMES[type] || type}</span>
-                          <div className="flex items-center gap-2">
-                            <div className="w-20 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-purple-500 rounded-full"
-                                style={{ width: `${overallStats.ctaCount > 0 ? (count / overallStats.ctaCount) * 100 : 0}%` }}
-                              />
-                            </div>
-                            <span className="text-sm font-medium text-purple-600 w-8 text-right">{count}</span>
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="p-8 text-center">
-          <div className="text-gray-400 mb-2">
-            <Target className="w-12 h-12 mx-auto opacity-50" />
-          </div>
-          <p className="text-sm text-gray-500">
-            {summaryChannelIds.length > 0
-              ? "選択したQRコードのデータがありません"
-              : "データがありません"}
-          </p>
-          <p className="text-xs text-gray-400 mt-1">
-            選択した期間にアクセスや診断完了がない場合は表示されません
-          </p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// QRコードカードコンポーネント
-function QRCodeCard({
-  channel,
-  onHide,
-  onRestore,
-  onPermanentDelete,
-  onImageClick,
-  isDemo,
-  onDemoClick,
-}: {
-  channel: Channel;
-  onHide: () => void;
-  onRestore: () => void;
-  onPermanentDelete: () => void;
-  onImageClick: (url: string, name: string) => void;
-  isDemo?: boolean;
-  onDemoClick?: () => void;
-}) {
-  const isExpired = channel.expiresAt && new Date() > new Date(channel.expiresAt);
-
-  return (
-    <div className="bg-white rounded-xl border hover:shadow-md transition-all duration-200 group">
-      {/* カードヘッダー */}
-      <div className="p-4">
-        <div className="flex items-start gap-3">
-          {/* サムネイル */}
-          {channel.imageUrl ? (
-            <button
-              onClick={() => onImageClick(channel.imageUrl!, channel.name)}
-              className="w-14 h-14 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 hover:opacity-80 transition-opacity"
-            >
-              <img
-                src={channel.imageUrl}
-                alt={channel.name}
-                className="w-full h-full object-cover"
-              />
-            </button>
-          ) : (
-            <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center flex-shrink-0">
-              {channel.channelType === "link" ? (
-                <Link2 className="w-6 h-6 text-blue-500" />
-              ) : (
-                <QrCode className="w-6 h-6 text-blue-500" />
-              )}
-            </div>
-          )}
-
-          {/* タイトル・ステータス */}
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-gray-900 truncate">{channel.name}</h3>
-            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-              {channel.channelType === "link" && (
-                <span className="text-[10px] px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded-full font-medium">
-                  リンク
-                </span>
-              )}
-              {channel.isActive ? (
-                <span className="text-[10px] px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-medium">
-                  有効
-                </span>
-              ) : (
-                <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded-full font-medium">
-                  無効
-                </span>
-              )}
-              {isExpired && (
-                <span className="text-[10px] px-1.5 py-0.5 bg-red-100 text-red-600 rounded-full font-medium flex items-center gap-0.5">
-                  <AlertTriangle className="w-2.5 h-2.5" />
-                  期限切れ
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* メニュー */}
-          <DropdownMenu
-            trigger={
-              <button className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
-                <MoreVertical className="w-4 h-4 text-gray-500" />
-              </button>
-            }
-          >
-            <Link
-              href={`/dashboard/channels/${channel.id}`}
-              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-            >
-              <Eye className="w-4 h-4" />
-              QRコード表示
-            </Link>
-            {isDemo ? (
-              <button
-                onClick={onDemoClick}
-                className="flex items-center gap-2 px-3 py-2 text-sm text-gray-400 hover:bg-gray-50 w-full text-left"
-              >
-                <Settings className="w-4 h-4" />
-                編集
-              </button>
-            ) : (
-              <Link
-                href={`/dashboard/channels/${channel.id}/edit`}
-                className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-              >
-                <Settings className="w-4 h-4" />
-                編集
-              </Link>
-            )}
-            <div className="border-t my-1" />
-            {channel.isActive ? (
-              <button
-                onClick={isDemo ? onDemoClick : onHide}
-                className={`flex items-center gap-2 px-3 py-2 text-sm w-full text-left ${isDemo ? "text-gray-400 hover:bg-gray-50" : "text-red-600 hover:bg-red-50"}`}
-              >
-                <Trash2 className="w-4 h-4" />
-                非表示にする
-              </button>
-            ) : (
-              <>
-                <button
-                  onClick={isDemo ? onDemoClick : onRestore}
-                  className={`flex items-center gap-2 px-3 py-2 text-sm w-full text-left ${isDemo ? "text-gray-400 hover:bg-gray-50" : "text-emerald-600 hover:bg-emerald-50"}`}
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  復元する
-                </button>
-                <button
-                  onClick={isDemo ? onDemoClick : onPermanentDelete}
-                  className={`flex items-center gap-2 px-3 py-2 text-sm w-full text-left ${isDemo ? "text-gray-400 hover:bg-gray-50" : "text-red-600 hover:bg-red-50"}`}
-                >
-                  <Trash2 className="w-4 h-4" />
-                  完全に削除
-                </button>
-              </>
-            )}
-          </DropdownMenu>
-        </div>
-
-        {/* 日付情報 */}
-        <div className="flex items-center gap-3 mt-3 text-xs text-gray-500">
-          <span>作成: {new Date(channel.createdAt).toLocaleDateString("ja-JP")}</span>
-          {channel.expiresAt && (
-            <span className="flex items-center gap-1">
-              <Calendar className="w-3 h-3" />
-              {new Date(channel.expiresAt).toLocaleDateString("ja-JP")}まで
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* QR読み込み回数（アクティブなチャンネルのみ） */}
-      {channel.isActive && (
-        <div className="border-t bg-gray-50/50 p-4">
-          <div className="flex items-center justify-center gap-2 text-emerald-600">
-            <QrCode className="w-5 h-5" />
-            <span className="text-sm text-gray-500">QR読み込み</span>
-            <span className="text-2xl font-bold">{channel.scanCount}</span>
-            <span className="text-sm text-gray-500">回</span>
-          </div>
-        </div>
-      )}
-
-      {/* 詳細リンク（アクティブなチャンネルのみ） */}
-      {channel.isActive && (
-        <Link
-          href={`/dashboard/channels/${channel.id}`}
-          className="block border-t px-4 py-2.5 text-center text-sm font-medium text-blue-600 hover:bg-blue-50 transition-colors"
-        >
-          QRコードを表示
-        </Link>
-      )}
-    </div>
-  );
-}
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -850,7 +54,7 @@ export default function DashboardPage() {
   const [showDemoModal, setShowDemoModal] = useState(false);
 
   // QRコードソート
-  type ChannelSortField = "createdAt" | "accessCount" | "completedCount" | "completionRate" | "ctaCount";
+  type ChannelSortField = "createdAt" | "accessCount" | "budget" | "costPerAccess" | "ctaCount" | "ctaRate";
   const [channelSortField, setChannelSortField] = useState<ChannelSortField>("createdAt");
 
   // ソート
@@ -898,7 +102,6 @@ export default function DashboardPage() {
   // フィルター
   const [period, setPeriod] = useState("all");
   const [selectedChannelId, setSelectedChannelId] = useState("");
-  const [selectedDiagnosisType, setSelectedDiagnosisType] = useState("");
   const [summaryChannelIds, setSummaryChannelIds] = useState<string[]>([]); // 効果測定サマリー用（複数選択）
 
   // カスタム期間
@@ -999,7 +202,6 @@ export default function DashboardPage() {
           limit: "30",
         });
         if (selectedChannelId) params.set("channelId", selectedChannelId);
-        if (selectedDiagnosisType) params.set("diagnosisType", selectedDiagnosisType);
         if (period === "custom") {
           params.set("startDate", customStartDate);
           params.set("endDate", customEndDate);
@@ -1030,7 +232,7 @@ export default function DashboardPage() {
         setIsLoadingMore(false);
       }
     },
-    [period, selectedChannelId, selectedDiagnosisType, customStartDate, customEndDate]
+    [period, selectedChannelId, customStartDate, customEndDate]
   );
 
   // サブスクリプション情報取得
@@ -1205,23 +407,33 @@ export default function DashboardPage() {
   // QRコードのソート済みリスト
   const getSortedChannels = (channelList: Channel[]) => {
     return [...channelList].sort((a, b) => {
+      const statsA = channelStats[a.id];
+      const statsB = channelStats[b.id];
+      const accessA = statsA?.accessCount ?? a.scanCount;
+      const accessB = statsB?.accessCount ?? b.scanCount;
+
       if (channelSortField === "createdAt") {
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       }
+      if (channelSortField === "accessCount") {
+        return accessB - accessA;
+      }
+      if (channelSortField === "budget") {
+        return (b.budget || 0) - (a.budget || 0);
+      }
+      if (channelSortField === "costPerAccess") {
+        const costA = a.budget && accessA > 0 ? a.budget / accessA : Infinity;
+        const costB = b.budget && accessB > 0 ? b.budget / accessB : Infinity;
+        return costA - costB;
+      }
 
-      const statsA = channelStats[a.id];
-      const statsB = channelStats[b.id];
       if (!statsA || !statsB) return 0;
 
       switch (channelSortField) {
-        case "accessCount":
-          return statsB.accessCount - statsA.accessCount;
-        case "completedCount":
-          return statsB.completedCount - statsA.completedCount;
-        case "completionRate":
-          return statsB.completionRate - statsA.completionRate;
         case "ctaCount":
           return statsB.ctaCount - statsA.ctaCount;
+        case "ctaRate":
+          return statsB.ctaRate - statsA.ctaRate;
         default:
           return 0;
       }
@@ -1240,7 +452,6 @@ export default function DashboardPage() {
 
     const params = new URLSearchParams({ period, offset: "0", limit: "10000" });
     if (selectedChannelId) params.set("channelId", selectedChannelId);
-    if (selectedDiagnosisType) params.set("diagnosisType", selectedDiagnosisType);
     if (period === "custom") {
       params.set("startDate", customStartDate);
       params.set("endDate", customEndDate);
@@ -1360,6 +571,16 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* 効果測定サマリー */}
+      <EffectivenessSummary
+        channels={channels}
+        overallStats={overallStats}
+        summaryChannelIds={summaryChannelIds}
+        setSummaryChannelIds={setSummaryChannelIds}
+        isDemo={subscription?.isDemo}
+        onDemoClick={() => setShowDemoModal(true)}
+      />
+
       {/* QRコードセクション */}
       <div className="bg-white rounded-2xl shadow-sm border">
         {/* ヘッダー */}
@@ -1417,15 +638,16 @@ export default function DashboardPage() {
               className="px-3 py-1.5 border rounded-lg text-xs bg-white text-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="createdAt">作成日順</option>
-              <option value="accessCount">アクセス順</option>
-              <option value="completedCount">診断完了順</option>
-              <option value="completionRate">完了率順</option>
+              <option value="accessCount">QR読込順</option>
+              <option value="budget">予算順</option>
+              <option value="costPerAccess">読込単価順</option>
               <option value="ctaCount">CTA順</option>
+              <option value="ctaRate">CTA率順</option>
             </select>
           )}
         </div>
 
-        {/* QRコードグリッド */}
+        {/* QRコードリスト */}
         {displayChannels.length === 0 ? (
           <div className="p-12 text-center">
             <div className="w-20 h-20 mx-auto bg-gray-100 rounded-2xl flex items-center justify-center mb-4">
@@ -1447,12 +669,48 @@ export default function DashboardPage() {
             )}
           </div>
         ) : (
-          <div className="p-5">
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {displayChannels.map((channel) => (
-                <QRCodeCard
+          <>
+            {/* PC用テーブル */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b bg-gray-50/50">
+                    <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">QRコード</th>
+                    <th className="text-center px-3 py-2.5 text-xs font-medium text-gray-500 w-24">QR読込</th>
+                    <th className="text-center px-3 py-2.5 text-xs font-medium text-gray-500 w-24">予算</th>
+                    <th className="text-center px-3 py-2.5 text-xs font-medium text-gray-500 w-20">読込単価</th>
+                    <th className="text-center px-3 py-2.5 text-xs font-medium text-gray-500 w-20">CTA</th>
+                    <th className="text-center px-3 py-2.5 text-xs font-medium text-gray-500 w-20">CTA率</th>
+                    <th className="text-center px-3 py-2.5 text-xs font-medium text-gray-500 w-24">作成日</th>
+                    <th className="w-10"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {displayChannels.map((channel, index) => (
+                    <QRCodeRow
+                      key={channel.id}
+                      channel={channel}
+                      stats={channelStats[channel.id]}
+                      color={CHANNEL_COLORS[index % CHANNEL_COLORS.length]}
+                      onHide={() => handleHideChannel(channel.id)}
+                      onRestore={() => handleRestoreChannel(channel.id)}
+                      onPermanentDelete={() => handlePermanentDeleteChannel(channel.id)}
+                      onImageClick={(url, name) => setSelectedImage({ url, name })}
+                      isDemo={subscription?.isDemo}
+                      onDemoClick={() => setShowDemoModal(true)}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {/* モバイル用リスト */}
+            <div className="md:hidden divide-y">
+              {displayChannels.map((channel, index) => (
+                <QRCodeRow
                   key={channel.id}
                   channel={channel}
+                  stats={channelStats[channel.id]}
+                  color={CHANNEL_COLORS[index % CHANNEL_COLORS.length]}
                   onHide={() => handleHideChannel(channel.id)}
                   onRestore={() => handleRestoreChannel(channel.id)}
                   onPermanentDelete={() => handlePermanentDeleteChannel(channel.id)}
@@ -1462,7 +720,7 @@ export default function DashboardPage() {
                 />
               ))}
             </div>
-          </div>
+          </>
         )}
       </div>
 
@@ -1474,15 +732,6 @@ export default function DashboardPage() {
         customEndDate={period === "custom" ? customEndDate : undefined}
       />
 
-      {/* 効果測定サマリー */}
-      <EffectivenessSummary
-        channels={channels}
-        overallStats={overallStats}
-        summaryChannelIds={summaryChannelIds}
-        setSummaryChannelIds={setSummaryChannelIds}
-        isDemo={subscription?.isDemo}
-        onDemoClick={() => setShowDemoModal(true)}
-      />
 
       {/* QR読み込み履歴 */}
       <div className="bg-white rounded-2xl shadow-sm border">
@@ -1500,15 +749,6 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="flex flex-wrap gap-2 sm:ml-auto">
-              <select
-                value={selectedDiagnosisType}
-                onChange={(e) => setSelectedDiagnosisType(e.target.value)}
-                className="px-3 py-1.5 border rounded-lg text-sm bg-white"
-              >
-                <option value="">全ての診断</option>
-                <option value="oral-age">お口年齢診断</option>
-                <option value="child-orthodontics">矯正チェック</option>
-              </select>
               <select
                 value={selectedChannelId}
                 onChange={(e) => setSelectedChannelId(e.target.value)}
@@ -1692,42 +932,6 @@ export default function DashboardPage() {
           </>
         )}
       </div>
-
-      {/* クイックスタートガイド */}
-      {channels.length === 0 && (
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100">
-          <h2 className="text-lg font-bold text-gray-900 mb-4">はじめての方へ</h2>
-          <div className="grid md:grid-cols-3 gap-4">
-            <div className="bg-white rounded-xl p-4 shadow-sm">
-              <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 font-bold mb-3">
-                1
-              </div>
-              <h3 className="font-semibold mb-1">QRコードを作成</h3>
-              <p className="text-sm text-gray-600">
-                「チラシ①」「医院前看板」など、計測したいQRコードを登録
-              </p>
-            </div>
-            <div className="bg-white rounded-xl p-4 shadow-sm">
-              <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 font-bold mb-3">
-                2
-              </div>
-              <h3 className="font-semibold mb-1">QRコードを印刷</h3>
-              <p className="text-sm text-gray-600">
-                発行されたQRコードをチラシや看板に印刷
-              </p>
-            </div>
-            <div className="bg-white rounded-xl p-4 shadow-sm">
-              <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 font-bold mb-3">
-                3
-              </div>
-              <h3 className="font-semibold mb-1">効果を確認</h3>
-              <p className="text-sm text-gray-600">
-                ダッシュボードでQRコード別の効果を比較
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* 画像モーダル */}
       {selectedImage && (
