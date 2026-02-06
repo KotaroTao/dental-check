@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
 import { getAdminSession } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
 import { getPlan, type PlanType } from "@/lib/plans";
@@ -164,7 +165,7 @@ export async function PATCH(
   }
 }
 
-// 医院を完全削除（非表示の医院のみ）
+// 医院を完全削除（非表示の医院のみ、管理者パスワード必須）
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -173,6 +174,23 @@ export async function DELETE(
     const session = await getAdminSession();
     if (!session) {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { password } = body;
+
+    if (!password) {
+      return NextResponse.json({ error: "管理者パスワードを入力してください" }, { status: 400 });
+    }
+
+    // 管理者パスワードを検証
+    const admin = await prisma.admin.findUnique({
+      where: { id: session.adminId },
+      select: { passwordHash: true },
+    });
+
+    if (!admin || !(await bcrypt.compare(password, admin.passwordHash))) {
+      return NextResponse.json({ error: "パスワードが正しくありません" }, { status: 403 });
     }
 
     const { id } = await params;

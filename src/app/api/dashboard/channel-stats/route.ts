@@ -73,15 +73,16 @@ export async function GET(request: NextRequest) {
       ageByChannel,
       accessLogs,
     ] = await Promise.all([
-      // アクセス数（チャンネル別）
-      prisma.accessLog.groupBy({
+      // アクセス数（チャンネル別）- DiagnosisSessionベースで統一（削除済みを除外）
+      prisma.diagnosisSession.groupBy({
         by: ["channelId"],
         where: {
           clinicId: session.clinicId,
           channelId: { in: channelIds },
-          ...dateFilter,
-          eventType: { not: "clinic_page_view" },
           isDeleted: false,
+          isDemo: false,
+          completedAt: { not: null },
+          ...dateFilter,
         },
         _count: { id: true },
       }),
@@ -199,7 +200,7 @@ export async function GET(request: NextRequest) {
       };
     }
 
-    // アクセス数
+    // アクセス数（DiagnosisSessionベース）
     for (const item of accessCounts) {
       if (item.channelId && stats[item.channelId]) {
         stats[item.channelId].accessCount = item._count.id;

@@ -4,7 +4,6 @@ import { prisma } from "@/lib/prisma";
 import { getSubscriptionState } from "@/lib/subscription";
 
 // QRコードを完全に削除する（物理削除）
-// 非表示（isActive=false）のQRコードのみが対象
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

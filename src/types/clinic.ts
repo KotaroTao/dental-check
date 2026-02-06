@@ -143,6 +143,7 @@ export interface Channel {
   name: string;
   description: string | null;
   imageUrl: string | null;
+  imageUrl2: string | null;
   channelType: "diagnosis" | "link";
   diagnosisTypeSlug: string | null;
   redirectUrl: string | null;

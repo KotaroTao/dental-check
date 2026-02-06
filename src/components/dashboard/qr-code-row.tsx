@@ -16,7 +16,6 @@ export function QRCodeRow({
   onHide,
   onRestore,
   onPermanentDelete,
-  onImageClick,
   isDemo,
   onDemoClick,
 }: {
@@ -26,7 +25,6 @@ export function QRCodeRow({
   onHide: () => void;
   onRestore: () => void;
   onPermanentDelete: () => void;
-  onImageClick: (url: string, name: string) => void;
   isDemo?: boolean;
   onDemoClick?: () => void;
 }) {
@@ -122,13 +120,22 @@ export function QRCodeRow({
       <td className="px-4 py-3">
         <div className="flex items-center gap-3">
           <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-          {channel.imageUrl ? (
-            <button
-              onClick={() => onImageClick(channel.imageUrl!, channel.name)}
-              className="w-9 h-9 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 hover:opacity-80 transition-opacity"
+          {channel.imageUrl || channel.imageUrl2 ? (
+            <Link
+              href={`/dashboard/channels/${channel.id}#images`}
+              className={`flex gap-0.5 flex-shrink-0 hover:opacity-80 transition-opacity ${channel.imageUrl && channel.imageUrl2 ? "" : ""}`}
             >
-              <img src={channel.imageUrl} alt={channel.name} className="w-full h-full object-cover" />
-            </button>
+              {channel.imageUrl && (
+                <div className="w-9 h-9 rounded-lg overflow-hidden bg-gray-100">
+                  <img src={channel.imageUrl} alt={channel.name} className="w-full h-full object-cover" />
+                </div>
+              )}
+              {channel.imageUrl2 && (
+                <div className="w-9 h-9 rounded-lg overflow-hidden bg-gray-100">
+                  <img src={channel.imageUrl2} alt={channel.name} className="w-full h-full object-cover" />
+                </div>
+              )}
+            </Link>
           ) : (
             <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center flex-shrink-0">
               {channel.channelType === "link" ? (
@@ -206,13 +213,22 @@ export function QRCodeRow({
     <div className="md:hidden px-4 py-3 hover:bg-gray-50/80 transition-colors">
       <div className="flex items-center gap-3">
         <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-        {channel.imageUrl ? (
-          <button
-            onClick={() => onImageClick(channel.imageUrl!, channel.name)}
-            className="w-9 h-9 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 hover:opacity-80 transition-opacity"
+        {channel.imageUrl || channel.imageUrl2 ? (
+          <Link
+            href={`/dashboard/channels/${channel.id}#images`}
+            className="flex gap-0.5 flex-shrink-0 hover:opacity-80 transition-opacity"
           >
-            <img src={channel.imageUrl} alt={channel.name} className="w-full h-full object-cover" />
-          </button>
+            {channel.imageUrl && (
+              <div className="w-9 h-9 rounded-lg overflow-hidden bg-gray-100">
+                <img src={channel.imageUrl} alt={channel.name} className="w-full h-full object-cover" />
+              </div>
+            )}
+            {channel.imageUrl2 && (
+              <div className="w-9 h-9 rounded-lg overflow-hidden bg-gray-100">
+                <img src={channel.imageUrl2} alt={channel.name} className="w-full h-full object-cover" />
+              </div>
+            )}
+          </Link>
         ) : (
           <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center flex-shrink-0">
             {channel.channelType === "link" ? (
