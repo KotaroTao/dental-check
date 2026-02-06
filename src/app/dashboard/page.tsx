@@ -128,7 +128,6 @@ export default function DashboardPage() {
   };
 
   // 画像モーダル
-  const [selectedImage, setSelectedImage] = useState<{ url: string; name: string } | null>(null);
 
   // QRコード一覧取得
   const fetchChannels = useCallback(async () => {
@@ -695,7 +694,7 @@ export default function DashboardPage() {
                       onHide={() => handleHideChannel(channel.id)}
                       onRestore={() => handleRestoreChannel(channel.id)}
                       onPermanentDelete={() => handlePermanentDeleteChannel(channel.id)}
-                      onImageClick={(url, name) => setSelectedImage({ url, name })}
+
                       isDemo={subscription?.isDemo}
                       onDemoClick={() => setShowDemoModal(true)}
                     />
@@ -714,7 +713,6 @@ export default function DashboardPage() {
                   onHide={() => handleHideChannel(channel.id)}
                   onRestore={() => handleRestoreChannel(channel.id)}
                   onPermanentDelete={() => handlePermanentDeleteChannel(channel.id)}
-                  onImageClick={(url, name) => setSelectedImage({ url, name })}
                   isDemo={subscription?.isDemo}
                   onDemoClick={() => setShowDemoModal(true)}
                 />
@@ -932,29 +930,6 @@ export default function DashboardPage() {
           </>
         )}
       </div>
-
-      {/* 画像モーダル */}
-      {selectedImage && (
-        <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-          onClick={() => setSelectedImage(null)}
-        >
-          <div className="relative max-w-4xl max-h-[90vh]">
-            <button
-              onClick={() => setSelectedImage(null)}
-              className="absolute -top-3 -right-3 bg-white rounded-full p-2 shadow-lg hover:bg-gray-100 transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-            <img
-              src={selectedImage.url}
-              alt={selectedImage.name}
-              className="max-w-full max-h-[90vh] rounded-xl shadow-2xl"
-              onClick={(e) => e.stopPropagation()}
-            />
-          </div>
-        </div>
-      )}
 
       {/* QRコード作成上限アラートモーダル */}
       {showQRLimitModal && subscription && (

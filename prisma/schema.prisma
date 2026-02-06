@@ -47,6 +47,7 @@ model Channel {
   name              String   // 例: "ポスティング用", "駅看板", "Instagram広告"
   description       String?
   imageUrl          String?   @map("image_url") // QRコードに紐付く画像
+  imageUrl2         String?   @map("image_url_2") // 2枚目の画像
   channelType       String    @default("diagnosis") @map("channel_type") // "diagnosis" | "link"
   diagnosisTypeSlug String?   @map("diagnosis_type_slug") // 診断タイプ（diagnosisタイプ用）
   redirectUrl       String?   @map("redirect_url") // リダイレクト先URL（linkタイプ用）

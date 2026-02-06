@@ -27,6 +27,7 @@ interface Channel {
   name: string;
   description: string | null;
   imageUrl: string | null;
+  imageUrl2: string | null;
   channelType: "diagnosis" | "link";
   diagnosisTypeSlug: string | null;
   redirectUrl: string | null;
@@ -57,6 +58,7 @@ export default function ChannelDetailPage() {
     description: "",
     isActive: true,
     imageUrl: "" as string | null,
+    imageUrl2: "" as string | null,
     redirectUrl: "",
     expiresAt: "",
     budget: "",
@@ -97,6 +99,7 @@ export default function ChannelDetailPage() {
             description: data.channel.description || "",
             isActive: data.channel.isActive,
             imageUrl: data.channel.imageUrl || null,
+            imageUrl2: data.channel.imageUrl2 || null,
             redirectUrl: data.channel.redirectUrl || "",
             expiresAt: expiresAtValue,
             budget: data.channel.budget !== null ? String(data.channel.budget) : "",
@@ -228,7 +231,9 @@ export default function ChannelDetailPage() {
     });
   };
 
-  const handleImageUpload = useCallback(async (file: File) => {
+  const [uploadTarget, setUploadTarget] = useState<"imageUrl" | "imageUrl2">("imageUrl");
+
+  const handleImageUpload = useCallback(async (file: File, target: "imageUrl" | "imageUrl2" = "imageUrl") => {
     if (!file.type.startsWith("image/")) {
       setError("画像ファイルを選択してください");
       return;
@@ -253,7 +258,7 @@ export default function ChannelDetailPage() {
         throw new Error(errorData.error || "アップロードに失敗しました");
       }
       const { url } = await response.json();
-      setFormData((prev) => ({ ...prev, imageUrl: url }));
+      setFormData((prev) => ({ ...prev, [target]: url }));
     } catch (err) {
       setError(err instanceof Error ? err.message : "アップロードに失敗しました");
     } finally {
@@ -261,20 +266,19 @@ export default function ChannelDetailPage() {
     }
   }, []);
 
-  const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); setIsDragOver(true); };
   const handleDragLeave = (e: React.DragEvent) => { e.preventDefault(); setIsDragOver(false); };
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = (e: React.DragEvent, target: "imageUrl" | "imageUrl2" = "imageUrl") => {
     e.preventDefault();
     setIsDragOver(false);
     const file = e.dataTransfer.files[0];
-    if (file) handleImageUpload(file);
+    if (file) handleImageUpload(file, target);
   };
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) handleImageUpload(file);
+    if (file) handleImageUpload(file, uploadTarget);
   };
-  const handleRemoveImage = () => {
-    setFormData((prev) => ({ ...prev, imageUrl: null }));
+  const handleRemoveImage = (target: "imageUrl" | "imageUrl2" = "imageUrl") => {
+    setFormData((prev) => ({ ...prev, [target]: null }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -315,6 +319,7 @@ export default function ChannelDetailPage() {
           description: formData.description,
           isActive: formData.isActive,
           imageUrl: formData.imageUrl,
+          imageUrl2: formData.imageUrl2,
           expiresAt: formData.expiresAt || null,
           redirectUrl: channel?.channelType === "link" ? formData.redirectUrl : null,
           budget: formData.budget || null,
@@ -440,89 +445,160 @@ export default function ChannelDetailPage() {
           )}
 
           {/* Image upload */}
-          <div className="space-y-2">
-            <Label>画像</Label>
-            <div
-              className={`relative border-2 border-dashed rounded-lg transition-colors ${
-                isDragOver ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300"
-              }`}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-            >
-              {formData.imageUrl ? (
-                <div className="relative aspect-video">
-                  <img
-                    src={formData.imageUrl}
-                    alt="プレビュー"
-                    className="w-full h-full object-cover rounded-lg cursor-pointer"
-                    onClick={() => setShowImageModal(true)}
-                  />
-                  {isUploading && (
-                    <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
-                      <Loader2 className="w-8 h-8 text-white animate-spin" />
-                    </div>
-                  )}
-                  {!isDemo && (
-                    <div className="absolute top-2 right-2 flex gap-2">
+          <div id="images" className="space-y-2">
+            <Label>サムネイル画像（最大2枚）</Label>
+            <div className="grid grid-cols-2 gap-3">
+              {/* 画像1 */}
+              <div
+                className={`relative border-2 border-dashed rounded-lg transition-colors ${
+                  isDragOver && uploadTarget === "imageUrl" ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300"
+                }`}
+                onDragOver={(e) => { e.preventDefault(); setUploadTarget("imageUrl"); setIsDragOver(true); }}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, "imageUrl")}
+              >
+                {formData.imageUrl ? (
+                  <div className="relative aspect-video">
+                    <img
+                      src={formData.imageUrl}
+                      alt="画像1"
+                      className="w-full h-full object-cover rounded-lg cursor-pointer"
+                      onClick={() => setShowImageModal(true)}
+                    />
+                    {isUploading && uploadTarget === "imageUrl" && (
+                      <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                        <Loader2 className="w-6 h-6 text-white animate-spin" />
+                      </div>
+                    )}
+                    {!isDemo && (
+                      <div className="absolute top-1 right-1 flex gap-1">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => { setUploadTarget("imageUrl"); document.getElementById("image-input")?.click(); }}
+                          disabled={isUploading}
+                          className="bg-white/90 hover:bg-white h-7 px-2 text-xs"
+                        >
+                          変更
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => handleRemoveImage("imageUrl")}
+                          disabled={isUploading}
+                          className="bg-white/90 hover:bg-white text-red-600 hover:text-red-700 h-7 w-7 p-0"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="p-4 text-center aspect-video flex flex-col items-center justify-center">
+                    {isUploading && uploadTarget === "imageUrl" ? (
+                      <Loader2 className="w-8 h-8 text-gray-400 animate-spin mb-1" />
+                    ) : (
+                      <ImageIcon className="w-8 h-8 text-gray-300 mb-1" />
+                    )}
+                    <p className="text-xs text-gray-500 mb-1">画像 1</p>
+                    {!isUploading && !isDemo && (
                       <Button
                         type="button"
-                        variant="secondary"
+                        variant="outline"
                         size="sm"
-                        onClick={() => document.getElementById("image-input")?.click()}
-                        disabled={isUploading}
-                        className="bg-white/90 hover:bg-white"
+                        onClick={() => { setUploadTarget("imageUrl"); document.getElementById("image-input")?.click(); }}
+                        className="h-7 text-xs"
                       >
-                        変更
+                        <Upload className="w-3 h-3 mr-1" />
+                        選択
                       </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* 画像2 */}
+              <div
+                className={`relative border-2 border-dashed rounded-lg transition-colors ${
+                  isDragOver && uploadTarget === "imageUrl2" ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300"
+                }`}
+                onDragOver={(e) => { e.preventDefault(); setUploadTarget("imageUrl2"); setIsDragOver(true); }}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, "imageUrl2")}
+              >
+                {formData.imageUrl2 ? (
+                  <div className="relative aspect-video">
+                    <img
+                      src={formData.imageUrl2}
+                      alt="画像2"
+                      className="w-full h-full object-cover rounded-lg cursor-pointer"
+                      onClick={() => setShowImageModal(true)}
+                    />
+                    {isUploading && uploadTarget === "imageUrl2" && (
+                      <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                        <Loader2 className="w-6 h-6 text-white animate-spin" />
+                      </div>
+                    )}
+                    {!isDemo && (
+                      <div className="absolute top-1 right-1 flex gap-1">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => { setUploadTarget("imageUrl2"); document.getElementById("image-input")?.click(); }}
+                          disabled={isUploading}
+                          className="bg-white/90 hover:bg-white h-7 px-2 text-xs"
+                        >
+                          変更
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => handleRemoveImage("imageUrl2")}
+                          disabled={isUploading}
+                          className="bg-white/90 hover:bg-white text-red-600 hover:text-red-700 h-7 w-7 p-0"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="p-4 text-center aspect-video flex flex-col items-center justify-center">
+                    {isUploading && uploadTarget === "imageUrl2" ? (
+                      <Loader2 className="w-8 h-8 text-gray-400 animate-spin mb-1" />
+                    ) : (
+                      <ImageIcon className="w-8 h-8 text-gray-300 mb-1" />
+                    )}
+                    <p className="text-xs text-gray-500 mb-1">画像 2</p>
+                    {!isUploading && !isDemo && (
                       <Button
                         type="button"
-                        variant="secondary"
+                        variant="outline"
                         size="sm"
-                        onClick={handleRemoveImage}
-                        disabled={isUploading}
-                        className="bg-white/90 hover:bg-white text-red-600 hover:text-red-700"
+                        onClick={() => { setUploadTarget("imageUrl2"); document.getElementById("image-input")?.click(); }}
+                        className="h-7 text-xs"
                       >
-                        <X className="w-4 h-4" />
+                        <Upload className="w-3 h-3 mr-1" />
+                        選択
                       </Button>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="p-8 text-center">
-                  {isUploading ? (
-                    <Loader2 className="w-10 h-10 mx-auto text-gray-400 animate-spin mb-2" />
-                  ) : (
-                    <div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-3">
-                      <ImageIcon className="w-8 h-8 text-gray-400" />
-                    </div>
-                  )}
-                  <p className="text-sm text-gray-600 mb-2">
-                    {isUploading ? "アップロード中..." : "ドラッグ&ドロップ または"}
-                  </p>
-                  {!isUploading && !isDemo && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => document.getElementById("image-input")?.click()}
-                    >
-                      <Upload className="w-4 h-4 mr-2" />
-                      ファイルを選択
-                    </Button>
-                  )}
-                  <p className="text-xs text-gray-400 mt-3">JPG, PNG, GIF / 最大5MB</p>
-                </div>
-              )}
-              <input
-                id="image-input"
-                type="file"
-                accept="image/jpeg,image/png,image/gif,image/webp"
-                onChange={handleFileSelect}
-                className="hidden"
-                disabled={isUploading || !!isDemo}
-              />
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
+            <input
+              id="image-input"
+              type="file"
+              accept="image/jpeg,image/png,image/gif,image/webp"
+              onChange={handleFileSelect}
+              className="hidden"
+              disabled={isUploading || !!isDemo}
+            />
+            <p className="text-xs text-gray-400">JPG, PNG, GIF / 最大5MB</p>
           </div>
 
           {/* Name */}
@@ -687,24 +763,32 @@ export default function ChannelDetailPage() {
       </div>
 
       {/* Image modal */}
-      {showImageModal && formData.imageUrl && (
+      {showImageModal && (formData.imageUrl || formData.imageUrl2) && (
         <div
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
           onClick={() => setShowImageModal(false)}
         >
-          <div className="relative max-w-4xl max-h-[90vh]">
+          <div className="relative max-w-4xl max-h-[90vh] flex gap-4" onClick={(e) => e.stopPropagation()}>
             <button
               onClick={() => setShowImageModal(false)}
-              className="absolute -top-3 -right-3 bg-white rounded-full p-2 shadow-lg hover:bg-gray-100"
+              className="absolute -top-3 -right-3 bg-white rounded-full p-2 shadow-lg hover:bg-gray-100 z-10"
             >
               <X className="w-5 h-5" />
             </button>
-            <img
-              src={formData.imageUrl}
-              alt={channel.name}
-              className="max-w-full max-h-[90vh] rounded-lg"
-              onClick={(e) => e.stopPropagation()}
-            />
+            {formData.imageUrl && (
+              <img
+                src={formData.imageUrl}
+                alt={channel.name}
+                className="max-w-full max-h-[90vh] rounded-lg"
+              />
+            )}
+            {formData.imageUrl2 && (
+              <img
+                src={formData.imageUrl2}
+                alt={channel.name}
+                className="max-w-full max-h-[90vh] rounded-lg"
+              />
+            )}
           </div>
         </div>
       )}
