@@ -151,6 +151,8 @@ export interface Channel {
   expiresAt: Date | null;
   scanCount: number;
   budget: number | null;
+  distributionMethod: string | null;
+  distributionQuantity: number | null;
   createdAt: Date;
   updatedAt: Date;
 }

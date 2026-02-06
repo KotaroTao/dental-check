@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, X, Image as ImageIcon, Calendar, Link2, Stethoscope, QrCode, Wallet } from "lucide-react";
+import { ArrowLeft, X, Image as ImageIcon, Calendar, Link2, Stethoscope, QrCode, Wallet, Megaphone, Hash } from "lucide-react";
 
 interface DiagnosisType {
   slug: string;
@@ -31,6 +31,8 @@ export default function NewChannelPage() {
     redirectUrl: "",
     expiresAt: "",
     budget: "",
+    distributionMethod: "",
+    distributionQuantity: "",
   });
   const [diagnosisTypes, setDiagnosisTypes] = useState<DiagnosisType[]>([]);
   const [isLoadingDiagnoses, setIsLoadingDiagnoses] = useState(true);
@@ -215,6 +217,8 @@ export default function NewChannelPage() {
           redirectUrl: channelType === "link" ? formData.redirectUrl : null,
           expiresAt: formData.expiresAt || null,
           budget: formData.budget ? parseInt(formData.budget, 10) : null,
+          distributionMethod: formData.distributionMethod || null,
+          distributionQuantity: formData.distributionQuantity ? parseInt(formData.distributionQuantity, 10) : null,
           imageUrl,
         }),
       });
@@ -467,6 +471,71 @@ export default function NewChannelPage() {
             </div>
             <p className="text-xs text-gray-500">
               このQRコードにかけた広告費用を入力すると、QR読み込み単価を確認できます。
+            </p>
+          </div>
+
+          {/* 配布方法 */}
+          <div className="space-y-2">
+            <Label htmlFor="distributionMethod" className="flex items-center gap-2">
+              <Megaphone className="w-4 h-4 text-gray-500" />
+              配布方法（任意）
+            </Label>
+            <select
+              id="distributionMethod"
+              name="distributionMethod"
+              value={formData.distributionMethod}
+              onChange={handleChange}
+              disabled={isLoading}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <option value="">選択してください</option>
+              <option value="ポスティング">ポスティング</option>
+              <option value="手配り">手配り</option>
+              <option value="店頭設置">店頭設置</option>
+              <option value="新聞折込">新聞折込</option>
+              <option value="DM">DM</option>
+              <option value="その他">その他</option>
+            </select>
+            <p className="text-xs text-gray-500">
+              チラシの配布方法を選択すると、方法別の効果比較ができます。
+            </p>
+          </div>
+
+          {/* 配布枚数 */}
+          <div className="space-y-2">
+            <Label htmlFor="distributionQuantity" className="flex items-center gap-2">
+              <Hash className="w-4 h-4 text-gray-500" />
+              配布枚数（任意）
+            </Label>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Input
+                  id="distributionQuantity"
+                  name="distributionQuantity"
+                  type="number"
+                  min="0"
+                  placeholder="例: 5000"
+                  value={formData.distributionQuantity}
+                  onChange={handleChange}
+                  disabled={isLoading}
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">枚</span>
+              </div>
+              {formData.distributionQuantity && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setFormData((prev) => ({ ...prev, distributionQuantity: "" }))}
+                  disabled={isLoading}
+                  className="shrink-0"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
+            <p className="text-xs text-gray-500">
+              配布枚数を入力すると、チラシの反応率（スキャン数÷配布枚数）を確認できます。
             </p>
           </div>
 

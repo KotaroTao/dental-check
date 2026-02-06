@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, description, channelType, diagnosisTypeSlug, redirectUrl, imageUrl, expiresAt } = body;
+    const { name, description, channelType, diagnosisTypeSlug, redirectUrl, imageUrl, expiresAt, budget, distributionMethod, distributionQuantity } = body;
 
     if (!name || name.trim() === "") {
       return NextResponse.json(
@@ -197,6 +197,9 @@ export async function POST(request: NextRequest) {
         diagnosisTypeSlug: type === "diagnosis" ? diagnosisTypeSlug.trim() : null,
         redirectUrl: type === "link" ? redirectUrl.trim() : null,
         expiresAt: expiresAt ? new Date(expiresAt) : null,
+        budget: budget ? parseInt(budget, 10) : null,
+        distributionMethod: distributionMethod || null,
+        distributionQuantity: distributionQuantity ? parseInt(distributionQuantity, 10) : null,
         code,
       },
     })) as Channel;
