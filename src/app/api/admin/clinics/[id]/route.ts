@@ -84,7 +84,19 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await request.json();
-    const { planType, isHidden } = body;
+    const { planType, isHidden, excludeFromAnalysis } = body;
+
+    // チラシ分析除外設定の更新
+    if (typeof excludeFromAnalysis === "boolean") {
+      await prisma.clinic.update({
+        where: { id },
+        data: { excludeFromAnalysis },
+      });
+      return NextResponse.json({
+        success: true,
+        message: excludeFromAnalysis ? "チラシ分析から除外しました" : "チラシ分析に含めるようにしました",
+      });
+    }
 
     // 非表示設定の更新
     if (typeof isHidden === "boolean") {

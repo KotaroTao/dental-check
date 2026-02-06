@@ -31,11 +31,17 @@ export async function GET(request: Request) {
     startDate.setDate(startDate.getDate() - days);
     startDate.setHours(0, 0, 0, 0);
 
-    // 全チャネルを取得（クリニック情報付き）
+    // 全チャネルを取得（クリニック情報付き、デモ・除外クリニックを除く）
     const channels = await prisma.channel.findMany({
       where: {
         isActive: true,
         ...(methodFilter ? { distributionMethod: methodFilter } : {}),
+        clinic: {
+          excludeFromAnalysis: false,
+          subscription: {
+            planType: { not: "demo" },
+          },
+        },
       },
       include: {
         clinic: {

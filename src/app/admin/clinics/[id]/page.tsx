@@ -56,6 +56,7 @@ interface ClinicSettings {
   clinicPage: Record<string, unknown>;
   status: string;
   isHidden: boolean;
+  excludeFromAnalysis: boolean;
   createdAt: string;
   subscription: {
     status: string;
@@ -484,6 +485,47 @@ export default function AdminClinicDetailPage({
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">登録日</label>
                     <div>{new Date(settings.createdAt).toLocaleDateString("ja-JP")}</div>
+                  </div>
+                </div>
+
+                <div className="border-t pt-6">
+                  <h3 className="font-bold mb-4">分析設定</h3>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-medium">チラシ分析から除外</div>
+                      <div className="text-sm text-gray-500">ONにするとチラシ分析ページにこの医院のデータが表示されません</div>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        setIsUpdating(true);
+                        try {
+                          const res = await fetch(`/api/admin/clinics/${clinicId}`, {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ excludeFromAnalysis: !settings.excludeFromAnalysis }),
+                          });
+                          if (res.ok) {
+                            const data = await res.json();
+                            setSettings((prev) => prev ? { ...prev, excludeFromAnalysis: !prev.excludeFromAnalysis } : prev);
+                            setMessage({ type: "success", text: data.message });
+                          }
+                        } catch {
+                          setMessage({ type: "error", text: "更新に失敗しました" });
+                        } finally {
+                          setIsUpdating(false);
+                        }
+                      }}
+                      disabled={isUpdating}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        settings.excludeFromAnalysis ? "bg-blue-600" : "bg-gray-300"
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          settings.excludeFromAnalysis ? "translate-x-6" : "translate-x-1"
+                        }`}
+                      />
+                    </button>
                   </div>
                 </div>
 

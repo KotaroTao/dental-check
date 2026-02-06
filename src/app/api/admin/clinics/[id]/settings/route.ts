@@ -29,6 +29,7 @@ export async function GET(
         clinicPage: true,
         status: true,
         isHidden: true,
+        excludeFromAnalysis: true,
         createdAt: true,
         subscription: {
           select: {
