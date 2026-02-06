@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getBaseUrl } from "@/lib/url";
 import crypto from "crypto";
 
 export async function POST(request: NextRequest) {
@@ -53,7 +54,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || request.headers.get("origin") || new URL(request.url).origin;
+    const baseUrl = getBaseUrl(request);
     const resetUrl = `${baseUrl}/invite/${token}`;
 
     // TODO: メール送信機能を実装した場合はここで送信

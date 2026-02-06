@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
+import { getBaseUrl } from "@/lib/url";
 import crypto from "crypto";
 
 // 招待トークンを発行・再発行
@@ -50,7 +51,7 @@ export async function POST(
       },
     });
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || request.headers.get("origin") || new URL(request.url).origin;
+    const baseUrl = getBaseUrl(request);
     const inviteUrl = `${baseUrl}/invite/${token}`;
 
     return NextResponse.json({

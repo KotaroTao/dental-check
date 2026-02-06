@@ -3,6 +3,7 @@ import { getAdminSession } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
 import { getAllPlans, type PlanType } from "@/lib/plans";
 import { hashPassword } from "@/lib/auth";
+import { getBaseUrl } from "@/lib/url";
 import crypto from "crypto";
 
 // 医院一覧を取得
@@ -58,7 +59,7 @@ export async function GET(request: NextRequest) {
       return false;
     };
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || request.headers.get("origin") || new URL(request.url).origin;
+    const baseUrl = getBaseUrl(request);
 
     const clinicsWithPlan = clinics.map((clinic: typeof clinics[number]) => {
       const latestInvite = clinic.invitationTokens[0] || null;
@@ -196,7 +197,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || request.headers.get("origin") || new URL(request.url).origin;
+    const baseUrl = getBaseUrl(request);
     const inviteUrl = `${baseUrl}/invite/${token}`;
 
     return NextResponse.json(
