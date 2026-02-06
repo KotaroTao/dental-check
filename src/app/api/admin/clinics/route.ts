@@ -16,9 +16,21 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const showHidden = searchParams.get("hidden") === "true";
+    const search = searchParams.get("search")?.trim() || "";
 
     const clinics = await prisma.clinic.findMany({
-      where: { isHidden: showHidden },
+      where: {
+        isHidden: showHidden,
+        ...(search
+          ? {
+              OR: [
+                { name: { contains: search, mode: "insensitive" } },
+                { email: { contains: search, mode: "insensitive" } },
+                { slug: { contains: search, mode: "insensitive" } },
+              ],
+            }
+          : {}),
+      },
       orderBy: { createdAt: "desc" },
       include: {
         subscription: {

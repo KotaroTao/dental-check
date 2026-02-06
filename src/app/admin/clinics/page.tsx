@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Building2, Users, QrCode, CheckCircle, Eye, EyeOff, Trash2, Plus, X, Copy, Send, LogIn, MessageSquare, RotateCcw, AlertTriangle } from "lucide-react";
+import { Building2, Users, QrCode, CheckCircle, Eye, EyeOff, Trash2, Plus, X, Copy, Send, LogIn, MessageSquare, RotateCcw, AlertTriangle, Search } from "lucide-react";
 
 interface Plan {
   type: string;
@@ -50,6 +50,21 @@ export default function AdminClinicsPage() {
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteError, setDeleteError] = useState("");
 
+  // 検索
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchQuery(value);
+    if (searchTimerRef.current) {
+      clearTimeout(searchTimerRef.current);
+    }
+    searchTimerRef.current = setTimeout(() => {
+      setDebouncedSearch(value);
+    }, 300);
+  }, []);
+
   // 新規作成モーダル
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createForm, setCreateForm] = useState({ name: "", planType: "starter" });
@@ -60,10 +75,14 @@ export default function AdminClinicsPage() {
   const [messageClinic, setMessageClinic] = useState<Clinic | null>(null);
   const [editableMessage, setEditableMessage] = useState("");
 
-  const fetchClinics = async () => {
+  const fetchClinics = async (search?: string) => {
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/admin/clinics?hidden=${activeTab === "hidden"}`);
+      const params = new URLSearchParams({ hidden: String(activeTab === "hidden") });
+      if (search) {
+        params.set("search", search);
+      }
+      const response = await fetch(`/api/admin/clinics?${params}`);
       if (response.ok) {
         const data = await response.json();
         setClinics(data.clinics);
@@ -78,8 +97,8 @@ export default function AdminClinicsPage() {
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    fetchClinics();
-  }, [activeTab]);
+    fetchClinics(debouncedSearch);
+  }, [activeTab, debouncedSearch]);
 
   const handleCreateClinic = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -341,6 +360,25 @@ https://qrqr-dental.com/login
           <EyeOff className="w-4 h-4 inline mr-2" />
           非表示の医院
         </button>
+      </div>
+
+      {/* 検索 */}
+      <div className="relative mb-6">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <Input
+          placeholder="医院名・メールアドレスで検索..."
+          value={searchQuery}
+          onChange={(e) => handleSearchChange(e.target.value)}
+          className="pl-10"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => { setSearchQuery(""); setDebouncedSearch(""); }}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
       {message && (
