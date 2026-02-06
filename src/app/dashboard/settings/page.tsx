@@ -278,6 +278,8 @@ export default function SettingsPage() {
       if (response.ok) {
         setMessage({ type: "success", text: "設定を保存しました" });
         setOriginalSettings(settings); // 保存成功後、原本を更新
+        // レイアウトのヘッダーに医院名変更を通知
+        window.dispatchEvent(new CustomEvent("clinic-settings-updated"));
       } else {
         const data = await response.json();
         setMessage({ type: "error", text: data.error || "保存に失敗しました" });

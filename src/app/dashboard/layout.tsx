@@ -66,6 +66,16 @@ export default function DashboardLayout({
     };
 
     fetchSession();
+
+    // 設定ページからの医院名変更を受け取る
+    const handleSettingsUpdated = () => {
+      fetch("/api/auth/me")
+        .then((res) => res.ok ? res.json() : null)
+        .then((data) => { if (data) setClinic(data.clinic); })
+        .catch(() => {});
+    };
+    window.addEventListener("clinic-settings-updated", handleSettingsUpdated);
+    return () => window.removeEventListener("clinic-settings-updated", handleSettingsUpdated);
   }, [router]);
 
   const handleLogout = async () => {
