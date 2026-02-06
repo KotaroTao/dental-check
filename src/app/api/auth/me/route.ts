@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
+import { getAdminSession } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
 import type { Clinic } from "@/types/clinic";
 
@@ -28,6 +29,10 @@ export async function GET() {
       );
     }
 
+    // 管理者がなりすましでログインしているか確認
+    const adminSession = await getAdminSession();
+    const isImpersonating = !!adminSession;
+
     return NextResponse.json({
       clinic: {
         id: clinic.id,
@@ -47,6 +52,7 @@ export async function GET() {
             }
           : null,
       },
+      isImpersonating,
     });
   } catch (error) {
     console.error("Get session error:", error);

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
+import { getAdminSession } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
 import { payjp } from "@/lib/payjp";
 import { getSubscriptionState } from "@/lib/subscription";
@@ -47,6 +48,10 @@ export async function GET() {
     const planType = ((subscription as { planType?: string }).planType as PlanType) || "starter";
     const plan = getPlan(planType);
 
+    // 管理者なりすまし時はすべての制限を解除
+    const adminSession = await getAdminSession();
+    const isImpersonating = !!adminSession;
+
     return NextResponse.json({
       subscription: {
         status: state.status,
@@ -61,17 +66,18 @@ export async function GET() {
         hasCard: !!card,
         card,
         planAmount: plan.price,
-        qrCodeLimit: state.qrCodeLimit,
+        qrCodeLimit: isImpersonating ? null : state.qrCodeLimit,
         qrCodeCount: state.qrCodeCount,
-        remainingQRCodes: state.remainingQRCodes,
-        canCreateQR: state.canCreateQR,
-        canEditQR: state.canEditQR,
-        canTrack: state.canTrack,
-        canCreateCustomDiagnosis: state.canCreateCustomDiagnosis,
-        canEditDiagnosis: state.canEditDiagnosis,
-        isDemo: state.isDemo,
-        message: state.message,
-        alertType: state.alertType,
+        remainingQRCodes: isImpersonating ? null : state.remainingQRCodes,
+        canCreateQR: isImpersonating ? true : state.canCreateQR,
+        canEditQR: isImpersonating ? true : state.canEditQR,
+        canTrack: isImpersonating ? true : state.canTrack,
+        canCreateCustomDiagnosis: isImpersonating ? true : state.canCreateCustomDiagnosis,
+        canEditDiagnosis: isImpersonating ? true : state.canEditDiagnosis,
+        isDemo: isImpersonating ? false : state.isDemo,
+        message: isImpersonating ? null : state.message,
+        alertType: isImpersonating ? null : state.alertType,
+        isImpersonating,
       },
       availablePlans: getPublicPlans(),
     });

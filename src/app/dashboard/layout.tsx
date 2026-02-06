@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { Menu, X, Eye } from "lucide-react";
+import { Menu, X, Eye, Shield } from "lucide-react";
 import { CTAAlert } from "@/components/dashboard/cta-alert";
 import { Logo } from "@/components/logo";
 
@@ -32,6 +32,7 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const [clinic, setClinic] = useState<Clinic | null>(null);
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
+  const [isImpersonating, setIsImpersonating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -47,6 +48,7 @@ export default function DashboardLayout({
         if (response.ok) {
           const data = await response.json();
           setClinic(data.clinic);
+          setIsImpersonating(!!data.isImpersonating);
           // サブスクリプション情報を取得
           const subResponse = await fetch("/api/billing/subscription");
           if (subResponse.ok) {
@@ -70,6 +72,12 @@ export default function DashboardLayout({
     await fetch("/api/auth/logout", { method: "POST" });
     // キャッシュをクリアしてハードリダイレクト
     window.location.href = "/";
+  };
+
+  const handleBackToAdmin = async () => {
+    // auth_tokenを削除してadmin_auth_tokenだけ残す
+    await fetch("/api/auth/logout", { method: "POST" });
+    window.location.href = "/admin/clinics";
   };
 
   if (isLoading) {
@@ -149,8 +157,25 @@ export default function DashboardLayout({
         )}
       </header>
 
+      {/* 管理者なりすましバナー */}
+      {isImpersonating && (
+        <div className="bg-amber-500 text-white">
+          <div className="container mx-auto px-4 py-2 flex items-center justify-center gap-2 text-sm">
+            <Shield className="w-4 h-4" />
+            <span className="font-medium">管理者モード</span>
+            <span className="hidden sm:inline">- {clinic?.name} としてログイン中</span>
+            <button
+              onClick={handleBackToAdmin}
+              className="ml-2 px-3 py-0.5 bg-white/20 hover:bg-white/30 rounded text-sm font-medium transition-colors"
+            >
+              管理画面に戻る
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* デモアカウントバナー */}
-      {subscription?.isDemo && (
+      {subscription?.isDemo && !isImpersonating && (
         <div className="bg-blue-600 text-white">
           <div className="container mx-auto px-4 py-2 flex items-center justify-center gap-2 text-sm">
             <Eye className="w-4 h-4" />

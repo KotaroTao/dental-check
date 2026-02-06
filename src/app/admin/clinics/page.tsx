@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Building2, Users, QrCode, CheckCircle, AlertCircle, Clock, Eye, EyeOff, Trash2, ExternalLink, Plus, X, Copy, RefreshCw, Send, Mail } from "lucide-react";
+import { Building2, Users, QrCode, CheckCircle, AlertCircle, Clock, Eye, EyeOff, Trash2, ExternalLink, Plus, X, Copy, RefreshCw, Send, Mail, LogIn } from "lucide-react";
 
 interface Plan {
   type: string;
@@ -143,6 +143,24 @@ export default function AdminClinicsPage() {
       document.body.removeChild(textarea);
       setCopiedId(clinicId);
       setTimeout(() => setCopiedId(null), 2000);
+    }
+  };
+
+  const handleImpersonate = async (clinicId: string) => {
+    try {
+      const response = await fetch(`/api/admin/clinics/${clinicId}/impersonate`, {
+        method: "POST",
+      });
+
+      if (response.ok) {
+        // ダッシュボードに遷移
+        window.location.href = "/dashboard";
+      } else {
+        const data = await response.json();
+        setMessage({ type: "error", text: data.error || "ログインに失敗しました" });
+      }
+    } catch {
+      setMessage({ type: "error", text: "通信エラーが発生しました" });
     }
   };
 
@@ -501,6 +519,15 @@ export default function AdminClinicsPage() {
                         </>
                       ) : (
                         <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleImpersonate(clinic.id)}
+                            className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                          >
+                            <LogIn className="w-3 h-3 mr-1" />
+                            ログイン
+                          </Button>
                           <Link href={`/admin/clinics/${clinic.id}`}>
                             <Button size="sm" variant="outline">
                               <ExternalLink className="w-3 h-3 mr-1" />
