@@ -108,6 +108,11 @@ export default function AdminBackupsPage() {
         "export PGPASSWORD=\"DentalCheck2025Secure\" && pg_restore -h localhost -U dental_user -d dental_check --clean --if-exists YYYYMMDD_HHMMSS/database.dump",
     },
     {
+      id: "restore-uploads",
+      label: "アップロード画像復元",
+      command: "tar xzf YYYYMMDD_HHMMSS/uploads.tar.gz -C /var/www/dental-check/public/",
+    },
+    {
       id: "restore-env",
       label: ".env復元",
       command: "cp YYYYMMDD_HHMMSS/env_backup /var/www/dental-check/.env",
@@ -116,6 +121,11 @@ export default function AdminBackupsPage() {
       id: "restart",
       label: "アプリ再起動",
       command: "cd /var/www/dental-check && npm run build && pm2 restart dental-app",
+    },
+    {
+      id: "full-guide",
+      label: "別サーバーへの完全移行手順",
+      command: "cat /var/www/dental-check/docs/server-setup.md",
     },
   ];
 
