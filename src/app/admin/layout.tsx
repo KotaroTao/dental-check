@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Shield, FileText, LogOut, BarChart3, Building2, Menu, X } from "lucide-react";
+import { Shield, FileText, LogOut, BarChart3, Building2, Menu, X, Megaphone } from "lucide-react";
 
 interface Admin {
   id: string;
@@ -107,6 +107,15 @@ export default function AdminLayout({
                 <BarChart3 className="w-4 h-4" />
                 統計
               </Link>
+              <Link
+                href="/admin/flyer-analysis"
+                className={`flex items-center gap-2 hover:text-gray-300 ${
+                  pathname.startsWith("/admin/flyer-analysis") ? "text-white" : "text-gray-400"
+                }`}
+              >
+                <Megaphone className="w-4 h-4" />
+                チラシ分析
+              </Link>
             </nav>
           </div>
           <div className="flex items-center gap-4">
@@ -159,6 +168,16 @@ export default function AdminLayout({
               >
                 <BarChart3 className="w-4 h-4" />
                 統計
+              </Link>
+              <Link
+                href="/admin/flyer-analysis"
+                className={`flex items-center gap-2 py-2 ${
+                  pathname.startsWith("/admin/flyer-analysis") ? "text-white" : "text-gray-400"
+                }`}
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <Megaphone className="w-4 h-4" />
+                チラシ分析
               </Link>
               <div className="border-t border-gray-700 pt-4 mt-2">
                 <span className="text-sm text-gray-400 block mb-2">

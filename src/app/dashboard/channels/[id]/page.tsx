@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   ArrowLeft, Download, Copy, ExternalLink, Image as ImageIcon, X,
-  Calendar, Link2, Wallet, Upload, Loader2, Eye, Check,
+  Calendar, Link2, Wallet, Upload, Loader2, Eye, Check, Megaphone, Hash,
 } from "lucide-react";
 
 // 診断タイプの表示名
@@ -35,6 +35,8 @@ interface Channel {
   expiresAt: string | null;
   scanCount: number;
   budget: number | null;
+  distributionMethod: string | null;
+  distributionQuantity: number | null;
 }
 
 interface SubscriptionInfo {
@@ -62,6 +64,8 @@ export default function ChannelDetailPage() {
     redirectUrl: "",
     expiresAt: "",
     budget: "",
+    distributionMethod: "",
+    distributionQuantity: "",
   });
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -103,6 +107,8 @@ export default function ChannelDetailPage() {
             redirectUrl: data.channel.redirectUrl || "",
             expiresAt: expiresAtValue,
             budget: data.channel.budget !== null ? String(data.channel.budget) : "",
+            distributionMethod: data.channel.distributionMethod || "",
+            distributionQuantity: data.channel.distributionQuantity !== null ? String(data.channel.distributionQuantity) : "",
           });
         }
       } catch (error) {
@@ -192,7 +198,7 @@ export default function ChannelDetailPage() {
   };
 
   // Form handlers
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     if (type === "checkbox") {
       setFormData({ ...formData, [name]: (e.target as HTMLInputElement).checked });
@@ -323,6 +329,8 @@ export default function ChannelDetailPage() {
           expiresAt: formData.expiresAt || null,
           redirectUrl: channel?.channelType === "link" ? formData.redirectUrl : null,
           budget: formData.budget || null,
+          distributionMethod: formData.distributionMethod || null,
+          distributionQuantity: formData.distributionQuantity || null,
         }),
       });
 
@@ -732,6 +740,71 @@ export default function ChannelDetailPage() {
             </div>
             <p className="text-xs text-gray-500">
               このQRコードにかけた広告費用を入力すると、QR読み込み単価を確認できます。
+            </p>
+          </div>
+
+          {/* Distribution Method */}
+          <div className="space-y-2">
+            <Label htmlFor="distributionMethod" className="flex items-center gap-2">
+              <Megaphone className="w-4 h-4 text-gray-500" />
+              配布方法（任意）
+            </Label>
+            <select
+              id="distributionMethod"
+              name="distributionMethod"
+              value={formData.distributionMethod}
+              onChange={handleChange}
+              disabled={isSaving || !!isDemo}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <option value="">選択してください</option>
+              <option value="ポスティング">ポスティング</option>
+              <option value="手配り">手配り</option>
+              <option value="店頭設置">店頭設置</option>
+              <option value="新聞折込">新聞折込</option>
+              <option value="DM">DM</option>
+              <option value="その他">その他</option>
+            </select>
+            <p className="text-xs text-gray-500">
+              チラシの配布方法を選択すると、方法別の効果比較ができます。
+            </p>
+          </div>
+
+          {/* Distribution Quantity */}
+          <div className="space-y-2">
+            <Label htmlFor="distributionQuantity" className="flex items-center gap-2">
+              <Hash className="w-4 h-4 text-gray-500" />
+              配布枚数（任意）
+            </Label>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Input
+                  id="distributionQuantity"
+                  name="distributionQuantity"
+                  type="number"
+                  min="0"
+                  placeholder="例: 5000"
+                  value={formData.distributionQuantity}
+                  onChange={handleChange}
+                  disabled={isSaving || !!isDemo}
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">枚</span>
+              </div>
+              {formData.distributionQuantity && !isDemo && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setFormData((prev) => ({ ...prev, distributionQuantity: "" }))}
+                  disabled={isSaving}
+                  className="shrink-0"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
+            <p className="text-xs text-gray-500">
+              配布枚数を入力すると、チラシの反応率（スキャン数÷配布枚数）を確認できます。
             </p>
           </div>
 
