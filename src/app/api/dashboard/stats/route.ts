@@ -77,13 +77,9 @@ export async function GET(request: NextRequest) {
     // アクティブなチャンネルIDを取得（非表示チャンネルを統計から除外するため）
     const activeChannels = await prisma.channel.findMany({
       where: { clinicId: session.clinicId, isActive: true },
-      select: { id: true, channelType: true },
+      select: { id: true },
     });
     const activeChannelIds = activeChannels.map((c: { id: string }) => c.id);
-    // リンクのみタイプのチャンネルID
-    const linkOnlyChannelIds = activeChannels
-      .filter((c: { id: string; channelType: string }) => c.channelType === "link")
-      .map((c: { id: string }) => c.id);
 
     // チャンネルフィルター（特定チャンネル指定時はそれを使用、なければアクティブチャンネルのみ）
     let channelFilter: { channelId?: string | { in: string[] } } = {};
@@ -100,37 +96,6 @@ export async function GET(request: NextRequest) {
       // デフォルト: すべてのアクティブチャンネル
       channelFilter = { channelId: { in: activeChannelIds } };
     }
-
-    // フィルター適用後のリンクのみタイプのチャンネルIDを計算
-    let filteredLinkOnlyChannelIds: string[] = [];
-    if (channelId) {
-      // 単一チャンネル指定の場合
-      if (linkOnlyChannelIds.includes(channelId)) {
-        filteredLinkOnlyChannelIds = [channelId];
-      }
-    } else if (selectedChannelIds.length > 0) {
-      // 複数チャンネル指定の場合
-      filteredLinkOnlyChannelIds = selectedChannelIds.filter((id) => linkOnlyChannelIds.includes(id));
-    } else {
-      // デフォルト: すべてのリンクのみタイプチャンネル
-      filteredLinkOnlyChannelIds = linkOnlyChannelIds;
-    }
-
-    // 共通のフィルター条件（AccessLog用 - isDeletedあり）
-    const accessLogFilter = {
-      clinicId: session.clinicId,
-      isDeleted: false,
-      ...(dateFrom && dateTo ? { createdAt: { gte: dateFrom, lte: dateTo } } : {}),
-      ...channelFilter,
-    };
-
-    // 前期の共通フィルター条件（AccessLog用 - isDeletedあり）
-    const prevAccessLogFilter = {
-      clinicId: session.clinicId,
-      isDeleted: false,
-      ...(prevDateFrom && prevDateTo ? { createdAt: { gte: prevDateFrom, lte: prevDateTo } } : {}),
-      ...channelFilter,
-    };
 
     // CTAClick用のフィルター条件（isDeletedなし）
     const ctaFilter = {
@@ -166,18 +131,6 @@ export async function GET(request: NextRequest) {
       completedAt: { not: null },
     };
 
-    // リンクのみタイプの診断完了フィルター（完了率100%、CTA=1として計算するため）
-    const linkOnlyCompletedFilter = filteredLinkOnlyChannelIds.length > 0
-      ? {
-          clinicId: session.clinicId,
-          ...(dateFrom && dateTo ? { createdAt: { gte: dateFrom, lte: dateTo } } : {}),
-          channelId: { in: filteredLinkOnlyChannelIds },
-          isDemo: false,
-          isDeleted: false,
-          completedAt: { not: null },
-        }
-      : null;
-
     // 統計データを並行取得（現期間 + 前期間）
     const [
       accessCount,
@@ -196,14 +149,16 @@ export async function GET(request: NextRequest) {
       prevAccessCount,
       prevCompletedCount,
       prevCtaCount,
-      // リンクのみタイプの診断完了数
-      linkOnlyCompletedCount,
     ] = await Promise.all([
-      // アクセス数（診断ページ）
-      prisma.accessLog.count({
+      // QR読込数（DiagnosisSessionベース - 削除済み連動）
+      prisma.diagnosisSession.count({
         where: {
-          ...accessLogFilter,
-          eventType: { not: "clinic_page_view" },
+          clinicId: session.clinicId,
+          isDeleted: false,
+          isDemo: false,
+          completedAt: { not: null },
+          ...(dateFrom && dateTo ? { createdAt: { gte: dateFrom, lte: dateTo } } : {}),
+          ...channelFilter,
         },
       }),
 
@@ -299,11 +254,15 @@ export async function GET(request: NextRequest) {
       }),
 
       // --- 前期データ ---
-      // 前期アクセス数
-      prisma.accessLog.count({
+      // 前期QR読込数（DiagnosisSessionベース）
+      prisma.diagnosisSession.count({
         where: {
-          ...prevAccessLogFilter,
-          eventType: { not: "clinic_page_view" },
+          clinicId: session.clinicId,
+          isDeleted: false,
+          isDemo: false,
+          completedAt: { not: null },
+          ...(prevDateFrom && prevDateTo ? { createdAt: { gte: prevDateFrom, lte: prevDateTo } } : {}),
+          ...channelFilter,
         },
       }),
 
@@ -323,12 +282,6 @@ export async function GET(request: NextRequest) {
         },
       }),
 
-      // リンクのみタイプの診断完了数（完了率100%、CTA=1として計算するため）
-      linkOnlyCompletedFilter
-        ? prisma.diagnosisSession.count({
-            where: linkOnlyCompletedFilter,
-          })
-        : Promise.resolve(0),
     ]);
 
     // CTAクリックをタイプ別に整理
@@ -339,13 +292,9 @@ export async function GET(request: NextRequest) {
       ctaCount += cta._count.id;
     }
 
-    // リンクのみタイプの診断完了はアクセス数にも加算（完了率100%を実現）
-    // CTAはdirect_linkとしてCTAClickに記録されるため、ctaCountへの加算は不要
-    const adjustedAccessCount = accessCount + linkOnlyCompletedCount;
-
-    // 完了率を計算
+    // 完了率を計算（accessCountはDiagnosisSessionベースなので常に100%）
     const completionRate =
-      adjustedAccessCount > 0 ? Math.round((completedCount / adjustedAccessCount) * 100 * 10) / 10 : 0;
+      accessCount > 0 ? Math.round((completedCount / accessCount) * 100 * 10) / 10 : 0;
 
     // コンバージョン率を計算
     // 診断結果→CTAのコンバージョン率
@@ -434,7 +383,7 @@ export async function GET(request: NextRequest) {
     };
 
     const trends = {
-      accessCount: calcTrend(adjustedAccessCount, prevAccessCount),
+      accessCount: calcTrend(accessCount, prevAccessCount),
       completedCount: calcTrend(completedCount, prevCompletedCount),
       ctaCount: calcTrend(ctaCount, prevCtaCount),
     };
@@ -446,7 +395,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       stats: {
-        accessCount: adjustedAccessCount,
+        accessCount,
         completedCount,
         completionRate,
         ctaCount,

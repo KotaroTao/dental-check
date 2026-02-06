@@ -51,12 +51,10 @@ export async function GET(request: NextRequest) {
       where: { clinicId: session.clinicId, isActive: true },
       select: {
         id: true,
-        channelType: true,
       },
     });
 
-    const channelIds = channels.map((c: { id: string; channelType: string }) => c.id);
-    const linkChannelIds = new Set(channels.filter((c: { id: string; channelType: string }) => c.channelType === "link").map((c: { id: string; channelType: string }) => c.id));
+    const channelIds = channels.map((c: { id: string }) => c.id);
 
     if (channelIds.length === 0) {
       return NextResponse.json({ stats: {} });
@@ -68,7 +66,6 @@ export async function GET(request: NextRequest) {
     // 各チャンネルの統計を取得
     const [
       accessCounts,
-      linkAccessCounts,
       completedCounts,
       ctaCounts,
       ctaByChannel,
@@ -76,26 +73,14 @@ export async function GET(request: NextRequest) {
       ageByChannel,
       accessLogs,
     ] = await Promise.all([
-      // アクセス数（チャンネル別）- 診断タイプ用
-      prisma.accessLog.groupBy({
+      // アクセス数（チャンネル別）- DiagnosisSessionベースで統一（削除済みを除外）
+      prisma.diagnosisSession.groupBy({
         by: ["channelId"],
         where: {
           clinicId: session.clinicId,
           channelId: { in: channelIds },
-          ...dateFilter,
-          eventType: { not: "clinic_page_view" },
           isDeleted: false,
-        },
-        _count: { id: true },
-      }),
-
-      // アクセス数（チャンネル別）- リンクタイプ用（DiagnosisSessionから取得）
-      prisma.diagnosisSession.groupBy({
-        by: ["channelId"],
-        where: {
-          channelId: { in: channelIds },
-          sessionType: "link",
-          isDeleted: false,
+          isDemo: false,
           completedAt: { not: null },
           ...dateFilter,
         },
@@ -215,14 +200,9 @@ export async function GET(request: NextRequest) {
       };
     }
 
-    // アクセス数（診断タイプ: AccessLogから、リンクタイプ: DiagnosisSessionから）
+    // アクセス数（DiagnosisSessionベース）
     for (const item of accessCounts) {
-      if (item.channelId && stats[item.channelId] && !linkChannelIds.has(item.channelId)) {
-        stats[item.channelId].accessCount = item._count.id;
-      }
-    }
-    for (const item of linkAccessCounts) {
-      if (item.channelId && stats[item.channelId] && linkChannelIds.has(item.channelId)) {
+      if (item.channelId && stats[item.channelId]) {
         stats[item.channelId].accessCount = item._count.id;
       }
     }
