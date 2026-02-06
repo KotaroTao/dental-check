@@ -47,6 +47,8 @@ export default function AdminClinicsPage() {
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>("active");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteError, setDeleteError] = useState("");
 
   // 新規作成モーダル
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -218,25 +220,32 @@ https://qrqr-dental.com/login
   };
 
   const handleDelete = async (clinicId: string) => {
+    if (!deletePassword) {
+      setDeleteError("パスワードを入力してください");
+      return;
+    }
     setIsUpdating(true);
-    setMessage(null);
+    setDeleteError("");
 
     try {
       const response = await fetch(`/api/admin/clinics/${clinicId}`, {
         method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: deletePassword }),
       });
 
       if (response.ok) {
         const data = await response.json();
         setMessage({ type: "success", text: data.message });
         setConfirmDelete(null);
+        setDeletePassword("");
         fetchClinics();
       } else {
         const data = await response.json();
-        setMessage({ type: "error", text: data.error || "削除に失敗しました" });
+        setDeleteError(data.error || "削除に失敗しました");
       }
     } catch {
-      setMessage({ type: "error", text: "通信エラーが発生しました" });
+      setDeleteError("通信エラーが発生しました");
     } finally {
       setIsUpdating(false);
     }
@@ -399,13 +408,6 @@ https://qrqr-dental.com/login
                       取消
                     </Button>
                   </>
-                ) : confirmDelete === clinic.id ? (
-                  <>
-                    <Button size="sm" variant="destructive" onClick={() => handleDelete(clinic.id)} disabled={isUpdating}>
-                      {isUpdating ? "..." : "削除確定"}
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => setConfirmDelete(null)}>取消</Button>
-                  </>
                 ) : (
                   <>
                     <Button size="sm" variant="outline" onClick={() => handleImpersonate(clinic.id)} className="text-blue-600 border-blue-200 hover:bg-blue-50">
@@ -418,7 +420,7 @@ https://qrqr-dental.com/login
                       {clinic.isHidden ? <><Eye className="w-3 h-3 mr-1" />表示</> : <><EyeOff className="w-3 h-3 mr-1" />非表示</>}
                     </Button>
                     {activeTab === "hidden" && (
-                      <Button size="sm" variant="destructive" onClick={() => setConfirmDelete(clinic.id)} disabled={isUpdating}>
+                      <Button size="sm" variant="destructive" onClick={() => { setConfirmDelete(clinic.id); setDeletePassword(""); setDeleteError(""); }} disabled={isUpdating}>
                         <Trash2 className="w-3 h-3 mr-1" />削除
                       </Button>
                     )}
@@ -527,25 +529,6 @@ https://qrqr-dental.com/login
                             キャンセル
                           </Button>
                         </>
-                      ) : confirmDelete === clinic.id ? (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => handleDelete(clinic.id)}
-                            disabled={isUpdating}
-                          >
-                            {isUpdating ? "..." : "削除確定"}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setConfirmDelete(null)}
-                            disabled={isUpdating}
-                          >
-                            キャンセル
-                          </Button>
-                        </>
                       ) : (
                         <>
                           <Button
@@ -589,7 +572,7 @@ https://qrqr-dental.com/login
                             <Button
                               size="sm"
                               variant="destructive"
-                              onClick={() => setConfirmDelete(clinic.id)}
+                              onClick={() => { setConfirmDelete(clinic.id); setDeletePassword(""); setDeleteError(""); }}
                               disabled={isUpdating}
                             >
                               <Trash2 className="w-3 h-3 mr-1" />
@@ -614,6 +597,77 @@ https://qrqr-dental.com/login
           )}
         </div>
         </>
+      )}
+
+      {/* 削除確認モーダル */}
+      {confirmDelete && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => { setConfirmDelete(null); setDeletePassword(""); setDeleteError(""); }}
+        >
+          <div
+            className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <Trash2 className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">医院を完全削除</h2>
+                <p className="text-sm text-gray-500">
+                  {clinics.find(c => c.id === confirmDelete)?.name}
+                </p>
+              </div>
+            </div>
+
+            <p className="text-sm text-gray-600 mb-4">
+              この操作は取り消せません。関連するすべてのデータが削除されます。続行するには管理者パスワードを入力してください。
+            </p>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleDelete(confirmDelete);
+              }}
+            >
+              <div className="space-y-2 mb-4">
+                <Label htmlFor="delete-password">管理者パスワード</Label>
+                <Input
+                  id="delete-password"
+                  type="password"
+                  value={deletePassword}
+                  onChange={(e) => { setDeletePassword(e.target.value); setDeleteError(""); }}
+                  placeholder="パスワードを入力"
+                  autoFocus
+                  disabled={isUpdating}
+                />
+                {deleteError && (
+                  <p className="text-sm text-red-600">{deleteError}</p>
+                )}
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  type="submit"
+                  variant="destructive"
+                  className="flex-1"
+                  disabled={isUpdating || !deletePassword}
+                >
+                  {isUpdating ? "削除中..." : "完全に削除する"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => { setConfirmDelete(null); setDeletePassword(""); setDeleteError(""); }}
+                  disabled={isUpdating}
+                >
+                  キャンセル
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
       {/* 送信文面モーダル */}
