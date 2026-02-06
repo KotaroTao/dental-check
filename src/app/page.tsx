@@ -138,7 +138,7 @@ export default function Home() {
               どんなことができるの？
             </h2>
             <p className="text-gray-600 max-w-2xl mx-auto">
-              くるくるQRは、QRコードを活用した診断コンテンツで
+              QRくるくる診断DXは、QRコードを活用した診断コンテンツで
               <br className="hidden sm:block" />
               歯科医院の集患をサポートする便利なツールです
             </p>
@@ -237,7 +237,7 @@ export default function Home() {
                   歯科医院にとってのメリット
                 </h3>
                 <p className="text-gray-400 text-center max-w-xl mx-auto mb-10">
-                  くるくるQRを導入することで、こんな効果が期待できます
+                  QRくるくる診断DXを導入することで、こんな効果が期待できます
                 </p>
 
                 <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -724,7 +724,7 @@ export default function Home() {
             </div>
             <div className="text-center md:text-right">
               <p className="text-gray-500 text-sm">
-                &copy; 2026 くるくるQR for Dental. All rights reserved.
+                &copy; 2026 QRくるくる診断DX. All rights reserved.
               </p>
               <p className="text-gray-500 text-sm mt-1">
                 運営: <a href="https://function-t.com/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors">株式会社ファンクション・ティ</a>

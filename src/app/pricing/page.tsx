@@ -500,7 +500,7 @@ export default function PricingPage() {
             </div>
             <div className="text-center md:text-right">
               <p className="text-gray-500 text-sm">
-                &copy; 2026 くるくるQR for Dental. All rights reserved.
+                &copy; 2026 QRくるくる診断DX. All rights reserved.
               </p>
               <p className="text-gray-500 text-sm mt-1">
                 運営: <a href="https://function-t.com/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors">株式会社ファンクション・ティ</a>
