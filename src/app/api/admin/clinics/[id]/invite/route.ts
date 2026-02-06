@@ -37,10 +37,9 @@ export async function POST(
       },
     });
 
-    // 新しいトークンを発行（7日間有効）
+    // 新しいトークンを発行（無期限）
     const token = crypto.randomBytes(32).toString("hex");
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7);
+    const expiresAt = new Date("2099-12-31T23:59:59Z");
 
     await prisma.invitationToken.create({
       data: {

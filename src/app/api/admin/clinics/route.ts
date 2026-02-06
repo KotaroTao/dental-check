@@ -52,14 +52,12 @@ export async function GET(request: NextRequest) {
 
     const clinicsWithPlan = clinics.map((clinic: typeof clinics[number]) => {
       const latestInvite = clinic.invitationTokens[0] || null;
-      let invitationStatus: "none" | "pending" | "expired" | "used" = "none";
+      let invitationStatus: "none" | "pending" | "used" = "none";
       let inviteUrl: string | null = null;
 
       if (latestInvite) {
         if (latestInvite.usedAt) {
           invitationStatus = "used";
-        } else if (new Date() > latestInvite.expiresAt) {
-          invitationStatus = "expired";
         } else {
           invitationStatus = "pending";
           inviteUrl = `${baseUrl}/invite/${latestInvite.token}`;
@@ -174,10 +172,9 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // 招待トークンを発行（7日間有効）
+    // 招待トークンを発行（無期限）
     const token = crypto.randomBytes(32).toString("hex");
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7);
+    const expiresAt = new Date("2099-12-31T23:59:59Z");
 
     await prisma.invitationToken.create({
       data: {

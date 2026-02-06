@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Building2, Users, QrCode, CheckCircle, AlertCircle, Clock, Eye, EyeOff, Trash2, Plus, X, Copy, RefreshCw, Send, Mail, LogIn } from "lucide-react";
+import { Building2, Users, QrCode, CheckCircle, AlertCircle, Clock, Eye, EyeOff, Trash2, Plus, X, Copy, Send, Mail, LogIn, MessageSquare } from "lucide-react";
 
 interface Plan {
   type: string;
@@ -30,7 +30,7 @@ interface Clinic {
   } | null;
   channelCount: number;
   sessionCount: number;
-  invitationStatus: "none" | "pending" | "expired" | "used";
+  invitationStatus: "none" | "pending" | "used";
   inviteUrl: string | null;
 }
 
@@ -53,8 +53,8 @@ export default function AdminClinicsPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [createResult, setCreateResult] = useState<{ inviteUrl: string; clinicName: string } | null>(null);
 
-  // 招待URL表示
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  // 送信文面モーダル
+  const [messageClinic, setMessageClinic] = useState<Clinic | null>(null);
 
   const fetchClinics = async () => {
     setIsLoading(true);
@@ -104,45 +104,31 @@ export default function AdminClinicsPage() {
     }
   };
 
-  const handleResendInvite = async (clinicId: string) => {
-    setIsUpdating(true);
-    setMessage(null);
+  const getInviteMessage = (clinicName: string, inviteUrl: string) => {
+    return `${clinicName}様
 
-    try {
-      const response = await fetch(`/api/admin/clinics/${clinicId}/invite`, {
-        method: "POST",
-      });
+QRくるくる診断DXのアカウントをご用意いたしました。
+以下のURLからメールアドレスとパスワードを設定してください。
 
-      const data = await response.json();
+${inviteUrl}
 
-      if (response.ok) {
-        setMessage({ type: "success", text: data.message });
-        fetchClinics();
-      } else {
-        setMessage({ type: "error", text: data.error || "発行に失敗しました" });
-      }
-    } catch {
-      setMessage({ type: "error", text: "通信エラーが発生しました" });
-    } finally {
-      setIsUpdating(false);
-    }
+設定完了後、上記で登録したメールアドレスとパスワードでログインできます。
+
+ご不明な点がございましたらお気軽にお問い合わせください。`;
   };
 
-  const handleCopyInviteUrl = async (clinicId: string, url: string) => {
+  const handleCopyText = async (text: string) => {
     try {
-      await navigator.clipboard.writeText(url);
-      setCopiedId(clinicId);
-      setTimeout(() => setCopiedId(null), 2000);
+      await navigator.clipboard.writeText(text);
     } catch {
       const textarea = document.createElement("textarea");
-      textarea.value = url;
+      textarea.value = text;
       document.body.appendChild(textarea);
       textarea.select();
       document.execCommand("copy");
       document.body.removeChild(textarea);
-      setCopiedId(clinicId);
-      setTimeout(() => setCopiedId(null), 2000);
     }
+    setMessage({ type: "success", text: "コピーしました" });
   };
 
   const handleImpersonate = async (clinicId: string) => {
@@ -296,13 +282,6 @@ export default function AdminClinicsPage() {
             未設定
           </span>
         );
-      case "expired":
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-red-100 text-red-700">
-            <Clock className="w-3 h-3" />
-            期限切れ
-          </span>
-        );
       case "used":
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-green-100 text-green-700">
@@ -439,25 +418,11 @@ export default function AdminClinicsPage() {
                       {getInviteBadge(clinic)}
                       {clinic.invitationStatus === "pending" && clinic.inviteUrl && (
                         <button
-                          onClick={() => handleCopyInviteUrl(clinic.id, clinic.inviteUrl!)}
+                          onClick={() => setMessageClinic(clinic)}
                           className="p-1 text-gray-400 hover:text-blue-600 rounded"
-                          title="招待URLをコピー"
+                          title="送信文面を表示"
                         >
-                          {copiedId === clinic.id ? (
-                            <CheckCircle className="w-3.5 h-3.5 text-green-600" />
-                          ) : (
-                            <Copy className="w-3.5 h-3.5" />
-                          )}
-                        </button>
-                      )}
-                      {(clinic.invitationStatus === "expired" || (clinic.status === "pending" && clinic.invitationStatus !== "pending")) && (
-                        <button
-                          onClick={() => handleResendInvite(clinic.id)}
-                          className="p-1 text-gray-400 hover:text-blue-600 rounded"
-                          title="招待URLを再発行"
-                          disabled={isUpdating}
-                        >
-                          <RefreshCw className="w-3.5 h-3.5" />
+                          <MessageSquare className="w-3.5 h-3.5" />
                         </button>
                       )}
                     </div>
@@ -578,6 +543,59 @@ export default function AdminClinicsPage() {
         </div>
       )}
 
+      {/* 送信文面モーダル */}
+      {messageClinic && messageClinic.inviteUrl && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setMessageClinic(null)}
+        >
+          <div
+            className="bg-white rounded-xl shadow-xl max-w-md w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold">{messageClinic.name} - 招待文面</h2>
+              <button
+                onClick={() => setMessageClinic(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="bg-gray-50 rounded-lg p-3 mb-4">
+              <pre className="text-xs bg-white border rounded p-2.5 text-gray-700 whitespace-pre-wrap font-sans leading-relaxed">
+                {getInviteMessage(messageClinic.name, messageClinic.inviteUrl)}
+              </pre>
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                className="flex-1 gap-1"
+                onClick={() => {
+                  handleCopyText(getInviteMessage(messageClinic.name, messageClinic.inviteUrl!));
+                  setMessageClinic(null);
+                }}
+              >
+                <Copy className="w-3.5 h-3.5" />
+                文面をコピー
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1 gap-1"
+                onClick={() => {
+                  handleCopyText(messageClinic.inviteUrl!);
+                  setMessageClinic(null);
+                }}
+              >
+                <Copy className="w-3.5 h-3.5" />
+                URLのみ
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 新規作成モーダル */}
       {showCreateModal && (
         <div
@@ -596,40 +614,41 @@ export default function AdminClinicsPage() {
                   </div>
                   <h2 className="text-lg font-bold">{createResult.clinicName} を作成しました</h2>
                   <p className="text-sm text-gray-600 mt-1">
-                    以下の招待URLをクライアントに共有してください
+                    以下の文面をコピーしてクライアントに送信してください
                   </p>
                 </div>
 
                 <div className="bg-gray-50 rounded-lg p-3 mb-4">
-                  <p className="text-xs text-gray-500 mb-1">招待URL（7日間有効）</p>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      readOnly
-                      value={createResult.inviteUrl}
-                      className="flex-1 text-sm bg-white border rounded px-2 py-1.5 text-gray-700"
-                    />
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs text-gray-500">クライアント送信用文面</p>
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => {
-                        navigator.clipboard.writeText(createResult.inviteUrl);
-                        setMessage({ type: "success", text: "コピーしました" });
-                      }}
+                      className="h-7 text-xs gap-1"
+                      onClick={() => handleCopyText(getInviteMessage(createResult.clinicName, createResult.inviteUrl))}
                     >
-                      <Copy className="w-4 h-4" />
+                      <Copy className="w-3 h-3" />
+                      文面をコピー
                     </Button>
                   </div>
+                  <pre className="text-xs bg-white border rounded p-2.5 text-gray-700 whitespace-pre-wrap font-sans leading-relaxed">
+                    {getInviteMessage(createResult.clinicName, createResult.inviteUrl)}
+                  </pre>
                 </div>
 
-                <p className="text-xs text-gray-500 mb-4">
-                  クライアントがこのURLを開くとメールアドレスとパスワードの設定画面が表示されます。
-                  設定完了後、ログインできるようになります。
-                </p>
-
-                <Button className="w-full" onClick={closeCreateModal}>
-                  閉じる
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1 gap-1"
+                    onClick={() => handleCopyText(createResult.inviteUrl)}
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    URLのみコピー
+                  </Button>
+                  <Button className="flex-1" onClick={closeCreateModal}>
+                    閉じる
+                  </Button>
+                </div>
               </div>
             ) : (
               <div>

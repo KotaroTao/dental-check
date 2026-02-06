@@ -27,7 +27,8 @@ export async function GET(
       return NextResponse.json({ error: "このURLは既に使用済みです" }, { status: 400 });
     }
 
-    if (new Date() > invitation.expiresAt) {
+    // パスワードリセットのみ有効期限チェック
+    if (invitation.type === "password_reset" && new Date() > invitation.expiresAt) {
       return NextResponse.json({ error: "このURLの有効期限が切れています" }, { status: 400 });
     }
 
@@ -83,7 +84,8 @@ export async function POST(
       return NextResponse.json({ error: "このURLは既に使用済みです" }, { status: 400 });
     }
 
-    if (new Date() > invitation.expiresAt) {
+    // パスワードリセットのみ有効期限チェック
+    if (invitation.type === "password_reset" && new Date() > invitation.expiresAt) {
       return NextResponse.json({ error: "このURLの有効期限が切れています" }, { status: 400 });
     }
 
