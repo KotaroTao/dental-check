@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || request.headers.get("origin") || "";
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || request.headers.get("origin") || new URL(request.url).origin;
     const resetUrl = `${baseUrl}/invite/${token}`;
 
     // TODO: メール送信機能を実装した場合はここで送信

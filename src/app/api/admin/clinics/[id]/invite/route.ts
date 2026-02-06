@@ -50,7 +50,7 @@ export async function POST(
       },
     });
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || request.headers.get("origin") || "";
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || request.headers.get("origin") || new URL(request.url).origin;
     const inviteUrl = `${baseUrl}/invite/${token}`;
 
     return NextResponse.json({

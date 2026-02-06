@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || request.headers.get("origin") || "";
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || request.headers.get("origin") || new URL(request.url).origin;
 
     const clinicsWithPlan = clinics.map((clinic: typeof clinics[number]) => {
       const latestInvite = clinic.invitationTokens[0] || null;
@@ -185,7 +185,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || request.headers.get("origin") || "";
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || request.headers.get("origin") || new URL(request.url).origin;
     const inviteUrl = `${baseUrl}/invite/${token}`;
 
     return NextResponse.json(
