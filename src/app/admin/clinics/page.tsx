@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Building2, Users, QrCode, CheckCircle, Eye, EyeOff, Trash2, Plus, X, Copy, Send, LogIn, MessageSquare, RotateCcw, AlertTriangle } from "lucide-react";
+import { Building2, Users, QrCode, CheckCircle, Eye, EyeOff, Trash2, Plus, X, Copy, Send, LogIn, MessageSquare, RotateCcw, AlertTriangle, ArrowUp, ArrowDown } from "lucide-react";
 
 interface Plan {
   type: string;
@@ -31,11 +31,14 @@ interface Clinic {
   channelCount: number;
   sessionCount: number;
   ctaConfigured: boolean;
+  excludeFromAnalysis: boolean;
   invitationStatus: "none" | "pending" | "used";
   inviteUrl: string | null;
 }
 
 type TabType = "active" | "hidden";
+type SortKey = "plan" | "cta" | "invite" | "analysis" | "channels" | "sessions" | "createdAt";
+type SortDir = "asc" | "desc";
 
 export default function AdminClinicsPage() {
   const [clinics, setClinics] = useState<Clinic[]>([]);
@@ -55,6 +58,10 @@ export default function AdminClinicsPage() {
   const [createForm, setCreateForm] = useState({ name: "", planType: "starter" });
   const [isCreating, setIsCreating] = useState(false);
   const [createResult, setCreateResult] = useState<{ inviteUrl: string; clinicName: string } | null>(null);
+
+  // ソート
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
 
   // 送信文面モーダル
   const [messageClinic, setMessageClinic] = useState<Clinic | null>(null);
@@ -251,6 +258,26 @@ https://qrqr-dental.com/login
     }
   };
 
+  const handleToggleExcludeFromAnalysis = async (clinicId: string, currentValue: boolean) => {
+    try {
+      const response = await fetch(`/api/admin/clinics/${clinicId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ excludeFromAnalysis: !currentValue }),
+      });
+
+      if (response.ok) {
+        setClinics((prev) =>
+          prev.map((c) =>
+            c.id === clinicId ? { ...c, excludeFromAnalysis: !currentValue } : c
+          )
+        );
+      }
+    } catch {
+      setMessage({ type: "error", text: "更新に失敗しました" });
+    }
+  };
+
   const getCtaBadge = (clinic: Clinic) => {
     if (clinic.ctaConfigured) {
       return (
@@ -297,6 +324,54 @@ https://qrqr-dental.com/login
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("ja-JP");
   };
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  };
+
+  const sortedClinics = [...clinics].sort((a, b) => {
+    if (!sortKey) return 0;
+    const dir = sortDir === "asc" ? 1 : -1;
+    switch (sortKey) {
+      case "plan":
+        return dir * (a.subscription?.planType || "").localeCompare(b.subscription?.planType || "");
+      case "cta":
+        return dir * (Number(a.ctaConfigured) - Number(b.ctaConfigured));
+      case "invite": {
+        const order = { used: 2, pending: 1, none: 0 };
+        return dir * (order[a.invitationStatus] - order[b.invitationStatus]);
+      }
+      case "analysis":
+        return dir * (Number(a.excludeFromAnalysis) - Number(b.excludeFromAnalysis));
+      case "channels":
+        return dir * (a.channelCount - b.channelCount);
+      case "sessions":
+        return dir * (a.sessionCount - b.sessionCount);
+      case "createdAt":
+        return dir * (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      default:
+        return 0;
+    }
+  });
+
+  const SortHeader = ({ label, sortKeyName, className }: { label: React.ReactNode; sortKeyName: SortKey; className?: string }) => (
+    <th
+      className={`px-4 py-3 text-sm font-medium text-gray-600 cursor-pointer hover:bg-gray-100 select-none ${className || ""}`}
+      onClick={() => handleSort(sortKeyName)}
+    >
+      <span className="inline-flex items-center gap-1">
+        {label}
+        {sortKey === sortKeyName && (
+          sortDir === "asc" ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+        )}
+      </span>
+    </th>
+  );
 
   const closeCreateModal = () => {
     setShowCreateModal(false);
@@ -360,7 +435,7 @@ https://qrqr-dental.com/login
       ) : (
         <>
         <div className="space-y-3 md:hidden">
-          {clinics.map((clinic) => (
+          {sortedClinics.map((clinic) => (
             <div key={clinic.id} className="bg-white rounded-xl shadow-sm border p-4">
               <div className="flex items-start justify-between mb-2">
                 <div>
@@ -370,6 +445,16 @@ https://qrqr-dental.com/login
                 <span className="text-xs text-gray-500">{getPlanName(clinic.subscription?.planType || "starter")}</span>
               </div>
               <div className="flex items-center gap-2 mb-3 flex-wrap">
+                <button
+                  onClick={() => handleToggleExcludeFromAnalysis(clinic.id, clinic.excludeFromAnalysis)}
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs cursor-pointer ${
+                    clinic.excludeFromAnalysis
+                      ? "bg-gray-100 text-gray-500"
+                      : "bg-green-100 text-green-700"
+                  }`}
+                >
+                  {clinic.excludeFromAnalysis ? "分析対象外" : "分析対象"}
+                </button>
                 {getCtaBadge(clinic)}
                 {getInviteBadge(clinic)}
                 {clinic.invitationStatus === "pending" && clinic.inviteUrl && (
@@ -442,21 +527,18 @@ https://qrqr-dental.com/login
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">医院名</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">プラン</th>
-                <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">CTA</th>
-                <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">招待</th>
-                <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">
-                  <QrCode className="w-4 h-4 inline" />
-                </th>
-                <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">
-                  <Users className="w-4 h-4 inline" />
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">登録日</th>
+                <SortHeader label="プラン" sortKeyName="plan" className="text-left" />
+                <SortHeader label="CTA" sortKeyName="cta" className="text-center" />
+                <SortHeader label="招待" sortKeyName="invite" className="text-center" />
+                <SortHeader label="分析" sortKeyName="analysis" className="text-center" />
+                <SortHeader label={<QrCode className="w-4 h-4" />} sortKeyName="channels" className="text-center" />
+                <SortHeader label={<Users className="w-4 h-4" />} sortKeyName="sessions" className="text-center" />
+                <SortHeader label="登録日" sortKeyName="createdAt" className="text-left" />
                 <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">操作</th>
               </tr>
             </thead>
             <tbody className="divide-y">
-              {clinics.map((clinic) => (
+              {sortedClinics.map((clinic) => (
                 <tr key={clinic.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3">
                     <div>
@@ -500,6 +582,18 @@ https://qrqr-dental.com/login
                         </button>
                       )}
                     </div>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <button
+                      onClick={() => handleToggleExcludeFromAnalysis(clinic.id, clinic.excludeFromAnalysis)}
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs cursor-pointer ${
+                        clinic.excludeFromAnalysis
+                          ? "bg-gray-100 text-gray-500"
+                          : "bg-green-100 text-green-700"
+                      }`}
+                    >
+                      {clinic.excludeFromAnalysis ? "対象外" : "対象"}
+                    </button>
                   </td>
                   <td className="px-4 py-3 text-center text-sm">{clinic.channelCount}</td>
                   <td className="px-4 py-3 text-center text-sm">{clinic.sessionCount}</td>

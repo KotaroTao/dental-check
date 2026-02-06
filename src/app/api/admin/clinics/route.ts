@@ -43,7 +43,12 @@ export async function GET(request: NextRequest) {
         _count: {
           select: {
             channels: true,
-            sessions: true,
+            sessions: {
+              where: {
+                isDemo: false,
+                isDeleted: false,
+              },
+            },
           },
         },
       },
@@ -94,6 +99,7 @@ export async function GET(request: NextRequest) {
         channelCount: clinic._count.channels,
         sessionCount: clinic._count.sessions,
         ctaConfigured: isCtaConfigured((clinic as unknown as { ctaConfig: unknown }).ctaConfig),
+        excludeFromAnalysis: (clinic as unknown as { excludeFromAnalysis: boolean }).excludeFromAnalysis,
         invitationStatus,
         inviteUrl,
       };
