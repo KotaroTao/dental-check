@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Building2, Users, QrCode, CheckCircle, AlertCircle, Clock, Eye, EyeOff, Trash2, Plus, X, Copy, Send, Mail, LogIn, MessageSquare } from "lucide-react";
+import { Building2, Users, QrCode, CheckCircle, AlertCircle, Clock, Eye, EyeOff, Trash2, Plus, X, Copy, Send, Mail, LogIn, MessageSquare, RotateCcw } from "lucide-react";
 
 interface Plan {
   type: string;
@@ -55,6 +55,7 @@ export default function AdminClinicsPage() {
 
   // 送信文面モーダル
   const [messageClinic, setMessageClinic] = useState<Clinic | null>(null);
+  const [editableMessage, setEditableMessage] = useState("");
 
   const fetchClinics = async () => {
     setIsLoading(true);
@@ -93,6 +94,7 @@ export default function AdminClinicsPage() {
 
       if (response.ok) {
         setCreateResult({ inviteUrl: data.inviteUrl, clinicName: data.clinic.name });
+        setEditableMessage(getInviteMessage(data.clinic.name, data.inviteUrl));
         fetchClinics();
       } else {
         setMessage({ type: "error", text: data.error || "作成に失敗しました" });
@@ -110,11 +112,20 @@ export default function AdminClinicsPage() {
 QRくるくる診断DXのアカウントをご用意いたしました。
 以下のURLからメールアドレスとパスワードを設定してください。
 
+▼ アカウント設定URL
 ${inviteUrl}
 
-設定完了後、上記で登録したメールアドレスとパスワードでログインできます。
+設定完了後、以下のログインページからログインできます。
+
+▼ ログインページ
+https://qrqr-dental.com/login
 
 ご不明な点がございましたらお気軽にお問い合わせください。`;
+  };
+
+  const openMessageModal = (clinic: Clinic) => {
+    setMessageClinic(clinic);
+    setEditableMessage(getInviteMessage(clinic.name, clinic.inviteUrl!));
   };
 
   const handleCopyText = async (text: string) => {
@@ -418,7 +429,7 @@ ${inviteUrl}
                       {getInviteBadge(clinic)}
                       {clinic.invitationStatus === "pending" && clinic.inviteUrl && (
                         <button
-                          onClick={() => setMessageClinic(clinic)}
+                          onClick={() => openMessageModal(clinic)}
                           className="p-1 text-gray-400 hover:text-blue-600 rounded"
                           title="送信文面を表示"
                         >
@@ -550,7 +561,7 @@ ${inviteUrl}
           onClick={() => setMessageClinic(null)}
         >
           <div
-            className="bg-white rounded-xl shadow-xl max-w-md w-full p-6"
+            className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
@@ -563,17 +574,18 @@ ${inviteUrl}
               </button>
             </div>
 
-            <div className="bg-gray-50 rounded-lg p-3 mb-4">
-              <pre className="text-xs bg-white border rounded p-2.5 text-gray-700 whitespace-pre-wrap font-sans leading-relaxed">
-                {getInviteMessage(messageClinic.name, messageClinic.inviteUrl)}
-              </pre>
-            </div>
+            <textarea
+              value={editableMessage}
+              onChange={(e) => setEditableMessage(e.target.value)}
+              className="w-full text-sm bg-white border rounded-lg p-3 text-gray-700 font-sans leading-relaxed resize-none break-all"
+              rows={14}
+            />
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 mt-4">
               <Button
                 className="flex-1 gap-1"
                 onClick={() => {
-                  handleCopyText(getInviteMessage(messageClinic.name, messageClinic.inviteUrl!));
+                  handleCopyText(editableMessage);
                   setMessageClinic(null);
                 }}
               >
@@ -582,14 +594,11 @@ ${inviteUrl}
               </Button>
               <Button
                 variant="outline"
-                className="flex-1 gap-1"
-                onClick={() => {
-                  handleCopyText(messageClinic.inviteUrl!);
-                  setMessageClinic(null);
-                }}
+                className="gap-1"
+                onClick={() => setEditableMessage(getInviteMessage(messageClinic.name, messageClinic.inviteUrl!))}
+                title="デフォルト文面に戻す"
               >
-                <Copy className="w-3.5 h-3.5" />
-                URLのみ
+                <RotateCcw className="w-3.5 h-3.5" />
               </Button>
             </div>
           </div>
@@ -603,7 +612,7 @@ ${inviteUrl}
           onClick={closeCreateModal}
         >
           <div
-            className="bg-white rounded-xl shadow-xl max-w-md w-full p-6"
+            className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6"
             onClick={(e) => e.stopPropagation()}
           >
             {createResult ? (
@@ -614,38 +623,34 @@ ${inviteUrl}
                   </div>
                   <h2 className="text-lg font-bold">{createResult.clinicName} を作成しました</h2>
                   <p className="text-sm text-gray-600 mt-1">
-                    以下の文面をコピーしてクライアントに送信してください
+                    文面を編集してコピーしてください
                   </p>
                 </div>
 
-                <div className="bg-gray-50 rounded-lg p-3 mb-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs text-gray-500">クライアント送信用文面</p>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-7 text-xs gap-1"
-                      onClick={() => handleCopyText(getInviteMessage(createResult.clinicName, createResult.inviteUrl))}
-                    >
-                      <Copy className="w-3 h-3" />
-                      文面をコピー
-                    </Button>
-                  </div>
-                  <pre className="text-xs bg-white border rounded p-2.5 text-gray-700 whitespace-pre-wrap font-sans leading-relaxed">
-                    {getInviteMessage(createResult.clinicName, createResult.inviteUrl)}
-                  </pre>
-                </div>
+                <textarea
+                  value={editableMessage}
+                  onChange={(e) => setEditableMessage(e.target.value)}
+                  className="w-full text-sm bg-white border rounded-lg p-3 text-gray-700 font-sans leading-relaxed resize-none break-all"
+                  rows={14}
+                />
 
-                <div className="flex gap-2">
+                <div className="flex gap-2 mt-4">
                   <Button
-                    variant="outline"
                     className="flex-1 gap-1"
-                    onClick={() => handleCopyText(createResult.inviteUrl)}
+                    onClick={() => handleCopyText(editableMessage)}
                   >
                     <Copy className="w-3.5 h-3.5" />
-                    URLのみコピー
+                    文面をコピー
                   </Button>
-                  <Button className="flex-1" onClick={closeCreateModal}>
+                  <Button
+                    variant="outline"
+                    className="gap-1"
+                    onClick={() => setEditableMessage(getInviteMessage(createResult.clinicName, createResult.inviteUrl))}
+                    title="デフォルト文面に戻す"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button variant="outline" onClick={closeCreateModal}>
                     閉じる
                   </Button>
                 </div>
