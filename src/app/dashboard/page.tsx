@@ -7,6 +7,8 @@ import {
   BarChart3,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
   QrCode,
   Plus,
   Trash2,
@@ -47,6 +49,10 @@ export default function DashboardPage() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [showHiddenChannels, setShowHiddenChannels] = useState(false);
+
+  // 履歴の表示件数とページネーション
+  const [historyLimit, setHistoryLimit] = useState(10);
+  const [historyPage, setHistoryPage] = useState(1);
 
   // サブスクリプション情報
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
@@ -190,36 +196,33 @@ export default function DashboardPage() {
     }
   }, [period, customStartDate, customEndDate, summaryChannelIds]);
 
-  // 履歴データ取得
+  // 履歴データ取得（ページネーション対応）
   const fetchHistory = useCallback(
-    async (offset = 0, append = false) => {
+    async (page = 1, limit = historyLimit) => {
       try {
-        if (offset === 0) setIsLoading(true);
-        else setIsLoadingMore(true);
+        setIsLoadingMore(true);
+        if (page === 1) setIsLoading(true);
 
+        const offset = (page - 1) * limit;
         const params = new URLSearchParams({
           period,
           offset: offset.toString(),
-          limit: "30",
+          limit: limit.toString(),
         });
         if (selectedChannelId) params.set("channelId", selectedChannelId);
         if (period === "custom") {
           params.set("startDate", customStartDate);
           params.set("endDate", customEndDate);
         }
-        // 追加読み込み時はCOUNTクエリをスキップしてパフォーマンス最適化
-        if (offset > 0) {
+        // 2ページ目以降はCOUNTクエリをスキップしてパフォーマンス最適化
+        if (page > 1) {
           params.set("skipCount", "true");
         }
 
         const response = await fetch(`/api/dashboard/history?${params}`);
         if (response.ok) {
           const data = await response.json();
-          if (append) {
-            setHistory((prev) => [...prev, ...data.history]);
-          } else {
-            setHistory(data.history);
-          }
+          setHistory(data.history);
           // skipCount時はtotalCountが-1なので更新しない（初回取得値を維持）
           if (data.totalCount >= 0) {
             setTotalCount(data.totalCount);
@@ -233,7 +236,7 @@ export default function DashboardPage() {
         setIsLoadingMore(false);
       }
     },
-    [period, selectedChannelId, customStartDate, customEndDate]
+    [period, selectedChannelId, customStartDate, customEndDate, historyLimit]
   );
 
   // サブスクリプション情報取得
@@ -258,7 +261,8 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchChannels();
     fetchChannelStats();
-    fetchHistory(0, false);
+    setHistoryPage(1);
+    fetchHistory(1);
   }, [fetchChannels, fetchChannelStats, fetchHistory]);
 
   // summaryChannelIds変更時（効果測定サマリー用）
@@ -297,7 +301,8 @@ export default function DashboardPage() {
         setChannels(channels.map((c) => (c.id === id ? { ...c, isActive: false } : c)));
         fetchChannelStats();
         fetchOverallStats();
-        fetchHistory(0, false);
+        setHistoryPage(1);
+        fetchHistory(1);
       }
     } catch (error) {
       console.error("Failed to hide channel:", error);
@@ -316,7 +321,8 @@ export default function DashboardPage() {
         setChannels(channels.map((c) => (c.id === id ? { ...c, isActive: true } : c)));
         fetchChannelStats();
         fetchOverallStats();
-        fetchHistory(0, false);
+        setHistoryPage(1);
+        fetchHistory(1);
       }
     } catch (error) {
       console.error("Failed to restore channel:", error);
@@ -341,7 +347,8 @@ export default function DashboardPage() {
         setChannels(channels.filter((c) => c.id !== id));
         fetchChannelStats();
         fetchOverallStats();
-        fetchHistory(0, false);
+        setHistoryPage(1);
+        fetchHistory(1);
       } else {
         const data = await response.json();
         alert(data.error || "完全削除に失敗しました");
@@ -401,8 +408,17 @@ export default function DashboardPage() {
     router.push("/dashboard/channels/new");
   };
 
-  const handleLoadMore = () => {
-    fetchHistory(history.length, true);
+  // ページ移動
+  const handlePageChange = (newPage: number) => {
+    setHistoryPage(newPage);
+    fetchHistory(newPage);
+  };
+
+  // 表示件数の変更
+  const handleLimitChange = (newLimit: number) => {
+    setHistoryLimit(newLimit);
+    setHistoryPage(1);
+    fetchHistory(1, newLimit);
   };
 
   // QRコードのソート済みリスト
@@ -912,23 +928,83 @@ export default function DashboardPage() {
               ))}
             </div>
 
-            {/* フッター */}
-            <div className="p-4 border-t flex items-center justify-between bg-gray-50">
-              <div className="text-sm text-gray-500">
-                表示: {history.length} / {totalCount.toLocaleString()}件
+            {/* フッター: 表示件数切り替え + ページネーション */}
+            <div className="p-4 border-t bg-gray-50">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                {/* 左: 表示件数セレクタ */}
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <span>表示:</span>
+                  <select
+                    value={historyLimit}
+                    onChange={(e) => handleLimitChange(Number(e.target.value))}
+                    className="px-2 py-1 border rounded text-sm bg-white"
+                  >
+                    <option value={10}>10件</option>
+                    <option value={50}>50件</option>
+                    <option value={100}>100件</option>
+                  </select>
+                  <span className="text-gray-400">
+                    / {totalCount.toLocaleString()}件中
+                  </span>
+                </div>
+
+                {/* 右: ページネーション */}
+                {totalCount > historyLimit && (
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(historyPage - 1)}
+                      disabled={historyPage <= 1 || isLoadingMore}
+                      className="h-8 w-8 p-0"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </Button>
+                    {(() => {
+                      const totalPages = Math.ceil(totalCount / historyLimit);
+                      const pages: (number | "...")[] = [];
+
+                      if (totalPages <= 7) {
+                        for (let i = 1; i <= totalPages; i++) pages.push(i);
+                      } else {
+                        pages.push(1);
+                        if (historyPage > 3) pages.push("...");
+                        const start = Math.max(2, historyPage - 1);
+                        const end = Math.min(totalPages - 1, historyPage + 1);
+                        for (let i = start; i <= end; i++) pages.push(i);
+                        if (historyPage < totalPages - 2) pages.push("...");
+                        pages.push(totalPages);
+                      }
+
+                      return pages.map((p, idx) =>
+                        p === "..." ? (
+                          <span key={`ellipsis-${idx}`} className="px-1 text-sm text-gray-400">...</span>
+                        ) : (
+                          <Button
+                            key={p}
+                            variant={p === historyPage ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => handlePageChange(p)}
+                            disabled={isLoadingMore}
+                            className="h-8 min-w-[2rem] px-2 text-sm"
+                          >
+                            {p}
+                          </Button>
+                        )
+                      );
+                    })()}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(historyPage + 1)}
+                      disabled={!hasMore || isLoadingMore}
+                      className="h-8 w-8 p-0"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
               </div>
-              {hasMore && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleLoadMore}
-                  disabled={isLoadingMore}
-                  className="gap-2"
-                >
-                  {isLoadingMore ? "読み込み中..." : "もっと見る"}
-                  <ChevronDown className="w-4 h-4" />
-                </Button>
-              )}
             </div>
           </>
         )}
