@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Building2, Users, QrCode, CheckCircle, AlertCircle, Clock, Eye, EyeOff, Trash2, ExternalLink, Plus, X, Copy, RefreshCw, Send, Mail, LogIn } from "lucide-react";
+import { Building2, Users, QrCode, CheckCircle, AlertCircle, Clock, Eye, EyeOff, Trash2, Plus, X, Copy, RefreshCw, Send, Mail, LogIn } from "lucide-react";
 
 interface Plan {
   type: string;
@@ -50,7 +49,7 @@ export default function AdminClinicsPage() {
 
   // 新規作成モーダル
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [createForm, setCreateForm] = useState({ name: "", phone: "", planType: "starter" });
+  const [createForm, setCreateForm] = useState({ name: "", planType: "starter" });
   const [isCreating, setIsCreating] = useState(false);
   const [createResult, setCreateResult] = useState<{ inviteUrl: string; clinicName: string } | null>(null);
 
@@ -153,8 +152,8 @@ export default function AdminClinicsPage() {
       });
 
       if (response.ok) {
-        // ダッシュボードに遷移
-        window.location.href = "/dashboard";
+        // 別タブでダッシュボードを開く
+        window.open("/dashboard", "_blank");
       } else {
         const data = await response.json();
         setMessage({ type: "error", text: data.error || "ログインに失敗しました" });
@@ -327,7 +326,7 @@ export default function AdminClinicsPage() {
 
   const closeCreateModal = () => {
     setShowCreateModal(false);
-    setCreateForm({ name: "", phone: "", planType: "starter" });
+    setCreateForm({ name: "", planType: "starter" });
     setCreateResult(null);
   };
 
@@ -408,14 +407,7 @@ export default function AdminClinicsPage() {
                 <tr key={clinic.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3">
                     <div>
-                      <div className="font-medium">
-                        <Link
-                          href={`/admin/clinics/${clinic.id}`}
-                          className="hover:text-blue-600 hover:underline"
-                        >
-                          {clinic.name}
-                        </Link>
-                      </div>
+                      <div className="font-medium">{clinic.name}</div>
                       <div className="text-sm text-gray-500">{clinic.email || "メール未設定"}</div>
                     </div>
                   </td>
@@ -528,12 +520,6 @@ export default function AdminClinicsPage() {
                             <LogIn className="w-3 h-3 mr-1" />
                             ログイン
                           </Button>
-                          <Link href={`/admin/clinics/${clinic.id}`}>
-                            <Button size="sm" variant="outline">
-                              <ExternalLink className="w-3 h-3 mr-1" />
-                              詳細
-                            </Button>
-                          </Link>
                           <Button
                             size="sm"
                             variant="outline"
@@ -667,17 +653,6 @@ export default function AdminClinicsPage() {
                       placeholder="例: ○○歯科クリニック"
                       value={createForm.name}
                       onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
-                      disabled={isCreating}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="create-phone">電話番号（任意）</Label>
-                    <Input
-                      id="create-phone"
-                      placeholder="03-1234-5678"
-                      value={createForm.phone}
-                      onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })}
                       disabled={isCreating}
                     />
                   </div>
