@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Building2, Users, QrCode, CheckCircle, AlertCircle, Clock, Eye, EyeOff, Trash2, Plus, X, Copy, Send, Mail, LogIn, MessageSquare, RotateCcw } from "lucide-react";
+import { Building2, Users, QrCode, CheckCircle, Eye, EyeOff, Trash2, Plus, X, Copy, Send, LogIn, MessageSquare, RotateCcw, AlertTriangle } from "lucide-react";
 
 interface Plan {
   type: string;
@@ -30,6 +30,7 @@ interface Clinic {
   } | null;
   channelCount: number;
   sessionCount: number;
+  ctaConfigured: boolean;
   invitationStatus: "none" | "pending" | "used";
   inviteUrl: string | null;
 }
@@ -241,47 +242,21 @@ https://qrqr-dental.com/login
     }
   };
 
-  const getStatusBadge = (clinic: Clinic) => {
-    if (clinic.status === "pending") {
+  const getCtaBadge = (clinic: Clinic) => {
+    if (clinic.ctaConfigured) {
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-amber-100 text-amber-700">
-          <Mail className="w-3 h-3" />
-          招待中
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-green-100 text-green-700">
+          <CheckCircle className="w-3 h-3" />
+          設定済み
         </span>
       );
     }
-
-    const status = clinic.subscription?.status || "unknown";
-    switch (status) {
-      case "trial":
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-700">
-            <AlertCircle className="w-3 h-3" />
-            トライアル
-          </span>
-        );
-      case "active":
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-green-100 text-green-700">
-            <CheckCircle className="w-3 h-3" />
-            有効
-          </span>
-        );
-      case "expired":
-      case "grace_period":
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-red-100 text-red-700">
-            <Clock className="w-3 h-3" />
-            期限切れ
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700">
-            {status}
-          </span>
-        );
-    }
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-orange-100 text-orange-700">
+        <AlertTriangle className="w-3 h-3" />
+        未設定
+      </span>
+    );
   };
 
   const getInviteBadge = (clinic: Clinic) => {
@@ -374,13 +349,99 @@ https://qrqr-dental.com/login
       {isLoading ? (
         <div className="text-gray-500">読み込み中...</div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+        <>
+        <div className="space-y-3 md:hidden">
+          {clinics.map((clinic) => (
+            <div key={clinic.id} className="bg-white rounded-xl shadow-sm border p-4">
+              <div className="flex items-start justify-between mb-2">
+                <div>
+                  <div className="font-medium">{clinic.name}</div>
+                  <div className="text-xs text-gray-500">{clinic.email || "メール未設定"}</div>
+                </div>
+                <span className="text-xs text-gray-500">{getPlanName(clinic.subscription?.planType || "starter")}</span>
+              </div>
+              <div className="flex items-center gap-2 mb-3 flex-wrap">
+                {getCtaBadge(clinic)}
+                {getInviteBadge(clinic)}
+                {clinic.invitationStatus === "pending" && clinic.inviteUrl && (
+                  <button
+                    onClick={() => openMessageModal(clinic)}
+                    className="p-1 text-gray-400 hover:text-blue-600 rounded"
+                    title="送信文面を表示"
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" />
+                  </button>
+                )}
+                <span className="text-xs text-gray-400 ml-auto flex items-center gap-2">
+                  <span className="flex items-center gap-0.5"><QrCode className="w-3 h-3" />{clinic.channelCount}</span>
+                  <span className="flex items-center gap-0.5"><Users className="w-3 h-3" />{clinic.sessionCount}</span>
+                </span>
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                {editingClinic === clinic.id ? (
+                  <>
+                    <select
+                      value={selectedPlan}
+                      onChange={(e) => setSelectedPlan(e.target.value)}
+                      className="border rounded px-2 py-1 text-sm flex-1"
+                    >
+                      <option value="">選択...</option>
+                      {availablePlans.map((plan) => (
+                        <option key={plan.type} value={plan.type}>
+                          {plan.name} ({plan.price === 0 ? "無料" : `¥${plan.price.toLocaleString()}`})
+                        </option>
+                      ))}
+                    </select>
+                    <Button size="sm" onClick={() => handleUpdatePlan(clinic.id)} disabled={isUpdating || !selectedPlan}>
+                      {isUpdating ? "..." : "保存"}
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => { setEditingClinic(null); setSelectedPlan(""); }}>
+                      取消
+                    </Button>
+                  </>
+                ) : confirmDelete === clinic.id ? (
+                  <>
+                    <Button size="sm" variant="destructive" onClick={() => handleDelete(clinic.id)} disabled={isUpdating}>
+                      {isUpdating ? "..." : "削除確定"}
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setConfirmDelete(null)}>取消</Button>
+                  </>
+                ) : (
+                  <>
+                    <Button size="sm" variant="outline" onClick={() => handleImpersonate(clinic.id)} className="text-blue-600 border-blue-200 hover:bg-blue-50">
+                      <LogIn className="w-3 h-3 mr-1" />ログイン
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => { setEditingClinic(clinic.id); setSelectedPlan(clinic.subscription?.planType || "starter"); }}>
+                      プラン変更
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => handleToggleHidden(clinic.id, clinic.isHidden)} disabled={isUpdating}>
+                      {clinic.isHidden ? <><Eye className="w-3 h-3 mr-1" />表示</> : <><EyeOff className="w-3 h-3 mr-1" />非表示</>}
+                    </Button>
+                    {activeTab === "hidden" && (
+                      <Button size="sm" variant="destructive" onClick={() => setConfirmDelete(clinic.id)} disabled={isUpdating}>
+                        <Trash2 className="w-3 h-3 mr-1" />削除
+                      </Button>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          ))}
+          {clinics.length === 0 && (
+            <div className="p-8 text-center text-gray-500">
+              {activeTab === "active" ? "表示中の医院がありません" : "非表示の医院がありません"}
+            </div>
+          )}
+        </div>
+
+        {/* デスクトップ: テーブル表示 */}
+        <div className="hidden md:block bg-white rounded-xl shadow-sm border overflow-hidden">
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">医院名</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">プラン</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">ステータス</th>
+                <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">CTA</th>
                 <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">招待</th>
                 <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">
                   <QrCode className="w-4 h-4 inline" />
@@ -421,8 +482,8 @@ https://qrqr-dental.com/login
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3">
-                    {getStatusBadge(clinic)}
+                  <td className="px-4 py-3 text-center">
+                    {getCtaBadge(clinic)}
                   </td>
                   <td className="px-4 py-3 text-center">
                     <div className="flex items-center justify-center gap-1">
@@ -552,6 +613,7 @@ https://qrqr-dental.com/login
             </div>
           )}
         </div>
+        </>
       )}
 
       {/* 送信文面モーダル */}

@@ -48,6 +48,16 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    const isCtaConfigured = (ctaConfig: unknown): boolean => {
+      if (!ctaConfig || typeof ctaConfig !== "object") return false;
+      const c = ctaConfig as Record<string, unknown>;
+      if (c.bookingUrl) return true;
+      if (c.lineUrl) return true;
+      if (c.phone) return true;
+      if (Array.isArray(c.customCTAs) && c.customCTAs.some((cta: { url?: string; label?: string }) => cta.url && cta.label)) return true;
+      return false;
+    };
+
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || request.headers.get("origin") || new URL(request.url).origin;
 
     const clinicsWithPlan = clinics.map((clinic: typeof clinics[number]) => {
@@ -82,6 +92,7 @@ export async function GET(request: NextRequest) {
           : null,
         channelCount: clinic._count.channels,
         sessionCount: clinic._count.sessions,
+        ctaConfigured: isCtaConfigured((clinic as unknown as { ctaConfig: unknown }).ctaConfig),
         invitationStatus,
         inviteUrl,
       };
