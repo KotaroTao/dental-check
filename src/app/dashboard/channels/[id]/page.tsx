@@ -462,7 +462,7 @@ export default function ChannelDetailPage() {
                     <img
                       src={formData.imageUrl}
                       alt="画像1"
-                      className="w-full h-full object-cover rounded-lg cursor-pointer"
+                      className="w-full h-full object-contain rounded-lg cursor-pointer"
                       onClick={() => setShowImageModal(true)}
                     />
                     {isUploading && uploadTarget === "imageUrl" && (
@@ -533,7 +533,7 @@ export default function ChannelDetailPage() {
                     <img
                       src={formData.imageUrl2}
                       alt="画像2"
-                      className="w-full h-full object-cover rounded-lg cursor-pointer"
+                      className="w-full h-full object-contain rounded-lg cursor-pointer"
                       onClick={() => setShowImageModal(true)}
                     />
                     {isUploading && uploadTarget === "imageUrl2" && (
