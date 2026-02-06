@@ -4,7 +4,6 @@ import { prisma } from "@/lib/prisma";
 import { getSubscriptionState } from "@/lib/subscription";
 
 // QRコードを完全に削除する（物理削除）
-// 非表示（isActive=false）のQRコードのみが対象
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -38,14 +37,6 @@ export async function DELETE(
       return NextResponse.json(
         { error: "QRコードが見つかりません" },
         { status: 404 }
-      );
-    }
-
-    // 非表示（isActive=false）のQRコードのみ完全削除可能
-    if (existingChannel.isActive) {
-      return NextResponse.json(
-        { error: "有効なQRコードは完全削除できません。先に非表示にしてください。" },
-        { status: 400 }
       );
     }
 
