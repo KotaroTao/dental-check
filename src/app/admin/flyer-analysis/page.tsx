@@ -212,7 +212,7 @@ export default function FlyerAnalysisPage() {
                 </div>
                 {ms.avgCostPerScan !== null && (
                   <div className="mt-2 text-center text-xs text-gray-500">
-                    1スキャンあたり ¥{ms.avgCostPerScan.toLocaleString()}
+                    1QR読込あたり ¥{ms.avgCostPerScan.toLocaleString()}
                   </div>
                 )}
               </CardContent>
@@ -268,7 +268,7 @@ export default function FlyerAnalysisPage() {
                   <th className="text-left py-3 px-4 font-medium">配布方法</th>
                   <th className="text-right py-3 px-4 font-medium">配布枚数</th>
                   <th className="text-right py-3 px-4 font-medium">予算</th>
-                  <SortHeader label="スキャン" sortKey="scans" currentKey={sortKey} asc={sortAsc} onClick={handleSort} />
+                  <SortHeader label="QR読込数" sortKey="scans" currentKey={sortKey} asc={sortAsc} onClick={handleSort} />
                   <SortHeader label="反応率" sortKey="responseRate" currentKey={sortKey} asc={sortAsc} onClick={handleSort} />
                   <SortHeader label="完了率" sortKey="completionRate" currentKey={sortKey} asc={sortAsc} onClick={handleSort} />
                   <SortHeader label="CTA率" sortKey="ctaRate" currentKey={sortKey} asc={sortAsc} onClick={handleSort} />
