@@ -43,7 +43,12 @@ export async function GET(request: NextRequest) {
         _count: {
           select: {
             channels: true,
-            sessions: true,
+            sessions: {
+              where: {
+                isDemo: false,
+                isDeleted: false,
+              },
+            },
           },
         },
       },
