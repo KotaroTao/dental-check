@@ -64,7 +64,7 @@ export function CTAAlert() {
             <QrCode className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
               <p className="text-sm text-blue-700">
-                QRコードがまだ作成されていません。診断コンテンツをQRコードにして配布しましょう。
+                QRコードがまだ作成されていません。
               </p>
             </div>
             <Link
