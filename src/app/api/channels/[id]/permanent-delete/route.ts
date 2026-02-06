@@ -40,6 +40,14 @@ export async function DELETE(
       );
     }
 
+    // 非表示（isActive=false）のQRコードのみ完全削除可能
+    if (existingChannel.isActive) {
+      return NextResponse.json(
+        { error: "有効なQRコードは完全削除できません。先に非表示にしてください。" },
+        { status: 400 }
+      );
+    }
+
     // トランザクションで関連データを含めて完全削除
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await prisma.$transaction(async (tx: any) => {

@@ -85,22 +85,13 @@ export function QRCodeRow({
       </button>
       <div className="border-t my-1" />
       {channel.isActive ? (
-        <>
-          <button
-            onClick={isDemo ? onDemoClick : onHide}
-            className={`flex items-center gap-2 px-3 py-2 text-sm w-full text-left ${isDemo ? "text-gray-400 hover:bg-gray-50" : "text-gray-600 hover:bg-gray-50"}`}
-          >
-            <Trash2 className="w-4 h-4" />
-            非表示にする
-          </button>
-          <button
-            onClick={isDemo ? onDemoClick : onPermanentDelete}
-            className={`flex items-center gap-2 px-3 py-2 text-sm w-full text-left ${isDemo ? "text-gray-400 hover:bg-gray-50" : "text-red-600 hover:bg-red-50"}`}
-          >
-            <Trash2 className="w-4 h-4" />
-            完全に削除
-          </button>
-        </>
+        <button
+          onClick={isDemo ? onDemoClick : onHide}
+          className={`flex items-center gap-2 px-3 py-2 text-sm w-full text-left ${isDemo ? "text-gray-400 hover:bg-gray-50" : "text-red-600 hover:bg-red-50"}`}
+        >
+          <Trash2 className="w-4 h-4" />
+          非表示にする
+        </button>
       ) : (
         <>
           <button
