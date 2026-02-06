@@ -225,10 +225,11 @@ export async function GET(request: NextRequest) {
         _count: { id: true },
       }),
 
-      // 年齢データを取得（年齢層統計用）
-      prisma.diagnosisSession.findMany({
-        where: completedFilter,
-        select: { userAge: true },
+      // 年齢データを取得（年齢層統計用）- groupByで集約して転送量削減
+      prisma.diagnosisSession.groupBy({
+        by: ['userAge'],
+        where: { ...completedFilter, userAge: { not: null } },
+        _count: { id: true },
       }),
 
       // 結果カテゴリ別セッション数
@@ -318,6 +319,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 年齢層統計を計算（LocationSectionと同じラベルを使用）
+    // groupBy結果から集計（個別レコードではなく年齢値ごとの件数）
     const ageRanges: Record<string, number> = {
       "0-9": 0,
       "10-19": 0,
@@ -329,18 +331,19 @@ export async function GET(request: NextRequest) {
       "70-79": 0,
       "80+": 0,
     };
-    for (const session of completedSessions) {
-      const age = session.userAge;
+    for (const item of completedSessions) {
+      const age = item.userAge;
+      const count = item._count.id;
       if (age !== null) {
-        if (age < 10) ageRanges["0-9"]++;
-        else if (age < 20) ageRanges["10-19"]++;
-        else if (age < 30) ageRanges["20-29"]++;
-        else if (age < 40) ageRanges["30-39"]++;
-        else if (age < 50) ageRanges["40-49"]++;
-        else if (age < 60) ageRanges["50-59"]++;
-        else if (age < 70) ageRanges["60-69"]++;
-        else if (age < 80) ageRanges["70-79"]++;
-        else ageRanges["80+"]++;
+        if (age < 10) ageRanges["0-9"] += count;
+        else if (age < 20) ageRanges["10-19"] += count;
+        else if (age < 30) ageRanges["20-29"] += count;
+        else if (age < 40) ageRanges["30-39"] += count;
+        else if (age < 50) ageRanges["40-49"] += count;
+        else if (age < 60) ageRanges["50-59"] += count;
+        else if (age < 70) ageRanges["60-69"] += count;
+        else if (age < 80) ageRanges["70-79"] += count;
+        else ageRanges["80+"] += count;
       }
     }
 
@@ -393,7 +396,7 @@ export async function GET(request: NextRequest) {
       ? Math.round((ctaCount / completedCount) * 100 * 10) / 10
       : 0;
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       stats: {
         accessCount,
         completedCount,
@@ -426,6 +429,11 @@ export async function GET(request: NextRequest) {
         to: dateTo.toISOString(),
       } : null,
     });
+
+    // 統計データは短期間キャッシュ可能（30秒）
+    response.headers.set("Cache-Control", "private, max-age=30, stale-while-revalidate=60");
+
+    return response;
   } catch (error) {
     console.error("Dashboard stats error:", error);
     return NextResponse.json(

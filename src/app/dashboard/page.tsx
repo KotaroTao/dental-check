@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -83,21 +83,23 @@ export default function DashboardPage() {
     );
   };
 
-  const sortedHistory = [...history].sort((a, b) => {
-    let comparison = 0;
-    switch (sortField) {
-      case "createdAt":
-        comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-        break;
-      case "userAge":
-        comparison = (a.userAge || 0) - (b.userAge || 0);
-        break;
-      case "ctaClickCount":
-        comparison = a.ctaClickCount - b.ctaClickCount;
-        break;
-    }
-    return sortDirection === "asc" ? comparison : -comparison;
-  });
+  const sortedHistory = useMemo(() => {
+    return [...history].sort((a, b) => {
+      let comparison = 0;
+      switch (sortField) {
+        case "createdAt":
+          comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          break;
+        case "userAge":
+          comparison = (a.userAge || 0) - (b.userAge || 0);
+          break;
+        case "ctaClickCount":
+          comparison = a.ctaClickCount - b.ctaClickCount;
+          break;
+      }
+      return sortDirection === "asc" ? comparison : -comparison;
+    });
+  }, [history, sortField, sortDirection]);
 
   // フィルター
   const [period, setPeriod] = useState("all");
@@ -404,7 +406,7 @@ export default function DashboardPage() {
   };
 
   // QRコードのソート済みリスト
-  const getSortedChannels = (channelList: Channel[]) => {
+  const getSortedChannels = useCallback((channelList: Channel[]) => {
     return [...channelList].sort((a, b) => {
       const statsA = channelStats[a.id];
       const statsB = channelStats[b.id];
@@ -437,7 +439,7 @@ export default function DashboardPage() {
           return 0;
       }
     });
-  };
+  }, [channelStats, channelSortField]);
 
   // CSVエクスポート
   const exportHistoryToCSV = async () => {
@@ -507,6 +509,12 @@ export default function DashboardPage() {
     }
   };
 
+  // メモ化された派生データ（Hooksルールに従い、条件分岐の前に配置）
+  const activeChannels = useMemo(() => channels.filter((c: Channel) => c.isActive), [channels]);
+  const hiddenChannels = useMemo(() => channels.filter((c: Channel) => !c.isActive), [channels]);
+  const sortedActiveChannels = useMemo(() => getSortedChannels(activeChannels), [activeChannels, getSortedChannels]);
+  const displayChannels = useMemo(() => showHiddenChannels ? hiddenChannels : sortedActiveChannels, [showHiddenChannels, hiddenChannels, sortedActiveChannels]);
+
   // ローディング
   if (isLoading && channels.length === 0) {
     return (
@@ -520,11 +528,6 @@ export default function DashboardPage() {
       </div>
     );
   }
-
-  const activeChannels = channels.filter((c) => c.isActive);
-  const hiddenChannels = channels.filter((c) => !c.isActive);
-  const sortedActiveChannels = getSortedChannels(activeChannels);
-  const displayChannels = showHiddenChannels ? hiddenChannels : sortedActiveChannels;
 
   return (
     <div className="space-y-8">

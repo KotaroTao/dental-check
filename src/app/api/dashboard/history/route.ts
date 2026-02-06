@@ -339,13 +339,18 @@ export async function GET(request: NextRequest) {
       responseHasMore = offset + limit < combinedTotalCount;
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       history,
       totalCount: combinedTotalCount,
       hasMore: responseHasMore,
       offset,
       limit,
     });
+
+    // 履歴データは短期間キャッシュ可能（15秒）
+    response.headers.set("Cache-Control", "private, max-age=15, stale-while-revalidate=30");
+
+    return response;
   } catch (error) {
     console.error("Dashboard history error:", error);
     return NextResponse.json(

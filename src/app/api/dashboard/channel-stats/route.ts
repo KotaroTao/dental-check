@@ -63,17 +63,25 @@ export async function GET(request: NextRequest) {
     // 日付フィルター条件
     const dateFilter = dateFrom && dateTo ? { createdAt: { gte: dateFrom, lte: dateTo } } : {};
 
+    // 日付別集計は直近10日分のみ取得（パフォーマンス最適化）
+    const tenDaysAgo = new Date();
+    tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
+    tenDaysAgo.setHours(0, 0, 0, 0);
+    const accessLogDateFilter = dateFrom && dateTo
+      ? { createdAt: { gte: dateFrom > tenDaysAgo ? dateFrom : tenDaysAgo, lte: dateTo } }
+      : { createdAt: { gte: tenDaysAgo } };
+
     // 各チャンネルの統計を取得
+    // NOTE: accessCountsとcompletedCountsは同一条件のため統合済み
     const [
-      accessCounts,
       completedCounts,
       ctaCounts,
       ctaByChannel,
       genderByChannel,
       ageByChannel,
-      accessLogs,
+      accessLogsByDate,
     ] = await Promise.all([
-      // アクセス数（チャンネル別）- DiagnosisSessionベースで統一（削除済みを除外）
+      // アクセス数 & 診断完了数（チャンネル別）- 同一条件のため1クエリに統合
       prisma.diagnosisSession.groupBy({
         by: ["channelId"],
         where: {
@@ -83,20 +91,6 @@ export async function GET(request: NextRequest) {
           isDemo: false,
           completedAt: { not: null },
           ...dateFilter,
-        },
-        _count: { id: true },
-      }),
-
-      // 診断完了数（チャンネル別）
-      prisma.diagnosisSession.groupBy({
-        by: ["channelId"],
-        where: {
-          clinicId: session.clinicId,
-          channelId: { in: channelIds },
-          ...dateFilter,
-          isDemo: false,
-          isDeleted: false,
-          completedAt: { not: null },
         },
         _count: { id: true },
       }),
@@ -145,8 +139,9 @@ export async function GET(request: NextRequest) {
         _count: { id: true },
       }),
 
-      // 年齢データ（チャンネル別）
-      prisma.diagnosisSession.findMany({
+      // 年齢データ（チャンネル別）- groupByで集約して転送量削減
+      prisma.diagnosisSession.groupBy({
+        by: ["channelId", "userAge"],
         where: {
           clinicId: session.clinicId,
           channelId: { in: channelIds },
@@ -154,16 +149,17 @@ export async function GET(request: NextRequest) {
           isDemo: false,
           isDeleted: false,
           completedAt: { not: null },
+          userAge: { not: null },
         },
-        select: { channelId: true, userAge: true },
+        _count: { id: true },
       }),
 
-      // アクセスログ（日付別集計用）
+      // アクセスログ（日付別集計用）- 直近10日分のみ取得してデータ転送量を削減
       prisma.accessLog.findMany({
         where: {
           clinicId: session.clinicId,
           channelId: { in: channelIds },
-          ...dateFilter,
+          ...accessLogDateFilter,
           eventType: { not: "clinic_page_view" },
           isDeleted: false,
         },
@@ -200,16 +196,10 @@ export async function GET(request: NextRequest) {
       };
     }
 
-    // アクセス数（DiagnosisSessionベース）
-    for (const item of accessCounts) {
-      if (item.channelId && stats[item.channelId]) {
-        stats[item.channelId].accessCount = item._count.id;
-      }
-    }
-
-    // 診断完了数
+    // アクセス数 & 診断完了数（同一クエリから取得）
     for (const item of completedCounts) {
       if (item.channelId && stats[item.channelId]) {
+        stats[item.channelId].accessCount = item._count.id;
         stats[item.channelId].completedCount = item._count.id;
       }
     }
@@ -235,16 +225,17 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 年齢層統計
-    for (const session of ageByChannel) {
-      if (session.channelId && session.userAge !== null && stats[session.channelId]) {
-        const age = session.userAge;
-        if (age < 20) stats[session.channelId].ageRanges["~19"]++;
-        else if (age < 30) stats[session.channelId].ageRanges["20-29"]++;
-        else if (age < 40) stats[session.channelId].ageRanges["30-39"]++;
-        else if (age < 50) stats[session.channelId].ageRanges["40-49"]++;
-        else if (age < 60) stats[session.channelId].ageRanges["50-59"]++;
-        else stats[session.channelId].ageRanges["60~"]++;
+    // 年齢層統計（groupBy結果から集計）
+    for (const item of ageByChannel) {
+      if (item.channelId && item.userAge !== null && stats[item.channelId]) {
+        const age = item.userAge;
+        const count = item._count.id;
+        if (age < 20) stats[item.channelId].ageRanges["~19"] += count;
+        else if (age < 30) stats[item.channelId].ageRanges["20-29"] += count;
+        else if (age < 40) stats[item.channelId].ageRanges["30-39"] += count;
+        else if (age < 50) stats[item.channelId].ageRanges["40-49"] += count;
+        else if (age < 60) stats[item.channelId].ageRanges["50-59"] += count;
+        else stats[item.channelId].ageRanges["60~"] += count;
       }
     }
 
@@ -268,7 +259,7 @@ export async function GET(request: NextRequest) {
     for (const channelId of channelIds) {
       accessByDateMap[channelId] = {};
     }
-    for (const log of accessLogs) {
+    for (const log of accessLogsByDate) {
       if (log.channelId && accessByDateMap[log.channelId]) {
         const dateKey = log.createdAt.toISOString().split("T")[0];
         accessByDateMap[log.channelId][dateKey] = (accessByDateMap[log.channelId][dateKey] || 0) + 1;
@@ -283,7 +274,12 @@ export async function GET(request: NextRequest) {
       }));
     }
 
-    return NextResponse.json({ stats });
+    const response = NextResponse.json({ stats });
+
+    // チャンネル統計は短期間キャッシュ可能（30秒）
+    response.headers.set("Cache-Control", "private, max-age=30, stale-while-revalidate=60");
+
+    return response;
   } catch (error) {
     console.error("Channel stats error:", error);
     return NextResponse.json(
