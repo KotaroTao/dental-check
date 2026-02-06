@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Building2, Users, QrCode, CheckCircle, Eye, EyeOff, Trash2, Plus, X, Copy, Send, LogIn, MessageSquare, RotateCcw, AlertTriangle } from "lucide-react";
+import { Building2, Users, QrCode, CheckCircle, Eye, EyeOff, Trash2, Plus, X, Copy, Send, LogIn, MessageSquare, RotateCcw, AlertTriangle, ArrowUp, ArrowDown } from "lucide-react";
 
 interface Plan {
   type: string;
@@ -37,6 +37,8 @@ interface Clinic {
 }
 
 type TabType = "active" | "hidden";
+type SortKey = "plan" | "cta" | "invite" | "analysis" | "channels" | "sessions" | "createdAt";
+type SortDir = "asc" | "desc";
 
 export default function AdminClinicsPage() {
   const [clinics, setClinics] = useState<Clinic[]>([]);
@@ -56,6 +58,10 @@ export default function AdminClinicsPage() {
   const [createForm, setCreateForm] = useState({ name: "", planType: "starter" });
   const [isCreating, setIsCreating] = useState(false);
   const [createResult, setCreateResult] = useState<{ inviteUrl: string; clinicName: string } | null>(null);
+
+  // ソート
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
 
   // 送信文面モーダル
   const [messageClinic, setMessageClinic] = useState<Clinic | null>(null);
@@ -319,6 +325,54 @@ https://qrqr-dental.com/login
     return new Date(dateString).toLocaleDateString("ja-JP");
   };
 
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  };
+
+  const sortedClinics = [...clinics].sort((a, b) => {
+    if (!sortKey) return 0;
+    const dir = sortDir === "asc" ? 1 : -1;
+    switch (sortKey) {
+      case "plan":
+        return dir * (a.subscription?.planType || "").localeCompare(b.subscription?.planType || "");
+      case "cta":
+        return dir * (Number(a.ctaConfigured) - Number(b.ctaConfigured));
+      case "invite": {
+        const order = { used: 2, pending: 1, none: 0 };
+        return dir * (order[a.invitationStatus] - order[b.invitationStatus]);
+      }
+      case "analysis":
+        return dir * (Number(a.excludeFromAnalysis) - Number(b.excludeFromAnalysis));
+      case "channels":
+        return dir * (a.channelCount - b.channelCount);
+      case "sessions":
+        return dir * (a.sessionCount - b.sessionCount);
+      case "createdAt":
+        return dir * (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      default:
+        return 0;
+    }
+  });
+
+  const SortHeader = ({ label, sortKeyName, className }: { label: React.ReactNode; sortKeyName: SortKey; className?: string }) => (
+    <th
+      className={`px-4 py-3 text-sm font-medium text-gray-600 cursor-pointer hover:bg-gray-100 select-none ${className || ""}`}
+      onClick={() => handleSort(sortKeyName)}
+    >
+      <span className="inline-flex items-center gap-1">
+        {label}
+        {sortKey === sortKeyName && (
+          sortDir === "asc" ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+        )}
+      </span>
+    </th>
+  );
+
   const closeCreateModal = () => {
     setShowCreateModal(false);
     setCreateForm({ name: "", planType: "starter" });
@@ -381,7 +435,7 @@ https://qrqr-dental.com/login
       ) : (
         <>
         <div className="space-y-3 md:hidden">
-          {clinics.map((clinic) => (
+          {sortedClinics.map((clinic) => (
             <div key={clinic.id} className="bg-white rounded-xl shadow-sm border p-4">
               <div className="flex items-start justify-between mb-2">
                 <div>
@@ -473,22 +527,18 @@ https://qrqr-dental.com/login
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">医院名</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">プラン</th>
-                <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">CTA</th>
-                <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">招待</th>
-                <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">分析</th>
-                <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">
-                  <QrCode className="w-4 h-4 inline" />
-                </th>
-                <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">
-                  <Users className="w-4 h-4 inline" />
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">登録日</th>
+                <SortHeader label="プラン" sortKeyName="plan" className="text-left" />
+                <SortHeader label="CTA" sortKeyName="cta" className="text-center" />
+                <SortHeader label="招待" sortKeyName="invite" className="text-center" />
+                <SortHeader label="分析" sortKeyName="analysis" className="text-center" />
+                <SortHeader label={<QrCode className="w-4 h-4" />} sortKeyName="channels" className="text-center" />
+                <SortHeader label={<Users className="w-4 h-4" />} sortKeyName="sessions" className="text-center" />
+                <SortHeader label="登録日" sortKeyName="createdAt" className="text-left" />
                 <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">操作</th>
               </tr>
             </thead>
             <tbody className="divide-y">
-              {clinics.map((clinic) => (
+              {sortedClinics.map((clinic) => (
                 <tr key={clinic.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3">
                     <div>
