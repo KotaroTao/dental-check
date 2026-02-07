@@ -1,10 +1,7 @@
 import bcrypt from "bcryptjs";
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
-
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "your-secret-key-change-in-production"
-);
+import { JWT_SECRET } from "./jwt-secret";
 
 const ADMIN_COOKIE_NAME = "admin_auth_token";
 
