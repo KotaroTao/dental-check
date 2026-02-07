@@ -3,8 +3,13 @@ import { prisma } from "@/lib/prisma";
 import { getClientIP } from "@/lib/geolocation";
 import { canTrackSession } from "@/lib/subscription";
 import { reverseGeocode } from "@/lib/geocoding";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
+  // レート制限: 1つのIPから1分間に20回まで
+  const rateLimitResponse = checkRateLimit(request, "track-complete", 20, 60 * 1000);
+  if (rateLimitResponse) return rateLimitResponse;
+
   try {
     const body = await request.json();
     const {

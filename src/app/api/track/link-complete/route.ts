@@ -2,12 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getClientIP } from "@/lib/geolocation";
 import { canTrackSession } from "@/lib/subscription";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 /**
  * リンクタイプQRコードのセッション完了を記録
  * プロファイル情報と位置情報を取得してセッションを作成
  */
 export async function POST(request: NextRequest) {
+  // レート制限: 1つのIPから1分間に20回まで
+  const rateLimitResponse = checkRateLimit(request, "track-link-complete", 20, 60 * 1000);
+  if (rateLimitResponse) return rateLimitResponse;
+
   try {
     const body = await request.json();
     const { channelId, userAge, userGender, latitude, longitude } = body;

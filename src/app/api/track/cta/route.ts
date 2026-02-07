@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { canTrackSession } from "@/lib/subscription";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
+  // レート制限: 1つのIPから1分間に30回まで
+  const rateLimitResponse = checkRateLimit(request, "track-cta", 30, 60 * 1000);
+  if (rateLimitResponse) return rateLimitResponse;
+
   try {
     const body = await request.json();
     const { channelId, ctaType, sessionId } = body;
