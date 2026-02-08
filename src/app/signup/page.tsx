@@ -43,6 +43,16 @@ export default function SignupPage() {
       return;
     }
 
+    if (!/[a-zA-Z]/.test(formData.password)) {
+      setError("パスワードには英字を1文字以上含めてください");
+      return;
+    }
+
+    if (!/[0-9]/.test(formData.password)) {
+      setError("パスワードには数字を1文字以上含めてください");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -140,7 +150,7 @@ export default function SignupPage() {
                 id="password"
                 name="password"
                 type="password"
-                placeholder="8文字以上"
+                placeholder="英字と数字を含む8文字以上"
                 value={formData.password}
                 onChange={handleChange}
                 disabled={isLoading}

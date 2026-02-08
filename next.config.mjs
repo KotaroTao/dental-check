@@ -3,12 +3,16 @@ const nextConfig = {
   // 本番ビルド最適化: standaloneモードでコンテナサイズ削減
   output: 'standalone',
 
-  // 画像最適化設定
+  // A5: 画像最適化 - 許可するドメインを限定（不正利用防止）
   images: {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: '**',
+        hostname: 'qrqr-dental.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.qrqr-dental.com',
       },
     ],
   },

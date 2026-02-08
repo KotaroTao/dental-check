@@ -3,6 +3,12 @@ import { prisma } from "@/lib/prisma";
 import { getClientIP } from "@/lib/geolocation";
 import { canTrackSession } from "@/lib/subscription";
 import { checkRateLimit } from "@/lib/rate-limit";
+import {
+  sanitizeAge,
+  sanitizeGender,
+  sanitizeLatitude,
+  sanitizeLongitude,
+} from "@/lib/track-validation";
 
 /**
  * リンクタイプQRコードのセッション完了を記録
@@ -15,17 +21,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { channelId, userAge, userGender, latitude, longitude } = body;
-
-    // リクエストデータをログ
-    console.log("Link complete request:", {
-      channelId,
-      userAge,
-      userGender,
-      hasLocation: latitude !== null && longitude !== null,
-      latitude,
-      longitude,
-    });
+    const { channelId } = body;
 
     if (!channelId) {
       return NextResponse.json(
@@ -33,6 +29,12 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // A6: 入力値をサニタイズ
+    const userAge = sanitizeAge(body.userAge);
+    const userGender = sanitizeGender(body.userGender);
+    const latitude = sanitizeLatitude(body.latitude);
+    const longitude = sanitizeLongitude(body.longitude);
 
     // チャンネル情報を取得
     const channel = await prisma.channel.findUnique({
@@ -66,37 +68,26 @@ export async function POST(request: NextRequest) {
     // IPアドレスを取得
     const ip = getClientIP(request);
 
-    // 位置情報の逆ジオコーディング
+    // 位置情報の逆ジオコーディング（緯度経度が両方有効な場合のみ）
     let location: { country: string; region: string; city: string; town: string } | null = null;
     let roundedLat: number | null = null;
     let roundedLng: number | null = null;
 
-    if (latitude !== null && latitude !== undefined && longitude !== null && longitude !== undefined) {
-      console.log("Processing location data:", { latitude, longitude });
-      location = await reverseGeocode(latitude, longitude);
+    if (latitude !== null && longitude !== null) {
+      try {
+        location = await reverseGeocode(latitude, longitude);
+      } catch (e) {
+        console.error("Reverse geocode failed:", e);
+      }
       // 座標を小数点2桁に丸める（約1km精度、プライバシー保護）
       roundedLat = Math.round(latitude * 100) / 100;
       roundedLng = Math.round(longitude * 100) / 100;
-      console.log("Geocoded location:", {
-        roundedLat,
-        roundedLng,
-        location,
-      });
-    } else {
-      console.log("No location data provided (latitude/longitude is null/undefined)");
     }
 
     // セッションを作成（契約が有効な場合のみ）
     let sessionId: string | null = null;
 
     if (canTrack) {
-      console.log("Creating session with location:", {
-        roundedLat,
-        roundedLng,
-        country: location?.country,
-        region: location?.region,
-        city: location?.city,
-      });
       const session = await prisma.diagnosisSession.create({
         data: {
           clinicId: channel.clinicId,
@@ -104,8 +95,8 @@ export async function POST(request: NextRequest) {
           diagnosisTypeId: null, // linkタイプは診断なし
           sessionType: "link",
           isDemo: false,
-          userAge: userAge || null,
-          userGender: userGender || null,
+          userAge,
+          userGender,
           answers: null,
           totalScore: null,
           resultCategory: null,

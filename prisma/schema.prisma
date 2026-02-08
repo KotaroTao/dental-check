@@ -23,6 +23,8 @@ model Clinic {
   ctaConfig     Json     @default("{}") @map("cta_config")
   clinicPage    Json     @default("{}") @map("clinic_page")
   status        String   @default("trial")
+  failedLoginAttempts  Int       @default(0) @map("failed_login_attempts")
+  lockedUntil          DateTime? @map("locked_until")
   isHidden              Boolean  @default(false) @map("is_hidden") // 管理者パネルで非表示
   excludeFromAnalysis   Boolean  @default(false) @map("exclude_from_analysis") // チラシ分析から除外
   createdAt     DateTime @default(now()) @map("created_at")
