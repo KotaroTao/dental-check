@@ -4,9 +4,8 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import crypto from "crypto";
 
 export async function POST(request: NextRequest) {
-  // A1: レート制限（1つのIPから15分間に3回まで）
-  // パスワードリセットは頻繁に使わないので厳しめに設定
-  const rateLimitResponse = checkRateLimit(request, "auth-forgot", 3, 15 * 60 * 1000);
+  // A1: レート制限（1つのIPから15分間に5回まで）
+  const rateLimitResponse = checkRateLimit(request, "auth-forgot", 5, 15 * 60 * 1000);
   if (rateLimitResponse) return rateLimitResponse;
 
   try {

@@ -7,8 +7,8 @@ import crypto from "crypto";
 import type { Clinic } from "@/types/clinic";
 
 export async function POST(request: NextRequest) {
-  // A1: レート制限（1つのIPから15分間に5回まで）
-  const rateLimitResponse = checkRateLimit(request, "auth-signup", 5, 15 * 60 * 1000);
+  // A1: レート制限（1つのIPから15分間に10回まで）
+  const rateLimitResponse = checkRateLimit(request, "auth-signup", 10, 15 * 60 * 1000);
   if (rateLimitResponse) return rateLimitResponse;
 
   try {

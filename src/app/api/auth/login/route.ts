@@ -5,14 +5,13 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import type { Clinic } from "@/types/clinic";
 
 /** ログイン失敗の上限回数（これを超えるとアカウントロック） */
-const MAX_FAILED_ATTEMPTS = 5;
-/** ロック時間（ミリ秒）: 15分 */
-const LOCK_DURATION_MS = 15 * 60 * 1000;
+const MAX_FAILED_ATTEMPTS = 10;
+/** ロック時間（ミリ秒）: 5分 */
+const LOCK_DURATION_MS = 5 * 60 * 1000;
 
 export async function POST(request: NextRequest) {
-  // A1: レート制限（1つのIPから15分間に10回まで）
-  // → 普通に使う分には絶対に引っかからない余裕のある設定
-  const rateLimitResponse = checkRateLimit(request, "auth-login", 10, 15 * 60 * 1000);
+  // A1: レート制限（1つのIPから15分間に30回まで）
+  const rateLimitResponse = checkRateLimit(request, "auth-login", 30, 15 * 60 * 1000);
   if (rateLimitResponse) return rateLimitResponse;
 
   try {
