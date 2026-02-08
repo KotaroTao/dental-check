@@ -64,6 +64,16 @@ export default function InvitePage() {
       return;
     }
 
+    if (!/[a-zA-Z]/.test(password)) {
+      setFormError("パスワードには英字を1文字以上含めてください");
+      return;
+    }
+
+    if (!/[0-9]/.test(password)) {
+      setFormError("パスワードには数字を1文字以上含めてください");
+      return;
+    }
+
     if (password !== confirmPassword) {
       setFormError("パスワードが一致しません");
       return;
@@ -198,7 +208,7 @@ export default function InvitePage() {
                 <Input
                   id="password"
                   type="password"
-                  placeholder="8文字以上"
+                  placeholder="英字と数字を含む8文字以上"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={isSubmitting}

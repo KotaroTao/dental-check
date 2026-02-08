@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, createToken } from "@/lib/auth";
+import { validatePassword } from "@/lib/password-validation";
 
 // トークンの有効性を確認
 export async function GET(
@@ -60,9 +61,11 @@ export async function POST(
     const body = await request.json();
     const { password, email } = body;
 
-    if (!password || password.length < 8) {
+    // A3: パスワード強度チェック
+    const passwordCheck = validatePassword(password);
+    if (!passwordCheck.valid) {
       return NextResponse.json(
-        { error: "パスワードは8文字以上で入力してください" },
+        { error: passwordCheck.error },
         { status: 400 }
       );
     }

@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, createToken } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { validatePassword } from "@/lib/password-validation";
+import crypto from "crypto";
 import type { Clinic } from "@/types/clinic";
 
 export async function POST(request: NextRequest) {
+  // A1: レート制限（1つのIPから15分間に5回まで）
+  const rateLimitResponse = checkRateLimit(request, "auth-signup", 5, 15 * 60 * 1000);
+  if (rateLimitResponse) return rateLimitResponse;
+
   try {
     const body = await request.json();
     const { name, email, password, phone } = body;
@@ -16,9 +23,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (password.length < 8) {
+    // A3: パスワード強度チェック
+    const passwordCheck = validatePassword(password);
+    if (!passwordCheck.valid) {
       return NextResponse.json(
-        { error: "パスワードは8文字以上で入力してください" },
+        { error: passwordCheck.error },
         { status: 400 }
       );
     }
@@ -35,7 +44,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // スラッグを生成（ランダムな文字列）
+    // スラッグを生成（暗号学的に安全なランダム文字列）
     const slug = generateSlug();
 
     // パスワードをハッシュ化
@@ -104,11 +113,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
+/** 暗号学的に安全なランダム文字列を生成 */
 function generateSlug(): string {
-  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
-  let result = "";
-  for (let i = 0; i < 8; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
+  return crypto.randomBytes(4).toString("hex"); // 8文字の16進数
 }

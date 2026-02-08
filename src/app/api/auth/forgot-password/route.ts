@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getBaseUrl } from "@/lib/url";
+import { checkRateLimit } from "@/lib/rate-limit";
 import crypto from "crypto";
 
 export async function POST(request: NextRequest) {
+  // A1: レート制限（1つのIPから15分間に3回まで）
+  // パスワードリセットは頻繁に使わないので厳しめに設定
+  const rateLimitResponse = checkRateLimit(request, "auth-forgot", 3, 15 * 60 * 1000);
+  if (rateLimitResponse) return rateLimitResponse;
+
   try {
     const body = await request.json();
     const { email } = body;
@@ -54,16 +59,14 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    const baseUrl = getBaseUrl(request);
-    const resetUrl = `${baseUrl}/invite/${token}`;
-
+    // A2: resetUrl をレスポンスに含めない
     // TODO: メール送信機能を実装した場合はここで送信
-    // 現時点ではURLを返却（管理者がクライアントに共有する想定）
+    // 現時点ではトークンをDB保存のみ（管理者がDB上で確認する運用）
+    console.log(`[パスワードリセット] clinicId=${clinic.id} token=${token}`);
+
     return NextResponse.json({
       success: true,
       message: successMessage,
-      // 管理者向け：URLを返す（将来メール送信に切り替え）
-      resetUrl,
     });
   } catch (error) {
     console.error("Forgot password error:", error);

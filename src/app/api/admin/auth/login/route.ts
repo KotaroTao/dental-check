@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyPassword, createAdminToken, getAdminCookieName } from "@/lib/admin-auth";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
+  // A1: レート制限（1つのIPから15分間に10回まで）
+  const rateLimitResponse = checkRateLimit(request, "admin-login", 10, 15 * 60 * 1000);
+  if (rateLimitResponse) return rateLimitResponse;
+
   try {
     const { email, password } = await request.json();
 

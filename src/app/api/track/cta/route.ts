@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { canTrackSession } from "@/lib/subscription";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { sanitizeCtaType } from "@/lib/track-validation";
 
 export async function POST(request: NextRequest) {
   // レート制限: 1つのIPから1分間に30回まで
@@ -10,7 +11,10 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { channelId, ctaType, sessionId } = body;
+    const { channelId, sessionId } = body;
+
+    // A6: CTAタイプをサニタイズ
+    const ctaType = sanitizeCtaType(body.ctaType);
 
     if (!channelId || !ctaType) {
       return NextResponse.json(
@@ -39,7 +43,7 @@ export async function POST(request: NextRequest) {
       data: {
         clinicId,
         channelId,
-        ctaType, // booking, phone, line, instagram
+        ctaType,
         sessionId: sessionId || null,
       },
     });

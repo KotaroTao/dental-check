@@ -66,8 +66,11 @@ export function checkRateLimit(
   // 上限超過
   if (entry.count > maxRequests) {
     const retryAfterSec = Math.ceil((entry.resetAt - now) / 1000);
+    const retryMin = Math.ceil(retryAfterSec / 60);
     return NextResponse.json(
-      { error: "Too many requests. Please try again later." },
+      {
+        error: `リクエスト回数の上限に達しました。${retryMin}分後に再度お試しください`,
+      },
       {
         status: 429,
         headers: {

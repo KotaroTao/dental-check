@@ -1,9 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyPassword, createToken } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/rate-limit";
 import type { Clinic } from "@/types/clinic";
 
+/** ログイン失敗の上限回数（これを超えるとアカウントロック） */
+const MAX_FAILED_ATTEMPTS = 5;
+/** ロック時間（ミリ秒）: 15分 */
+const LOCK_DURATION_MS = 15 * 60 * 1000;
+
 export async function POST(request: NextRequest) {
+  // A1: レート制限（1つのIPから15分間に10回まで）
+  // → 普通に使う分には絶対に引っかからない余裕のある設定
+  const rateLimitResponse = checkRateLimit(request, "auth-login", 10, 15 * 60 * 1000);
+  if (rateLimitResponse) return rateLimitResponse;
+
   try {
     const body = await request.json();
     const { email, password } = body;
@@ -22,7 +33,7 @@ export async function POST(request: NextRequest) {
       include: {
         subscription: true,
       },
-    })) as Clinic | null;
+    })) as (Clinic & { failedLoginAttempts: number; lockedUntil: Date | null }) | null;
 
     if (!clinic) {
       return NextResponse.json(
@@ -31,14 +42,64 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // A4: アカウントロック中かチェック
+    if (clinic.lockedUntil && new Date() < clinic.lockedUntil) {
+      const remainingMs = clinic.lockedUntil.getTime() - Date.now();
+      const remainingMin = Math.ceil(remainingMs / 60000);
+      return NextResponse.json(
+        {
+          error: `セキュリティのためアカウントが一時的にロックされています。${remainingMin}分後に再度お試しください`,
+        },
+        { status: 423 }
+      );
+    }
+
     // パスワードを検証
     const isValid = await verifyPassword(password, clinic.passwordHash);
 
     if (!isValid) {
+      // A4: 失敗回数を加算し、上限を超えたらロック
+      const newAttempts = clinic.failedLoginAttempts + 1;
+      const shouldLock = newAttempts >= MAX_FAILED_ATTEMPTS;
+
+      await prisma.clinic.update({
+        where: { id: clinic.id },
+        data: {
+          failedLoginAttempts: newAttempts,
+          ...(shouldLock
+            ? { lockedUntil: new Date(Date.now() + LOCK_DURATION_MS) }
+            : {}),
+        },
+      });
+
+      if (shouldLock) {
+        const lockMin = Math.ceil(LOCK_DURATION_MS / 60000);
+        return NextResponse.json(
+          {
+            error: `ログイン試行回数の上限に達しました。セキュリティのため${lockMin}分間ロックされます`,
+          },
+          { status: 423 }
+        );
+      }
+
+      const remaining = MAX_FAILED_ATTEMPTS - newAttempts;
       return NextResponse.json(
-        { error: "メールアドレスまたはパスワードが正しくありません" },
+        {
+          error: `メールアドレスまたはパスワードが正しくありません（あと${remaining}回試行できます）`,
+        },
         { status: 401 }
       );
+    }
+
+    // ログイン成功 → 失敗カウンターとロックをリセット
+    if (clinic.failedLoginAttempts > 0 || clinic.lockedUntil) {
+      await prisma.clinic.update({
+        where: { id: clinic.id },
+        data: {
+          failedLoginAttempts: 0,
+          lockedUntil: null,
+        },
+      });
     }
 
     // アカウントステータスをチェック
