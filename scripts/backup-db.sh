@@ -11,8 +11,6 @@
 #   0 3 * * * /var/www/dental-check/scripts/backup-db.sh
 # =============================================================================
 
-set -euo pipefail
-
 # ---------- 設定 ----------
 APP_DIR="/var/www/dental-check"
 BACKUP_DIR="/var/backups/dental-check"
@@ -41,18 +39,30 @@ fi
 # ---------- 2. アップロード画像バックアップ ----------
 UPLOADS_DIR="${APP_DIR}/public/uploads"
 UPLOADS_FILE="${BACKUP_DIR}/uploads_${TIMESTAMP}.tar.gz"
+UPLOADS_SIZE="0"
 
 if [ -d "$UPLOADS_DIR" ]; then
-    # uploadsディレクトリをtar.gzに圧縮
-    tar -czf "$UPLOADS_FILE" -C "${APP_DIR}/public" uploads/ 2>/dev/null
+    # アップロードディレクトリ内の画像ファイル数を確認
+    FILE_COUNT=$(find "$UPLOADS_DIR" -type f -not -name ".gitkeep" 2>/dev/null | wc -l)
 
-    # ★修正ポイント★
-    # 以前のスクリプトでは、圧縮ファイルではなくディレクトリ自体のサイズを
-    # 取得しようとして失敗していた（変数名の不一致や、duの対象ミス）
-    # 正しくは: 作成した tar.gz ファイルのサイズを取得する
-    UPLOADS_SIZE=$(du -h "$UPLOADS_FILE" | cut -f1)
-else
-    UPLOADS_SIZE="0"
+    if [ "$FILE_COUNT" -gt 0 ]; then
+        # uploadsディレクトリをtar.gzに圧縮
+        tar -czf "$UPLOADS_FILE" -C "${APP_DIR}/public" uploads/ 2>/dev/null
+
+        # 作成されたtar.gzファイルのサイズを取得
+        if [ -f "$UPLOADS_FILE" ]; then
+            UPLOADS_SIZE=$(du -h "$UPLOADS_FILE" | cut -f1)
+        fi
+    fi
+fi
+
+# uploadsディレクトリ自体のサイズもフォールバックとして計算
+# （tar.gzが作れなかった場合でも、元ディレクトリのサイズを表示）
+if [ "$UPLOADS_SIZE" = "0" ] && [ -d "$UPLOADS_DIR" ]; then
+    SRC_SIZE=$(du -sh "$UPLOADS_DIR" 2>/dev/null | cut -f1)
+    if [ -n "$SRC_SIZE" ] && [ "$SRC_SIZE" != "0" ] && [ "$SRC_SIZE" != "4.0K" ]; then
+        UPLOADS_SIZE="${SRC_SIZE}(src)"
+    fi
 fi
 
 # ---------- 3. 古いバックアップを削除（30日以上前） ----------
