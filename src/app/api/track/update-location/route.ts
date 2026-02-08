@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { reverseGeocode } from "@/lib/geocoding";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 /**
  * 診断セッションの位置情報を高精度データで更新
  * ブラウザのGeolocation APIから取得した位置情報を受け取る
  */
 export async function POST(request: NextRequest) {
+  // レート制限: 1つのIPから1分間に20回まで
+  const rateLimitResponse = checkRateLimit(request, "track-update-location", 20, 60 * 1000);
+  if (rateLimitResponse) return rateLimitResponse;
+
   try {
     const body = await request.json();
     const { sessionId, latitude, longitude } = body;

@@ -2,8 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getClientIP, getLocationFromIP } from "@/lib/geolocation";
 import { canTrackSession } from "@/lib/subscription";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
+  // レート制限: 1つのIPから1分間に60回まで
+  const rateLimitResponse = checkRateLimit(request, "track-access", 60, 60 * 1000);
+  if (rateLimitResponse) return rateLimitResponse;
+
   try {
     const body = await request.json();
     const { channelId, diagnosisType, eventType } = body;
