@@ -16,6 +16,7 @@ import {
   AlertTriangle,
   CreditCard,
   Eye,
+  Loader2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { LocationSection } from "@/components/dashboard/location-section";
@@ -25,6 +26,8 @@ import { HistoryCTAPopover } from "@/components/dashboard/history-cta-popover";
 import { Skeleton } from "@/components/dashboard/skeleton";
 import type { Channel, ChannelStats, OverallStats, HistoryItem, SubscriptionInfo } from "@/components/dashboard/types";
 import { CTA_TYPE_NAMES, CHANNEL_COLORS } from "@/components/dashboard/types";
+import { useToast, Toast } from "@/components/ui/toast";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 // 期間の選択肢
 const PERIOD_OPTIONS = [
@@ -52,6 +55,19 @@ export default function DashboardPage() {
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
   const [showQRLimitModal, setShowQRLimitModal] = useState(false);
   const [showDemoModal, setShowDemoModal] = useState(false);
+
+  // B1: トースト通知（エラーをユーザーに見せる）
+  const { toast, showToast, hideToast } = useToast();
+  // B2: 確認ダイアログ（alert/confirmの代わり）
+  const [confirmDialog, setConfirmDialog] = useState<{
+    title: string;
+    message: string;
+    confirmText?: string;
+    variant?: "danger" | "default";
+    onConfirm: () => void;
+  } | null>(null);
+  // B4: データ更新中のローディング表示
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // QRコードソート
   type ChannelSortField = "createdAt" | "accessCount" | "budget" | "costPerAccess" | "ctaCount" | "ctaRate";
@@ -141,11 +157,13 @@ export default function DashboardPage() {
       if (response.ok) {
         const data = await response.json();
         setChannels(data.channels);
+      } else {
+        showToast("error", "QRコードの取得に失敗しました");
       }
-    } catch (error) {
-      console.error("Failed to fetch channels:", error);
+    } catch {
+      showToast("error", "QRコードの取得に失敗しました");
     }
-  }, [period, customStartDate, customEndDate]);
+  }, [period, customStartDate, customEndDate, showToast]);
 
   // チャンネル別統計取得
   const fetchChannelStats = useCallback(async () => {
@@ -161,8 +179,8 @@ export default function DashboardPage() {
         const data = await response.json();
         setChannelStats(data.stats);
       }
-    } catch (error) {
-      console.error("Failed to fetch channel stats:", error);
+    } catch {
+      // 統計取得失敗は他のエラーと一緒に表示されるので個別通知は省略
     }
   }, [period, customStartDate, customEndDate]);
 
@@ -183,8 +201,8 @@ export default function DashboardPage() {
         const data = await response.json();
         setOverallStats(data.stats);
       }
-    } catch (error) {
-      console.error("Failed to fetch overall stats:", error);
+    } catch {
+      // 統計取得失敗は個別通知を省略
     }
   }, [period, customStartDate, customEndDate, summaryChannelIds]);
 
@@ -223,15 +241,17 @@ export default function DashboardPage() {
             setTotalCount(data.totalCount);
           }
           setHasMore(data.hasMore);
+        } else {
+          showToast("error", "履歴の取得に失敗しました");
         }
-      } catch (error) {
-        console.error("Failed to fetch history:", error);
+      } catch {
+        showToast("error", "履歴の取得に失敗しました");
       } finally {
         setIsLoading(false);
         setIsLoadingMore(false);
       }
     },
-    [period, selectedChannelId, customStartDate, customEndDate]
+    [period, selectedChannelId, customStartDate, customEndDate, showToast]
   );
 
   // サブスクリプション情報取得
@@ -242,8 +262,8 @@ export default function DashboardPage() {
         const data = await response.json();
         setSubscription(data.subscription);
       }
-    } catch (error) {
-      console.error("Failed to fetch subscription:", error);
+    } catch {
+      // サブスクリプション取得失敗は個別通知を省略
     }
   }, []);
 
@@ -252,12 +272,13 @@ export default function DashboardPage() {
     fetchSubscription();
   }, [fetchSubscription]);
 
-  // フィルター変更時（初回含む）- fetchOverallStatsは除く
+  // B4: フィルター変更時（初回含む）- fetchOverallStatsは除く
   useEffect(() => {
-    fetchChannels();
-    fetchChannelStats();
-    fetchHistory(0, false);
-  }, [fetchChannels, fetchChannelStats, fetchHistory]);
+    // 初回でなければリフレッシュ中表示を出す
+    if (channels.length > 0) setIsRefreshing(true);
+    Promise.all([fetchChannels(), fetchChannelStats(), fetchHistory(0, false)])
+      .finally(() => setIsRefreshing(false));
+  }, [fetchChannels, fetchChannelStats, fetchHistory]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // summaryChannelIds変更時（効果測定サマリー用）
   useEffect(() => {
@@ -284,22 +305,29 @@ export default function DashboardPage() {
   }, [channels, isInitialized]);
 
   // QRコード非表示
-  const handleHideChannel = async (id: string) => {
-    if (!confirm("このQRコードを非表示にしますか？統計からも除外されます。後から復元できます。")) {
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/channels/${id}`, { method: "DELETE" });
-      if (response.ok) {
-        setChannels(channels.map((c) => (c.id === id ? { ...c, isActive: false } : c)));
-        fetchChannelStats();
-        fetchOverallStats();
-        fetchHistory(0, false);
-      }
-    } catch (error) {
-      console.error("Failed to hide channel:", error);
-    }
+  const handleHideChannel = (id: string) => {
+    setConfirmDialog({
+      title: "QRコードを非表示にしますか？",
+      message: "統計からも除外されます。後から復元できます。",
+      confirmText: "非表示にする",
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        try {
+          const response = await fetch(`/api/channels/${id}`, { method: "DELETE" });
+          if (response.ok) {
+            setChannels(channels.map((c) => (c.id === id ? { ...c, isActive: false } : c)));
+            fetchChannelStats();
+            fetchOverallStats();
+            fetchHistory(0, false);
+            showToast("success", "QRコードを非表示にしました");
+          } else {
+            showToast("error", "非表示に失敗しました");
+          }
+        } catch {
+          showToast("error", "非表示に失敗しました");
+        }
+      },
+    });
   };
 
   // QRコード復元
@@ -315,67 +343,77 @@ export default function DashboardPage() {
         fetchChannelStats();
         fetchOverallStats();
         fetchHistory(0, false);
+        showToast("success", "QRコードを復元しました");
+      } else {
+        showToast("error", "復元に失敗しました");
       }
-    } catch (error) {
-      console.error("Failed to restore channel:", error);
+    } catch {
+      showToast("error", "復元に失敗しました");
     }
   };
 
   // QRコード完全削除
-  const handlePermanentDeleteChannel = async (id: string) => {
+  const handlePermanentDeleteChannel = (id: string) => {
     const channel = channels.find((c) => c.id === id);
     if (!channel) return;
 
-    const confirmed = confirm(
-      `【完全削除の警告】\n\n「${channel.name}」を完全に削除します。\n\nこの操作は取り消せません。以下のデータがすべて削除されます：\n• QRコード情報\n• QR読み込み履歴（${channel.scanCount}件）\n• 診断結果データ\n• アクセスログ\n\n本当に完全削除しますか？`
-    );
-    if (!confirmed) return;
-
-    try {
-      const response = await fetch(`/api/channels/${id}/permanent-delete`, {
-        method: "DELETE",
-      });
-      if (response.ok) {
-        setChannels(channels.filter((c) => c.id !== id));
-        fetchChannelStats();
-        fetchOverallStats();
-        fetchHistory(0, false);
-      } else {
-        const data = await response.json();
-        alert(data.error || "完全削除に失敗しました");
-      }
-    } catch (error) {
-      console.error("Failed to permanently delete channel:", error);
-      alert("完全削除に失敗しました");
-    }
+    setConfirmDialog({
+      title: "完全削除の警告",
+      message: `「${channel.name}」を完全に削除します。\n\nこの操作は取り消せません。以下のデータがすべて削除されます：\n• QRコード情報\n• QR読み込み履歴（${channel.scanCount}件）\n• 診断結果データ\n• アクセスログ`,
+      confirmText: "完全に削除する",
+      variant: "danger",
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        try {
+          const response = await fetch(`/api/channels/${id}/permanent-delete`, {
+            method: "DELETE",
+          });
+          if (response.ok) {
+            setChannels(channels.filter((c) => c.id !== id));
+            fetchChannelStats();
+            fetchOverallStats();
+            fetchHistory(0, false);
+            showToast("success", "QRコードを完全に削除しました");
+          } else {
+            const data = await response.json();
+            showToast("error", data.error || "完全削除に失敗しました");
+          }
+        } catch {
+          showToast("error", "完全削除に失敗しました");
+        }
+      },
+    });
   };
 
   // 履歴削除
-  const handleDeleteHistory = async (item: HistoryItem) => {
-    if (!confirm("この履歴を削除しますか？削除後は効果測定サマリーやQR読み込みエリアにも反映されなくなります。")) {
-      return;
-    }
+  const handleDeleteHistory = (item: HistoryItem) => {
+    setConfirmDialog({
+      title: "履歴を削除しますか？",
+      message: "削除後は効果測定サマリーやQR読み込みエリアにも反映されなくなります。",
+      confirmText: "削除する",
+      variant: "danger",
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        try {
+          const response = await fetch(
+            `/api/dashboard/history/${item.id}?type=${item.type}`,
+            { method: "DELETE" }
+          );
 
-    try {
-      const response = await fetch(
-        `/api/dashboard/history/${item.id}?type=${item.type}`,
-        { method: "DELETE" }
-      );
-
-      if (response.ok) {
-        // ローカルステートから削除
-        setHistory((prev) => prev.filter((h) => h.id !== item.id));
-        setTotalCount((prev) => Math.max(0, prev - 1));
-        // 統計を更新
-        fetchOverallStats();
-      } else {
-        const data = await response.json();
-        alert(data.error || "削除に失敗しました");
-      }
-    } catch (error) {
-      console.error("Failed to delete history:", error);
-      alert("削除に失敗しました");
-    }
+          if (response.ok) {
+            setHistory((prev) => prev.filter((h) => h.id !== item.id));
+            setTotalCount((prev) => Math.max(0, prev - 1));
+            fetchOverallStats();
+            showToast("success", "履歴を削除しました");
+          } else {
+            const data = await response.json();
+            showToast("error", data.error || "削除に失敗しました");
+          }
+        } catch {
+          showToast("error", "削除に失敗しました");
+        }
+      },
+    });
   };
 
   // 新規作成ボタンクリック
@@ -440,70 +478,81 @@ export default function DashboardPage() {
   };
 
   // CSVエクスポート
-  const exportHistoryToCSV = async () => {
+  const exportHistoryToCSV = () => {
+    const doExport = async () => {
+      setIsExporting(true);
+
+      const params = new URLSearchParams({ period, offset: "0", limit: "10000" });
+      if (selectedChannelId) params.set("channelId", selectedChannelId);
+      if (period === "custom") {
+        params.set("startDate", customStartDate);
+        params.set("endDate", customEndDate);
+      }
+
+      try {
+        const response = await fetch(`/api/dashboard/history?${params}`);
+        if (!response.ok) {
+          showToast("error", "エクスポートに失敗しました");
+          return;
+        }
+        const data = await response.json();
+
+        const rows: string[][] = [
+          ["日時", "年齢", "性別", "診断タイプ", "QRコード", "エリア", "CTAクリック回数", "CTA内訳"],
+        ];
+
+        data.history.forEach((item: HistoryItem) => {
+          const ctaDetails = Object.entries(item.ctaByType || {})
+            .map(([type, count]) => `${CTA_TYPE_NAMES[type] || type}:${count}`)
+            .join(" / ");
+
+          rows.push([
+            formatDate(item.createdAt),
+            item.userAge !== null ? item.userAge.toString() : "",
+            item.userGender || "",
+            item.diagnosisType,
+            item.channelName,
+            item.area,
+            item.ctaClickCount.toString(),
+            ctaDetails,
+          ]);
+        });
+
+        const BOM = "\uFEFF";
+        const csvContent = rows.map((row) =>
+          row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(",")
+        ).join("\n");
+
+        const blob = new Blob([BOM + csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `診断履歴_${new Date().toISOString().split("T")[0]}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        showToast("success", `${data.history.length}件のデータをエクスポートしました`);
+      } catch {
+        showToast("error", "エクスポート中にエラーが発生しました");
+      } finally {
+        setIsExporting(false);
+      }
+    };
+
+    // 大量データの場合は確認ダイアログを表示
     if (totalCount > 5000) {
-      if (!confirm(`${totalCount.toLocaleString()}件のデータをエクスポートします。続行しますか？`)) {
-        return;
-      }
-    }
-
-    setIsExporting(true);
-
-    const params = new URLSearchParams({ period, offset: "0", limit: "10000" });
-    if (selectedChannelId) params.set("channelId", selectedChannelId);
-    if (period === "custom") {
-      params.set("startDate", customStartDate);
-      params.set("endDate", customEndDate);
-    }
-
-    try {
-      const response = await fetch(`/api/dashboard/history?${params}`);
-      if (!response.ok) {
-        alert("エクスポートに失敗しました");
-        return;
-      }
-      const data = await response.json();
-
-      const rows: string[][] = [
-        ["日時", "年齢", "性別", "診断タイプ", "QRコード", "エリア", "CTAクリック回数", "CTA内訳"],
-      ];
-
-      data.history.forEach((item: HistoryItem) => {
-        const ctaDetails = Object.entries(item.ctaByType || {})
-          .map(([type, count]) => `${CTA_TYPE_NAMES[type] || type}:${count}`)
-          .join(" / ");
-
-        rows.push([
-          formatDate(item.createdAt),
-          item.userAge !== null ? item.userAge.toString() : "",
-          item.userGender || "",
-          item.diagnosisType,
-          item.channelName,
-          item.area,
-          item.ctaClickCount.toString(),
-          ctaDetails,
-        ]);
+      setConfirmDialog({
+        title: "CSVエクスポート",
+        message: `${totalCount.toLocaleString()}件のデータをエクスポートします。\n少し時間がかかる場合があります。`,
+        confirmText: "エクスポート開始",
+        onConfirm: () => {
+          setConfirmDialog(null);
+          doExport();
+        },
       });
-
-      const BOM = "\uFEFF";
-      const csvContent = rows.map((row) =>
-        row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(",")
-      ).join("\n");
-
-      const blob = new Blob([BOM + csvContent], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `診断履歴_${new Date().toISOString().split("T")[0]}.csv`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error("Failed to export history:", error);
-      alert("エクスポート中にエラーが発生しました");
-    } finally {
-      setIsExporting(false);
+    } else {
+      doExport();
     }
   };
 
@@ -528,10 +577,32 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
+      {/* B1: トースト通知 */}
+      <Toast toast={toast} onClose={hideToast} />
+      {/* B2: 確認ダイアログ */}
+      <ConfirmDialog
+        isOpen={!!confirmDialog}
+        title={confirmDialog?.title || ""}
+        message={confirmDialog?.message || ""}
+        confirmText={confirmDialog?.confirmText}
+        variant={confirmDialog?.variant}
+        onConfirm={() => confirmDialog?.onConfirm()}
+        onCancel={() => setConfirmDialog(null)}
+      />
+
       {/* ヘッダー */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">ダッシュボード</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-gray-900">ダッシュボード</h1>
+            {/* B4: データ更新中の表示 */}
+            {isRefreshing && (
+              <div className="flex items-center gap-1.5 text-blue-600">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span className="text-xs">更新中</span>
+              </div>
+            )}
+          </div>
           <p className="text-sm text-gray-500 mt-1">QRコードの効果測定と管理</p>
         </div>
         <div className="flex items-center gap-2">
@@ -772,8 +843,8 @@ export default function DashboardPage() {
                 disabled={history.length === 0 || isExporting}
                 className="gap-2"
               >
-                <Download className="w-4 h-4" />
-                {isExporting ? "..." : "CSV"}
+                {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                {isExporting ? "エクスポート中..." : "CSV"}
               </Button>
             </div>
           </div>
