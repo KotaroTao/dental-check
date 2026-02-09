@@ -239,5 +239,26 @@ model Admin {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
+  auditLogs    AuditLog[]
+
   @@map("admins")
+}
+
+// D3: 管理者操作の監査ログ
+model AuditLog {
+  id          String   @id @default(uuid())
+  adminId     String   @map("admin_id")
+  action      String   // 操作種別（例: "clinic.create", "clinic.impersonate", "invitation.create"）
+  targetType  String?  @map("target_type")  // 対象の種類（例: "clinic", "diagnosis"）
+  targetId    String?  @map("target_id")    // 対象のID
+  details     Json?    // 追加情報（変更前後の値など）
+  ipAddress   String?  @map("ip_address")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
 }

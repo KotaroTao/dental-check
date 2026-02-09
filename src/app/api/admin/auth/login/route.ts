@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyPassword, createAdminToken, getAdminCookieName } from "@/lib/admin-auth";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { createAuditLog } from "@/lib/audit-log";
 
 export async function POST(request: NextRequest) {
   // A1: レート制限（1つのIPから15分間に20回まで）
@@ -58,6 +59,14 @@ export async function POST(request: NextRequest) {
       sameSite: "lax",
       maxAge: 60 * 60 * 24, // 24 hours
       path: "/",
+    });
+
+    // D3: 管理者ログインの監査ログ
+    await createAuditLog({
+      adminId: admin.id,
+      action: "admin.login",
+      details: { email: admin.email },
+      request,
     });
 
     return response;

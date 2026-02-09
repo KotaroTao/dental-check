@@ -15,7 +15,6 @@ import {
   X,
   AlertTriangle,
   CreditCard,
-  Eye,
   Loader2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -28,6 +27,7 @@ import type { Channel, ChannelStats, OverallStats, HistoryItem, SubscriptionInfo
 import { CTA_TYPE_NAMES, CHANNEL_COLORS } from "@/components/dashboard/types";
 import { useToast, Toast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useDemoGuard } from "@/components/dashboard/demo-guard";
 
 // 期間の選択肢
 const PERIOD_OPTIONS = [
@@ -54,7 +54,8 @@ export default function DashboardPage() {
   // サブスクリプション情報
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
   const [showQRLimitModal, setShowQRLimitModal] = useState(false);
-  const [showDemoModal, setShowDemoModal] = useState(false);
+  // D5: デモモード共通化
+  const { DemoModal, showDemoModal } = useDemoGuard();
 
   // B1: トースト通知（エラーをユーザーに見せる）
   const { toast, showToast, hideToast } = useToast();
@@ -425,7 +426,7 @@ export default function DashboardPage() {
 
     // デモアカウントの場合
     if (subscription.isDemo) {
-      setShowDemoModal(true);
+      showDemoModal();
       return;
     }
 
@@ -648,7 +649,7 @@ export default function DashboardPage() {
         summaryChannelIds={summaryChannelIds}
         setSummaryChannelIds={setSummaryChannelIds}
         isDemo={subscription?.isDemo}
-        onDemoClick={() => setShowDemoModal(true)}
+        onDemoClick={() => showDemoModal()}
       />
 
       {/* QRコードセクション */}
@@ -767,7 +768,7 @@ export default function DashboardPage() {
                       onPermanentDelete={() => handlePermanentDeleteChannel(channel.id)}
 
                       isDemo={subscription?.isDemo}
-                      onDemoClick={() => setShowDemoModal(true)}
+                      onDemoClick={() => showDemoModal()}
                     />
                   ))}
                 </tbody>
@@ -785,7 +786,7 @@ export default function DashboardPage() {
                   onRestore={() => handleRestoreChannel(channel.id)}
                   onPermanentDelete={() => handlePermanentDeleteChannel(channel.id)}
                   isDemo={subscription?.isDemo}
-                  onDemoClick={() => setShowDemoModal(true)}
+                  onDemoClick={() => showDemoModal()}
                 />
               ))}
             </div>
@@ -835,7 +836,7 @@ export default function DashboardPage() {
                 size="sm"
                 onClick={() => {
                   if (subscription?.isDemo) {
-                    setShowDemoModal(true);
+                    showDemoModal();
                   } else {
                     exportHistoryToCSV();
                   }
@@ -927,7 +928,7 @@ export default function DashboardPage() {
                       <td className="px-3 py-3 text-sm text-gray-600">{item.area}</td>
                       <td className="px-2 py-3 text-center">
                         <button
-                          onClick={() => subscription?.isDemo ? setShowDemoModal(true) : handleDeleteHistory(item)}
+                          onClick={() => subscription?.isDemo ? showDemoModal() : handleDeleteHistory(item)}
                           className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
                           title="この履歴を削除"
                         >
@@ -956,7 +957,7 @@ export default function DashboardPage() {
                         </span>
                       )}
                       <button
-                        onClick={() => subscription?.isDemo ? setShowDemoModal(true) : handleDeleteHistory(item)}
+                        onClick={() => subscription?.isDemo ? showDemoModal() : handleDeleteHistory(item)}
                         className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded"
                         title="この履歴を削除"
                       >
@@ -1080,52 +1081,8 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* デモアカウント制限モーダル */}
-      {showDemoModal && (
-        <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-          onClick={() => setShowDemoModal(false)}
-        >
-          <div
-            className="relative bg-white rounded-2xl shadow-xl max-w-md w-full p-6"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-start gap-4 mb-4">
-              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                <Eye className="w-6 h-6 text-blue-600" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-gray-900">
-                  デモアカウントです
-                </h3>
-                <p className="text-sm text-gray-600 mt-1">
-                  デモアカウントでは、データの閲覧のみ可能です。
-                </p>
-              </div>
-            </div>
-
-            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-4">
-              <p className="text-sm text-blue-800">
-                QRコードや診断の新規作成・編集を行うには、正式なアカウントでのご登録が必要です。
-              </p>
-            </div>
-
-            <Button
-              className="w-full"
-              onClick={() => setShowDemoModal(false)}
-            >
-              閉じる
-            </Button>
-
-            <button
-              onClick={() => setShowDemoModal(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-      )}
+      {/* D5: デモアカウント制限モーダル（共通コンポーネント） */}
+      <DemoModal />
     </div>
   );
 }
