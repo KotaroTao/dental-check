@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { CreditCard, AlertCircle, CheckCircle, XCircle, Check, Clock } from "lucide-react";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface CardInfo {
   last4: string;
@@ -70,6 +71,7 @@ export default function BillingPage() {
   const [showCardForm, setShowCardForm] = useState(false);
   const [cardElement, setCardElement] = useState<unknown>(null);
   const [payjpInstance, setPayjpInstance] = useState<ReturnType<NonNullable<typeof window.Payjp>> | null>(null);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   const fetchSubscription = useCallback(async () => {
     try {
@@ -200,11 +202,12 @@ export default function BillingPage() {
     }
   };
 
-  const handleCancel = async () => {
-    if (!confirm("本当に解約しますか？現在の期間終了まで利用可能です。")) {
-      return;
-    }
+  const handleCancel = () => {
+    setShowCancelConfirm(true);
+  };
 
+  const doCancelSubscription = async () => {
+    setShowCancelConfirm(false);
     setIsProcessing(true);
     setMessage(null);
 
@@ -612,6 +615,17 @@ export default function BillingPage() {
           </div>
         )}
       </div>
+
+      {/* 解約確認ダイアログ */}
+      <ConfirmDialog
+        isOpen={showCancelConfirm}
+        title="本当に解約しますか？"
+        message="現在の期間終了まで利用可能です。"
+        confirmText="解約する"
+        variant="danger"
+        onConfirm={doCancelSubscription}
+        onCancel={() => setShowCancelConfirm(false)}
+      />
     </div>
   );
 }

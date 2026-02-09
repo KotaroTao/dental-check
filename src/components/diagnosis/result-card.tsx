@@ -7,7 +7,7 @@ import { DiagnosisType } from "@/data/diagnosis-types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DemoCTA } from "./demo-cta";
-import { Share2, Calendar, Phone, MessageCircle, Building2, Printer } from "lucide-react";
+import { Share2, Calendar, Phone, MessageCircle, Building2, Printer, CheckCircle } from "lucide-react";
 import Link from "next/link";
 import type { CTAConfig } from "@/types/clinic";
 
@@ -25,6 +25,7 @@ export function ResultCard({ diagnosis, isDemo, ctaConfig, clinicName, mainColor
     useDiagnosisStore();
   const hasTrackedRef = useRef(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [showCopied, setShowCopied] = useState(false);
 
   // 診断完了をトラッキング（非デモモードのみ、1回だけ）
   // 位置情報はプロファイルページで事前に取得済み
@@ -99,7 +100,8 @@ export function ResultCard({ diagnosis, isDemo, ctaConfig, clinicName, mainColor
     } else {
       // コピー
       navigator.clipboard.writeText(`${text}\n${window.location.href}`);
-      alert("URLをコピーしました");
+      setShowCopied(true);
+      setTimeout(() => setShowCopied(false), 2500);
     }
   };
 
@@ -174,15 +176,23 @@ export function ResultCard({ diagnosis, isDemo, ctaConfig, clinicName, mainColor
           )}
 
           {/* シェア・印刷ボタン */}
-          <div className="flex justify-center gap-4 pt-4 border-t print:hidden">
-            <Button variant="outline" onClick={handleShare} className="gap-2">
-              <Share2 className="w-4 h-4" />
-              結果をシェア
-            </Button>
-            <Button variant="outline" onClick={handlePrint} className="gap-2">
-              <Printer className="w-4 h-4" />
-              印刷
-            </Button>
+          <div className="flex flex-col items-center gap-2 pt-4 border-t print:hidden">
+            <div className="flex justify-center gap-4">
+              <Button variant="outline" onClick={handleShare} className="gap-2">
+                <Share2 className="w-4 h-4" />
+                結果をシェア
+              </Button>
+              <Button variant="outline" onClick={handlePrint} className="gap-2">
+                <Printer className="w-4 h-4" />
+                印刷
+              </Button>
+            </div>
+            {showCopied && (
+              <div className="flex items-center gap-1.5 text-green-600 text-sm animate-in fade-in duration-200">
+                <CheckCircle className="w-4 h-4" />
+                URLをコピーしました
+              </div>
+            )}
           </div>
 
           {/* もう一度診断 */}

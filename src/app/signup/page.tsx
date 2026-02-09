@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CheckCircle, XCircle } from "lucide-react";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -18,6 +19,20 @@ export default function SignupPage() {
   });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  // B5: リアルタイムパスワードバリデーション
+  const passwordChecks = useMemo(() => {
+    const pw = formData.password;
+    return {
+      length: pw.length >= 8,
+      hasLetter: /[a-zA-Z]/.test(pw),
+      hasNumber: /[0-9]/.test(pw),
+    };
+  }, [formData.password]);
+
+  const passwordMatch = formData.password.length > 0 &&
+    formData.passwordConfirm.length > 0 &&
+    formData.password === formData.passwordConfirm;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -155,6 +170,14 @@ export default function SignupPage() {
                 onChange={handleChange}
                 disabled={isLoading}
               />
+              {/* B5: リアルタイムバリデーション表示 */}
+              {formData.password.length > 0 && (
+                <div className="space-y-1 mt-1.5">
+                  <PasswordCheck passed={passwordChecks.length} label="8文字以上" />
+                  <PasswordCheck passed={passwordChecks.hasLetter} label="英字を含む" />
+                  <PasswordCheck passed={passwordChecks.hasNumber} label="数字を含む" />
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -170,6 +193,12 @@ export default function SignupPage() {
                 onChange={handleChange}
                 disabled={isLoading}
               />
+              {formData.passwordConfirm.length > 0 && (
+                <PasswordCheck
+                  passed={passwordMatch}
+                  label={passwordMatch ? "パスワードが一致" : "パスワードが一致しません"}
+                />
+              )}
             </div>
 
             <Button
@@ -197,5 +226,15 @@ export default function SignupPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+/** パスワード条件の合否を表示するミニコンポーネント */
+function PasswordCheck({ passed, label }: { passed: boolean; label: string }) {
+  return (
+    <div className={`flex items-center gap-1.5 text-xs ${passed ? "text-green-600" : "text-gray-400"}`}>
+      {passed ? <CheckCircle className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
+      {label}
+    </div>
   );
 }
