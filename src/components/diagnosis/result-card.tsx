@@ -32,25 +32,9 @@ export function ResultCard({ diagnosis, isDemo, ctaConfig, clinicName, mainColor
   // Zustandストアのハイドレーション完了を待つ
   useEffect(() => {
     // Zustandストアがまだハイドレーションしていない場合は待つ
-    if (!_hasHydrated) {
-      console.log("Waiting for Zustand hydration...");
-      return;
-    }
-    if (isDemo || !channelId || !resultPattern || hasTrackedRef.current) {
-      console.log("Skip tracking:", { isDemo, channelId: !!channelId, resultPattern: !!resultPattern, hasTracked: hasTrackedRef.current });
-      return;
-    }
+    if (!_hasHydrated) return;
+    if (isDemo || !channelId || !resultPattern || hasTrackedRef.current) return;
     hasTrackedRef.current = true;
-
-    console.log("Tracking diagnosis completion:", {
-      userAge,
-      userGender,
-      latitude,
-      longitude,
-      answers: answers?.length,
-      totalScore,
-      resultCategory: resultPattern.category,
-    });
 
     fetch("/api/track/complete", {
       method: "POST",
@@ -69,7 +53,6 @@ export function ResultCard({ diagnosis, isDemo, ctaConfig, clinicName, mainColor
     })
       .then((res) => res.json())
       .then((data) => {
-        console.log("Track complete response:", data);
         if (data.sessionId) {
           setSessionId(data.sessionId);
         }

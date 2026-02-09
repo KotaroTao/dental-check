@@ -37,13 +37,6 @@ export function QuestionImageUpload({ imageUrl, onImageChange }: Props) {
     setError(null);
     setIsUploading(true);
 
-    // デバッグ用ログ
-    console.log("Upload file:", {
-      name: file.name,
-      type: file.type,
-      size: file.size,
-    });
-
     try {
       const formData = new FormData();
       formData.append("file", file);

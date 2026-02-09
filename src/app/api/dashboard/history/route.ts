@@ -21,11 +21,14 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const channelId = searchParams.get("channelId");
     const diagnosisType = searchParams.get("diagnosisType");
-    const period = searchParams.get("period") || "all";
+    const VALID_PERIODS = ["today", "week", "month", "all", "custom"];
+    const period = VALID_PERIODS.includes(searchParams.get("period") || "")
+      ? searchParams.get("period")!
+      : "all";
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
-    const offset = parseInt(searchParams.get("offset") || "0");
-    const limit = parseInt(searchParams.get("limit") || "50");
+    const offset = Math.max(0, parseInt(searchParams.get("offset") || "0") || 0);
+    const limit = Math.min(10000, Math.max(1, parseInt(searchParams.get("limit") || "50") || 50));
     const skipCount = searchParams.get("skipCount") === "true"; // 追加読み込み時はカウントをスキップ
 
     // 期間の計算（"all"の場合は期間フィルターなし）

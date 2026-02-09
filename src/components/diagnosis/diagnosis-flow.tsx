@@ -29,15 +29,11 @@ export function DiagnosisFlow({ diagnosis, isDemo, ctaConfig, clinicName, mainCo
     if (hasInitialized.current) return;
     hasInitialized.current = true;
 
-    console.log("DiagnosisFlow initialized:", { userAge, answersLength: answers.length, resultPattern: !!resultPattern });
-
     // プロファイル入力済みで回答がまだない場合はリセットしない（プロファイルページから遷移）
     if (userAge !== null && answers.length === 0 && resultPattern === null) {
-      console.log("Skipping reset - profile already entered");
       return;
     }
     // それ以外はリセット（新規開始または再診断）
-    console.log("Resetting diagnosis state");
     reset();
   }, [_hasHydrated, reset, userAge, answers.length, resultPattern]);
 

@@ -61,7 +61,6 @@ export async function POST(request: NextRequest) {
     // A2: resetUrl をレスポンスに含めない
     // TODO: メール送信機能を実装した場合はここで送信
     // 現時点ではトークンをDB保存のみ（管理者がDB上で確認する運用）
-    console.log(`[パスワードリセット] clinicId=${clinic.id} token=${token}`);
 
     return NextResponse.json({
       success: true,

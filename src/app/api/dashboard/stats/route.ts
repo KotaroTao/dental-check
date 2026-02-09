@@ -12,7 +12,10 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const channelId = searchParams.get("channelId");
     const channelIdsParam = searchParams.get("channelIds"); // カンマ区切りで複数指定可能
-    const period = searchParams.get("period") || "all"; // today, week, month, all, custom
+    const VALID_PERIODS = ["today", "week", "month", "all", "custom"];
+    const period = VALID_PERIODS.includes(searchParams.get("period") || "")
+      ? searchParams.get("period")!
+      : "all";
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
 
@@ -74,10 +77,11 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // アクティブなチャンネルIDを取得（非表示チャンネルを統計から除外するため）
+    // アクティブなチャンネルを取得（ID一覧 + レスポンス用のname/slug）
     const activeChannels = await prisma.channel.findMany({
       where: { clinicId: session.clinicId, isActive: true },
-      select: { id: true },
+      select: { id: true, name: true, diagnosisTypeSlug: true },
+      orderBy: { createdAt: "desc" },
     });
     const activeChannelIds = activeChannels.map((c: { id: string }) => c.id);
 
@@ -136,7 +140,6 @@ export async function GET(request: NextRequest) {
       accessCount,
       completedCount,
       ctaClicks,
-      channels,
       clinicPageViews,
       ctaFromResult,
       ctaFromClinicPage,
@@ -178,13 +181,6 @@ export async function GET(request: NextRequest) {
           ],
         },
         _count: { id: true },
-      }),
-
-      // QRコード一覧（フィルター用、アクティブのみ）
-      prisma.channel.findMany({
-        where: { clinicId: session.clinicId, isActive: true },
-        select: { id: true, name: true, diagnosisTypeSlug: true },
-        orderBy: { createdAt: "desc" },
       }),
 
       // 医院紹介ページの閲覧数
@@ -420,7 +416,7 @@ export async function GET(request: NextRequest) {
           ctaCount: prevCtaCount,
         },
       },
-      channels,
+      channels: activeChannels,
       period: dateFrom && dateTo ? {
         from: dateFrom.toISOString(),
         to: dateTo.toISOString(),

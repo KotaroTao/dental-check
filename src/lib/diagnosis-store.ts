@@ -124,11 +124,6 @@ export const useDiagnosisStore = create<DiagnosisState>()(
       onRehydrateStorage: () => (state) => {
         if (state) {
           state.setHasHydrated(true);
-          console.log("Zustand store hydrated:", {
-            userAge: state.userAge,
-            latitude: state.latitude,
-            longitude: state.longitude,
-          });
         }
       },
       // _hasHydratedは永続化しない

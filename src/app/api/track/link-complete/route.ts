@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getClientIP } from "@/lib/geolocation";
+import { reverseGeocode } from "@/lib/geocoding";
 import { canTrackSession } from "@/lib/subscription";
 import { checkRateLimit } from "@/lib/rate-limit";
 import {
@@ -144,55 +145,3 @@ export async function POST(request: NextRequest) {
   }
 }
 
-/**
- * 緯度経度から住所情報を取得（逆ジオコーディング）
- */
-async function reverseGeocode(lat: number, lon: number): Promise<{
-  country: string;
-  region: string;
-  city: string;
-  town: string;
-} | null> {
-  try {
-    // OpenStreetMap Nominatim API（無料、1リクエスト/秒制限）
-    const response = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=ja`,
-      {
-        headers: {
-          "User-Agent": "DentalCheckApp/1.0",
-        },
-      }
-    );
-
-    if (!response.ok) {
-      console.error("Nominatim API error:", response.status);
-      return null;
-    }
-
-    const data = await response.json();
-    const address = data.address;
-
-    if (!address) {
-      return null;
-    }
-
-    // 都道府県を取得（state または province）
-    const region = address.state || address.province || "";
-
-    // 市区町村を取得（city, town, village, municipality のいずれか）
-    const city = address.city || address.town || address.village || address.municipality || "";
-
-    // 町丁目を取得（フォールバック付き）
-    const town = address.neighbourhood || address.quarter || address.suburb || "";
-
-    return {
-      country: address.country_code?.toUpperCase() || "JP",
-      region,
-      city,
-      town,
-    };
-  } catch (error) {
-    console.error("Reverse geocode error:", error);
-    return null;
-  }
-}
