@@ -25,15 +25,11 @@ export async function reverseGeocode(
   lat: number,
   lon: number
 ): Promise<GeocodingResult | null> {
-  console.log(`=== Reverse Geocode ===`);
-  console.log(`Input: lat=${lat}, lon=${lon}`);
-
   // Google Geocoding APIが設定されている場合はそちらを使用
   const googleApiKey = process.env.GOOGLE_MAPS_API_KEY;
   if (googleApiKey) {
     const result = await reverseGeocodeWithGoogle(lat, lon, googleApiKey);
     if (result) return result;
-    console.log("Google Geocoding failed, falling back to Nominatim...");
   }
 
   // フォールバック: Nominatim API
@@ -51,7 +47,6 @@ async function reverseGeocodeWithGoogle(
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
       const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lon}&language=ja&key=${apiKey}`;
-      console.log(`Google Geocoding attempt ${attempt}/${MAX_RETRIES}`);
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
@@ -65,36 +60,24 @@ async function reverseGeocodeWithGoogle(
       }
 
       const data = await response.json();
-      console.log(`Google Geocoding status: ${data.status}`);
 
       if (data.status === "OK" && data.results && data.results.length > 0) {
-        const result = parseGoogleResult(data.results[0]);
-        console.log(`Google Geocoding result:`, result);
-        return result;
+        return parseGoogleResult(data.results[0]);
       }
 
       if (data.status === "OVER_QUERY_LIMIT" && attempt < MAX_RETRIES) {
-        const waitTime = attempt * 1000;
-        console.log(`Rate limited, waiting ${waitTime}ms...`);
-        await new Promise((resolve) => setTimeout(resolve, waitTime));
+        await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
         continue;
       }
 
-      console.error(`Google Geocoding error: ${data.status} - ${data.error_message || ""}`);
+      console.error(`Google Geocoding error: ${data.status}`);
       return null;
     } catch (error) {
-      const isTimeout = error instanceof Error && error.name === "AbortError";
-      console.error(
-        `Google Geocoding error (attempt ${attempt}/${MAX_RETRIES}):`,
-        isTimeout ? "Request timed out" : error
-      );
-
       if (attempt < MAX_RETRIES) {
-        const waitTime = attempt * 1000;
-        console.log(`Waiting ${waitTime}ms before retry...`);
-        await new Promise((resolve) => setTimeout(resolve, waitTime));
+        await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
         continue;
       }
+      console.error("Google Geocoding failed:", error instanceof Error ? error.message : error);
       return null;
     }
   }
@@ -202,7 +185,6 @@ async function reverseGeocodeWithNominatim(
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
       const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=ja`;
-      console.log(`Nominatim attempt ${attempt}/${MAX_RETRIES}: ${url}`);
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
@@ -216,13 +198,9 @@ async function reverseGeocodeWithNominatim(
 
       clearTimeout(timeoutId);
 
-      console.log(`Nominatim response status: ${response.status}`);
-
       if (!response.ok) {
         if (response.status === 429 && attempt < MAX_RETRIES) {
-          const waitTime = attempt * 2000;
-          console.log(`Rate limited, waiting ${waitTime}ms...`);
-          await new Promise((resolve) => setTimeout(resolve, waitTime));
+          await new Promise((resolve) => setTimeout(resolve, attempt * 2000));
           continue;
         }
         return null;
@@ -231,40 +209,26 @@ async function reverseGeocodeWithNominatim(
       const data = await response.json();
       const address = data.address;
 
-      if (!address) {
-        console.warn("Nominatim returned no address data");
-        return null;
-      }
+      if (!address) return null;
 
-      const result: GeocodingResult = {
+      return {
         country: address.country_code?.toUpperCase() || "JP",
         region: address.state || address.province || "",
         city: address.city || address.town || address.village || address.municipality || "",
         town: address.neighbourhood || address.quarter || address.suburb || "",
       };
-
-      console.log(`Nominatim result:`, result);
-      return result;
     } catch (error) {
       const isTimeout = error instanceof Error && error.name === "AbortError";
       const isNetworkError = error instanceof Error && error.message.includes("fetch failed");
 
-      console.error(
-        `Nominatim error (attempt ${attempt}/${MAX_RETRIES}):`,
-        isTimeout ? "Request timed out" : error
-      );
-
       if ((isTimeout || isNetworkError) && attempt < MAX_RETRIES) {
-        const waitTime = attempt * 1000;
-        console.log(`Waiting ${waitTime}ms before retry...`);
-        await new Promise((resolve) => setTimeout(resolve, waitTime));
+        await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
         continue;
       }
+      console.error("Nominatim reverse geocode failed:", error instanceof Error ? error.message : error);
       return null;
     }
   }
-
-  console.error("All Nominatim attempts failed");
   return null;
 }
 
@@ -274,11 +238,7 @@ async function reverseGeocodeWithNominatim(
 export async function forwardGeocode(
   address: string
 ): Promise<ForwardGeocodingResult | null> {
-  console.log(`=== Forward Geocode ===`);
-  console.log(`Input: address=${address}`);
-
   if (!address || address.trim() === "") {
-    console.log("Empty address provided");
     return null;
   }
 
@@ -287,7 +247,6 @@ export async function forwardGeocode(
   if (googleApiKey) {
     const result = await forwardGeocodeWithGoogle(address, googleApiKey);
     if (result) return result;
-    console.log("Google Geocoding failed, falling back to Nominatim...");
   }
 
   // フォールバック: Nominatim API
@@ -305,7 +264,6 @@ async function forwardGeocodeWithGoogle(
     try {
       const encodedAddress = encodeURIComponent(address);
       const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodedAddress}&language=ja&region=jp&key=${apiKey}`;
-      console.log(`Google Forward Geocoding attempt ${attempt}/${MAX_RETRIES}`);
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
@@ -319,40 +277,28 @@ async function forwardGeocodeWithGoogle(
       }
 
       const data = await response.json();
-      console.log(`Google Geocoding status: ${data.status}`);
 
       if (data.status === "OK" && data.results && data.results.length > 0) {
         const location = data.results[0].geometry.location;
-        const result: ForwardGeocodingResult = {
+        return {
           latitude: location.lat,
           longitude: location.lng,
         };
-        console.log(`Google Forward Geocoding result:`, result);
-        return result;
       }
 
       if (data.status === "OVER_QUERY_LIMIT" && attempt < MAX_RETRIES) {
-        const waitTime = attempt * 1000;
-        console.log(`Rate limited, waiting ${waitTime}ms...`);
-        await new Promise((resolve) => setTimeout(resolve, waitTime));
+        await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
         continue;
       }
 
-      console.error(`Google Geocoding error: ${data.status} - ${data.error_message || ""}`);
+      console.error(`Google Geocoding error: ${data.status}`);
       return null;
     } catch (error) {
-      const isTimeout = error instanceof Error && error.name === "AbortError";
-      console.error(
-        `Google Forward Geocoding error (attempt ${attempt}/${MAX_RETRIES}):`,
-        isTimeout ? "Request timed out" : error
-      );
-
       if (attempt < MAX_RETRIES) {
-        const waitTime = attempt * 1000;
-        console.log(`Waiting ${waitTime}ms before retry...`);
-        await new Promise((resolve) => setTimeout(resolve, waitTime));
+        await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
         continue;
       }
+      console.error("Google forward geocode failed:", error instanceof Error ? error.message : error);
       return null;
     }
   }
@@ -369,7 +315,6 @@ async function forwardGeocodeWithNominatim(
     try {
       const encodedAddress = encodeURIComponent(address);
       const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&countrycodes=jp&limit=1`;
-      console.log(`Nominatim Forward Geocoding attempt ${attempt}/${MAX_RETRIES}`);
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
@@ -383,13 +328,9 @@ async function forwardGeocodeWithNominatim(
 
       clearTimeout(timeoutId);
 
-      console.log(`Nominatim response status: ${response.status}`);
-
       if (!response.ok) {
         if (response.status === 429 && attempt < MAX_RETRIES) {
-          const waitTime = attempt * 2000;
-          console.log(`Rate limited, waiting ${waitTime}ms...`);
-          await new Promise((resolve) => setTimeout(resolve, waitTime));
+          await new Promise((resolve) => setTimeout(resolve, attempt * 2000));
           continue;
         }
         return null;
@@ -398,36 +339,24 @@ async function forwardGeocodeWithNominatim(
       const data = await response.json();
 
       if (!Array.isArray(data) || data.length === 0) {
-        console.warn("Nominatim returned no results");
         return null;
       }
 
-      const result: ForwardGeocodingResult = {
+      return {
         latitude: parseFloat(data[0].lat),
         longitude: parseFloat(data[0].lon),
       };
-
-      console.log(`Nominatim Forward Geocoding result:`, result);
-      return result;
     } catch (error) {
       const isTimeout = error instanceof Error && error.name === "AbortError";
       const isNetworkError = error instanceof Error && error.message.includes("fetch failed");
 
-      console.error(
-        `Nominatim Forward Geocoding error (attempt ${attempt}/${MAX_RETRIES}):`,
-        isTimeout ? "Request timed out" : error
-      );
-
       if ((isTimeout || isNetworkError) && attempt < MAX_RETRIES) {
-        const waitTime = attempt * 1000;
-        console.log(`Waiting ${waitTime}ms before retry...`);
-        await new Promise((resolve) => setTimeout(resolve, waitTime));
+        await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
         continue;
       }
+      console.error("Nominatim forward geocode failed:", error instanceof Error ? error.message : error);
       return null;
     }
   }
-
-  console.error("All Nominatim Forward Geocoding attempts failed");
   return null;
 }

@@ -42,6 +42,19 @@ const nextConfig = {
             key: 'Referrer-Policy',
             value: 'strict-origin-when-cross-origin',
           },
+          {
+            // C6: HSTS - ブラウザに「常にHTTPSで接続して」と伝えるヘッダー
+            // max-age=1年, サブドメインも含む
+            key: 'Strict-Transport-Security',
+            value: 'max-age=31536000; includeSubDomains',
+          },
+          {
+            // C6: 不要なブラウザ機能を無効化（プライバシー保護）
+            // camera/microphone等はこのアプリでは不要
+            // geolocation=selfは診断の位置情報取得で必要
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), usb=(), geolocation=(self)',
+          },
         ],
       },
     ];
