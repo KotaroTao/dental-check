@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
 import { getBaseUrl } from "@/lib/url";
+import { sendInvitationEmail } from "@/lib/email";
+import { createAuditLog } from "@/lib/audit-log";
 import crypto from "crypto";
 
 // 招待トークンを発行・再発行
@@ -54,11 +56,34 @@ export async function POST(
     const baseUrl = getBaseUrl(request);
     const inviteUrl = `${baseUrl}/invite/${token}`;
 
+    // D1: 招待メールを送信（SMTP設定時のみ）
+    let emailSent = false;
+    if (clinic.email) {
+      emailSent = await sendInvitationEmail(
+        clinic.email,
+        clinic.name || "ご利用者",
+        inviteUrl
+      );
+    }
+
+    // D3: 監査ログ
+    await createAuditLog({
+      adminId: session.adminId,
+      action: "invitation.create",
+      targetType: "clinic",
+      targetId: clinic.id,
+      details: { clinicName: clinic.name, emailSent },
+      request,
+    });
+
     return NextResponse.json({
       success: true,
       inviteUrl,
+      emailSent,
       expiresAt: expiresAt.toISOString(),
-      message: "招待URLを発行しました",
+      message: emailSent
+        ? "招待URLを発行し、メールを送信しました"
+        : "招待URLを発行しました（メール送信はスキップ）",
     });
   } catch (error) {
     console.error("Generate invitation error:", error);

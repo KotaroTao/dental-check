@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { sendPasswordResetEmail } from "@/lib/email";
+import { getBaseUrl } from "@/lib/url";
 import crypto from "crypto";
 
 export async function POST(request: NextRequest) {
@@ -58,9 +60,10 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // A2: resetUrl をレスポンスに含めない
-    // TODO: メール送信機能を実装した場合はここで送信
-    // 現時点ではトークンをDB保存のみ（管理者がDB上で確認する運用）
+    // D1: パスワードリセットメールを送信（SMTP設定時のみ）
+    const baseUrl = getBaseUrl(request);
+    const resetUrl = `${baseUrl}/reset-password?token=${token}`;
+    await sendPasswordResetEmail(email, clinic.name || "ご利用者", resetUrl);
 
     return NextResponse.json({
       success: true,

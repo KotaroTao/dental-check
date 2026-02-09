@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-auth";
 import { createToken } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { createAuditLog } from "@/lib/audit-log";
 
 // 管理者として医院にログイン（なりすまし）
 export async function POST(
@@ -34,6 +35,16 @@ export async function POST(
     const response = NextResponse.json({
       success: true,
       message: `${clinic.name}のダッシュボードにログインしました`,
+    });
+
+    // D3: 監査ログ（なりすましは特に重要な操作）
+    await createAuditLog({
+      adminId: session.adminId,
+      action: "clinic.impersonate",
+      targetType: "clinic",
+      targetId: clinic.id,
+      details: { clinicName: clinic.name, clinicEmail: clinic.email },
+      request,
     });
 
     // auth_tokenをセット（admin_auth_tokenは既にブラウザにある）

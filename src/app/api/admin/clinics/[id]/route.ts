@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { getAdminSession } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
 import { getPlan, type PlanType } from "@/lib/plans";
+import { createAuditLog } from "@/lib/audit-log";
 
 // 医院詳細を取得
 export async function GET(
@@ -164,6 +165,16 @@ export async function PATCH(
       });
     }
 
+    // D3: 監査ログ
+    await createAuditLog({
+      adminId: session.adminId,
+      action: "clinic.plan_change",
+      targetType: "clinic",
+      targetId: id,
+      details: { newPlanType: planType, planName: plan.name },
+      request,
+    });
+
     return NextResponse.json({
       success: true,
       message: `プランを${plan.name}に変更しました`,
@@ -223,6 +234,16 @@ export async function DELETE(
         { status: 400 }
       );
     }
+
+    // D3: 監査ログ（削除前に記録）
+    await createAuditLog({
+      adminId: session.adminId,
+      action: "clinic.delete",
+      targetType: "clinic",
+      targetId: id,
+      details: { clinicName: clinic.name },
+      request,
+    });
 
     // 医院を削除（関連データはCascadeで自動削除）
     await prisma.clinic.delete({

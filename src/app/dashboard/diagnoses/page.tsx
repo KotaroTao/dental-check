@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Trash2, Eye, Lock, X } from "lucide-react";
+import { Plus, Edit, Trash2, Eye, Lock } from "lucide-react";
+import { useDemoGuard } from "@/components/dashboard/demo-guard";
 
 interface DiagnosisType {
   id: string;
@@ -21,7 +22,7 @@ export default function DiagnosesPage() {
   const [isDemo, setIsDemo] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-  const [showDemoModal, setShowDemoModal] = useState(false);
+  const { DemoModal, showDemoModal } = useDemoGuard();
 
   useEffect(() => {
     fetchDiagnoses();
@@ -76,7 +77,7 @@ export default function DiagnosesPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">診断管理</h1>
         {isDemo ? (
-          <Button onClick={() => setShowDemoModal(true)} className="gap-2">
+          <Button onClick={() => showDemoModal()} className="gap-2">
             <Eye className="w-4 h-4" />
             デモアカウント
           </Button>
@@ -182,10 +183,10 @@ export default function DiagnosesPage() {
                   )}
                   {isDemo && (
                     <>
-                      <Button variant="outline" size="sm" onClick={() => setShowDemoModal(true)}>
+                      <Button variant="outline" size="sm" onClick={() => showDemoModal()}>
                         <Edit className="w-4 h-4 text-gray-400" />
                       </Button>
-                      <Button variant="outline" size="sm" onClick={() => setShowDemoModal(true)}>
+                      <Button variant="outline" size="sm" onClick={() => showDemoModal()}>
                         <Trash2 className="w-4 h-4 text-gray-400" />
                       </Button>
                     </>
@@ -249,60 +250,8 @@ export default function DiagnosesPage() {
         </div>
       )}
 
-      {/* デモアカウント制限モーダル */}
-      {showDemoModal && (
-        <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-          onClick={() => setShowDemoModal(false)}
-        >
-          <div
-            className="relative bg-white rounded-2xl shadow-xl max-w-md w-full p-6"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={() => setShowDemoModal(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
-            >
-              <X className="w-5 h-5" />
-            </button>
-            <div className="flex items-start gap-4 mb-4">
-              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                <Eye className="w-6 h-6 text-blue-600" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-gray-900">デモアカウントです</h3>
-                <p className="text-sm text-gray-600 mt-1">
-                  デモアカウントでは、データの閲覧のみ可能です。
-                </p>
-              </div>
-            </div>
-            <div className="bg-gray-50 rounded-lg p-4 mb-4">
-              <p className="text-sm text-gray-600">
-                診断の新規作成・編集を行うには、正式なアカウントでのご登録が必要です。
-              </p>
-            </div>
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => setShowDemoModal(false)}
-              >
-                閉じる
-              </Button>
-              <a
-                href="https://lin.ee/xaT03Sm"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1"
-              >
-                <Button className="w-full bg-[#06C755] hover:bg-[#05b34d]">
-                  お問い合わせ
-                </Button>
-              </a>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* D5: デモアカウント制限モーダル（共通コンポーネント） */}
+      <DemoModal />
     </div>
   );
 }

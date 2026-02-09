@@ -9,8 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   ArrowLeft, Download, Copy, ExternalLink, Image as ImageIcon, X,
-  Calendar, Link2, Wallet, Upload, Loader2, Eye, Check, Megaphone, Hash,
+  Calendar, Link2, Wallet, Upload, Loader2, Check, Megaphone, Hash,
 } from "lucide-react";
+import { useDemoGuard } from "@/components/dashboard/demo-guard";
 
 // 診断タイプの表示名
 const DIAGNOSIS_TYPE_NAMES: Record<string, string> = {
@@ -51,7 +52,7 @@ export default function ChannelDetailPage() {
   const [copied, setCopied] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
-  const [showDemoModal, setShowDemoModal] = useState(false);
+  const { DemoModal, showDemoModal } = useDemoGuard();
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Form state
@@ -293,7 +294,7 @@ export default function ChannelDetailPage() {
     setSaveSuccess(false);
 
     if (isDemo) {
-      setShowDemoModal(true);
+      showDemoModal();
       return;
     }
 
@@ -866,44 +867,8 @@ export default function ChannelDetailPage() {
         </div>
       )}
 
-      {/* Demo modal */}
-      {showDemoModal && (
-        <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-          onClick={() => setShowDemoModal(false)}
-        >
-          <div
-            className="relative bg-white rounded-2xl shadow-xl max-w-md w-full p-6"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-start gap-4 mb-4">
-              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                <Eye className="w-6 h-6 text-blue-600" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-gray-900">デモアカウントです</h3>
-                <p className="text-sm text-gray-600 mt-1">
-                  デモアカウントでは、データの閲覧のみ可能です。
-                </p>
-              </div>
-            </div>
-            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-4">
-              <p className="text-sm text-blue-800">
-                QRコードの編集を行うには、正式なアカウントでのご登録が必要です。
-              </p>
-            </div>
-            <Button className="w-full" onClick={() => setShowDemoModal(false)}>
-              閉じる
-            </Button>
-            <button
-              onClick={() => setShowDemoModal(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-      )}
+      {/* D5: デモアカウント制限モーダル（共通コンポーネント） */}
+      <DemoModal />
     </div>
   );
 }

@@ -43,6 +43,7 @@ export async function GET() {
         logoUrl: clinic.logoUrl,
         mainColor: clinic.mainColor,
         ctaConfig: clinic.ctaConfig,
+        totpEnabled: clinic.totpEnabled ?? false,
         status: clinic.status,
         subscription: clinic.subscription
           ? {
