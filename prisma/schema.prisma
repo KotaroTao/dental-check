@@ -25,9 +25,6 @@ model Clinic {
   status        String   @default("trial")
   failedLoginAttempts  Int       @default(0) @map("failed_login_attempts")
   lockedUntil          DateTime? @map("locked_until")
-  // D2: 2段階認証（TOTP）
-  totpSecret    String?  @map("totp_secret")   // TOTP秘密鍵（暗号化済み）
-  totpEnabled   Boolean  @default(false) @map("totp_enabled") // 2FA有効化フラグ
   isHidden              Boolean  @default(false) @map("is_hidden") // 管理者パネルで非表示
   excludeFromAnalysis   Boolean  @default(false) @map("exclude_from_analysis") // チラシ分析から除外
   createdAt     DateTime @default(now()) @map("created_at")

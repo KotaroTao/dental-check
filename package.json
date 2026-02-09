@@ -33,7 +33,6 @@
     "lucide-react": "^0.562.0",
     "next": "14.2.35",
     "nodemailer": "^8.0.1",
-    "otplib": "^13.2.1",
     "payjp": "^3.0.0",
     "prisma": "^5.22.0",
     "qrcode": "^1.5.4",

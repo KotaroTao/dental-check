@@ -16,9 +16,6 @@ export default function LoginPage() {
   });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  // D2: 2段階認証
-  const [requiresTOTP, setRequiresTOTP] = useState(false);
-  const [totpCode, setTotpCode] = useState("");
 
   const handleDemoLogin = () => {
     setFormData({
@@ -46,24 +43,13 @@ export default function LoginPage() {
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...formData,
-          ...(requiresTOTP ? { totpCode } : {}),
-        }),
+        body: JSON.stringify(formData),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
         setError(data.error || "ログインに失敗しました");
-        return;
-      }
-
-      // D2: 2段階認証が必要な場合
-      if (data.requiresTOTP) {
-        setRequiresTOTP(true);
-        setTotpCode("");
-        setError("");
         return;
       }
 
@@ -114,31 +100,9 @@ export default function LoginPage() {
                 placeholder="パスワードを入力"
                 value={formData.password}
                 onChange={handleChange}
-                disabled={isLoading || requiresTOTP}
+                disabled={isLoading}
               />
             </div>
-
-            {/* D2: 2段階認証コード入力 */}
-            {requiresTOTP && (
-              <div className="space-y-2 bg-blue-50 p-4 rounded-lg border border-blue-200">
-                <Label htmlFor="totpCode" className="text-blue-800 font-medium">
-                  認証コード（6桁）
-                </Label>
-                <p className="text-xs text-blue-600">
-                  認証アプリに表示されている6桁のコードを入力してください
-                </p>
-                <Input
-                  id="totpCode"
-                  value={totpCode}
-                  onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                  placeholder="000000"
-                  maxLength={6}
-                  className="text-center text-lg tracking-widest"
-                  autoFocus
-                  disabled={isLoading}
-                />
-              </div>
-            )}
 
             <Button
               type="submit"

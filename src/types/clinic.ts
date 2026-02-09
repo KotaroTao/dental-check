@@ -116,7 +116,6 @@ export interface Clinic {
   mainColor: string;
   ctaConfig: CTAConfig;
   clinicPage: ClinicPage;
-  totpEnabled?: boolean;
   status: string;
   createdAt: Date;
   updatedAt: Date;

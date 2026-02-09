@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyPassword, createToken } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { verifyTOTP } from "@/lib/totp";
 import type { Clinic } from "@/types/clinic";
 
 /** ログイン失敗の上限回数（これを超えるとアカウントロック） */
@@ -17,7 +16,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { email, password, totpCode } = body;
+    const { email, password } = body;
 
     // バリデーション
     if (!email || !password) {
@@ -33,7 +32,7 @@ export async function POST(request: NextRequest) {
       include: {
         subscription: true,
       },
-    })) as (Clinic & { failedLoginAttempts: number; lockedUntil: Date | null; totpEnabled: boolean; totpSecret: string | null }) | null;
+    })) as (Clinic & { failedLoginAttempts: number; lockedUntil: Date | null }) | null;
 
     if (!clinic) {
       return NextResponse.json(
@@ -100,25 +99,6 @@ export async function POST(request: NextRequest) {
           lockedUntil: null,
         },
       });
-    }
-
-    // D2: 2段階認証チェック
-    if (clinic.totpEnabled && clinic.totpSecret) {
-      if (!totpCode) {
-        // TOTPコード未入力 → フロントにコード入力を要求
-        return NextResponse.json(
-          { requiresTOTP: true, message: "認証コードを入力してください" },
-          { status: 200 }
-        );
-      }
-      // TOTPコード検証
-      const isValidTOTP = verifyTOTP(clinic.totpSecret, totpCode);
-      if (!isValidTOTP) {
-        return NextResponse.json(
-          { error: "認証コードが正しくありません" },
-          { status: 401 }
-        );
-      }
     }
 
     // アカウントステータスをチェック

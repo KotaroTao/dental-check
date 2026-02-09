@@ -4,16 +4,12 @@ import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, GripVertical, AlertCircle, Eye, Loader2, Save, ExternalLink, Smartphone, ShieldCheck, ShieldOff } from "lucide-react";
+import { Plus, Trash2, GripVertical, AlertCircle, Eye, Loader2, Save, ExternalLink, Smartphone } from "lucide-react";
 import type { CustomCTA } from "@/types/clinic";
 import { useDemoGuard } from "@/components/dashboard/demo-guard";
 
 interface SubscriptionInfo {
   isDemo?: boolean;
-}
-
-interface TotpStatus {
-  enabled: boolean;
 }
 
 // URL検証関数（絶対URLと相対URLを許可）
@@ -93,13 +89,6 @@ export default function SettingsPage() {
   const [showPreview, setShowPreview] = useState(false);
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
   const { DemoModal, showDemoModal } = useDemoGuard();
-  // D2: 2FA関連のステート
-  const [totpStatus, setTotpStatus] = useState<TotpStatus>({ enabled: false });
-  const [totpSetup, setTotpSetup] = useState<{ qrCode: string; secret: string } | null>(null);
-  const [totpCode, setTotpCode] = useState("");
-  const [totpDisablePassword, setTotpDisablePassword] = useState("");
-  const [totpMessage, setTotpMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
-  const [totpLoading, setTotpLoading] = useState(false);
 
   const isDemo = subscription?.isDemo ?? false;
 
@@ -187,21 +176,8 @@ export default function SettingsPage() {
       }
     };
 
-    const fetchTotpStatus = async () => {
-      try {
-        const response = await fetch("/api/auth/me");
-        if (response.ok) {
-          const data = await response.json();
-          setTotpStatus({ enabled: data.clinic.totpEnabled || false });
-        }
-      } catch (error) {
-        console.error("Failed to fetch TOTP status:", error);
-      }
-    };
-
     fetchSettings();
     fetchSubscription();
-    fetchTotpStatus();
   }, []);
 
   const handleChange = (
@@ -394,178 +370,6 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
-
-        {/* D2: 2段階認証設定 */}
-        {!isDemo && (
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-              {totpStatus.enabled ? (
-                <ShieldCheck className="w-5 h-5 text-green-600" />
-              ) : (
-                <ShieldOff className="w-5 h-5 text-gray-400" />
-              )}
-              2段階認証
-            </h2>
-            <p className="text-sm text-gray-500 mb-4">
-              ログイン時にパスワードに加えて、認証アプリ（Google Authenticator等）の6桁コードを要求します。アカウントの安全性が大幅に向上します。
-            </p>
-
-            {totpMessage && (
-              <div className={`p-3 rounded-lg mb-4 text-sm ${
-                totpMessage.type === "success" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
-              }`}>
-                {totpMessage.text}
-              </div>
-            )}
-
-            {totpStatus.enabled ? (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-green-700 bg-green-50 p-3 rounded-lg">
-                  <ShieldCheck className="w-5 h-5" />
-                  <span className="text-sm font-medium">2段階認証は有効です</span>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="totpDisablePassword">無効化するにはパスワードを入力</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="totpDisablePassword"
-                      type="password"
-                      value={totpDisablePassword}
-                      onChange={(e) => setTotpDisablePassword(e.target.value)}
-                      placeholder="現在のパスワード"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={totpLoading || !totpDisablePassword}
-                      className="text-red-600 border-red-200 hover:bg-red-50 whitespace-nowrap"
-                      onClick={async () => {
-                        setTotpLoading(true);
-                        setTotpMessage(null);
-                        try {
-                          const res = await fetch("/api/auth/totp", {
-                            method: "DELETE",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ password: totpDisablePassword }),
-                          });
-                          const data = await res.json();
-                          if (res.ok) {
-                            setTotpStatus({ enabled: false });
-                            setTotpDisablePassword("");
-                            setTotpMessage({ type: "success", text: data.message });
-                          } else {
-                            setTotpMessage({ type: "error", text: data.error });
-                          }
-                        } catch {
-                          setTotpMessage({ type: "error", text: "通信エラー" });
-                        } finally {
-                          setTotpLoading(false);
-                        }
-                      }}
-                    >
-                      無効化
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ) : totpSetup ? (
-              <div className="space-y-4">
-                <div className="text-center">
-                  <p className="text-sm text-gray-600 mb-3">
-                    認証アプリで以下のQRコードを読み取ってください
-                  </p>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={totpSetup.qrCode}
-                    alt="2FA QRコード"
-                    className="mx-auto w-48 h-48"
-                  />
-                  <p className="text-xs text-gray-400 mt-2">
-                    手動入力: <code className="bg-gray-100 px-2 py-1 rounded select-all">{totpSetup.secret}</code>
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="totpCode">アプリに表示された6桁のコード</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="totpCode"
-                      value={totpCode}
-                      onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                      placeholder="000000"
-                      maxLength={6}
-                      className="text-center text-lg tracking-widest"
-                    />
-                    <Button
-                      type="button"
-                      disabled={totpLoading || totpCode.length !== 6}
-                      onClick={async () => {
-                        setTotpLoading(true);
-                        setTotpMessage(null);
-                        try {
-                          const res = await fetch("/api/auth/totp", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ code: totpCode }),
-                          });
-                          const data = await res.json();
-                          if (res.ok) {
-                            setTotpStatus({ enabled: true });
-                            setTotpSetup(null);
-                            setTotpCode("");
-                            setTotpMessage({ type: "success", text: data.message });
-                          } else {
-                            setTotpMessage({ type: "error", text: data.error });
-                          }
-                        } catch {
-                          setTotpMessage({ type: "error", text: "通信エラー" });
-                        } finally {
-                          setTotpLoading(false);
-                        }
-                      }}
-                    >
-                      {totpLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "有効化"}
-                    </Button>
-                  </div>
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="text-sm text-gray-500"
-                  onClick={() => { setTotpSetup(null); setTotpCode(""); setTotpMessage(null); }}
-                >
-                  キャンセル
-                </Button>
-              </div>
-            ) : (
-              <Button
-                type="button"
-                variant="outline"
-                disabled={totpLoading}
-                className="gap-2"
-                onClick={async () => {
-                  setTotpLoading(true);
-                  setTotpMessage(null);
-                  try {
-                    const res = await fetch("/api/auth/totp");
-                    const data = await res.json();
-                    if (res.ok) {
-                      setTotpSetup({ qrCode: data.qrCode, secret: data.secret });
-                    } else {
-                      setTotpMessage({ type: "error", text: data.error });
-                    }
-                  } catch {
-                    setTotpMessage({ type: "error", text: "通信エラー" });
-                  } finally {
-                    setTotpLoading(false);
-                  }
-                }}
-              >
-                {totpLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
-                2段階認証を設定する
-              </Button>
-            )}
-          </div>
-        )}
 
         {/* CTA設定 */}
         <div className="bg-white rounded-xl shadow-sm border p-6">
