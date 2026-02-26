@@ -27,6 +27,7 @@ model Clinic {
   lockedUntil          DateTime? @map("locked_until")
   isHidden              Boolean  @default(false) @map("is_hidden") // 管理者パネルで非表示
   excludeFromAnalysis   Boolean  @default(false) @map("exclude_from_analysis") // チラシ分析から除外
+  shareToken            String?  @unique @map("share_token") // ダッシュボード共有用トークン（nullなら共有OFF）
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
