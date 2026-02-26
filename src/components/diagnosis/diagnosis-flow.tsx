@@ -15,9 +15,10 @@ interface Props {
   clinicName?: string;
   mainColor?: string;
   channelId?: string;
+  channelDisplayName?: string;
 }
 
-export function DiagnosisFlow({ diagnosis, isDemo, ctaConfig, clinicName, mainColor, channelId }: Props) {
+export function DiagnosisFlow({ diagnosis, isDemo, ctaConfig, clinicName, mainColor, channelId, channelDisplayName }: Props) {
   const { userAge, currentStep, resultPattern, reset, answers, _hasHydrated } =
     useDiagnosisStore();
   const hasInitialized = useRef(false);
@@ -52,7 +53,7 @@ export function DiagnosisFlow({ diagnosis, isDemo, ctaConfig, clinicName, mainCo
   if (userAge === null) {
     return (
       <div className="container mx-auto px-4 py-8 max-w-lg">
-        <ProfileForm diagnosisName={diagnosis.name} />
+        <ProfileForm diagnosisName={diagnosis.name} channelDisplayName={channelDisplayName} />
       </div>
     );
   }

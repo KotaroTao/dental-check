@@ -47,7 +47,8 @@ model Channel {
   id                String    @id @default(uuid())
   clinicId          String    @map("clinic_id")
   code              String    @unique // QRコード用の短いコード
-  name              String   // 例: "ポスティング用", "駅看板", "Instagram広告"
+  name              String   // 例: "ポスティング用", "駅看板", "Instagram広告"（管理用）
+  displayName       String?   @map("display_name") // 一般表示用のQRコード名（アンケートページに表示）
   description       String?
   imageUrl          String?   @map("image_url") // QRコードに紐付く画像
   imageUrl2         String?   @map("image_url_2") // 2枚目の画像
@@ -61,6 +62,8 @@ model Channel {
   budget            Int?      @map("budget") // 予算（円）
   distributionMethod   String?  @map("distribution_method") // 配布方法（ポスティング/手配り/店頭設置/新聞折込/その他）
   distributionQuantity Int?     @map("distribution_quantity") // 配布枚数
+  distributionPeriod   String?  @map("distribution_period") // 配布期間（例: "2024年1月〜3月"）
+  documents            Json     @default("[]") // 資料アップロード（[{url, name, size, uploadedAt}]）
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 

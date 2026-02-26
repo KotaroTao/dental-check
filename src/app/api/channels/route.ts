@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, description, channelType, diagnosisTypeSlug, redirectUrl, imageUrl, expiresAt, budget, distributionMethod, distributionQuantity } = body;
+    const { name, displayName, description, channelType, diagnosisTypeSlug, redirectUrl, imageUrl, expiresAt, budget, distributionMethod, distributionQuantity, distributionPeriod } = body;
 
     if (!name || name.trim() === "") {
       return NextResponse.json(
@@ -191,6 +191,7 @@ export async function POST(request: NextRequest) {
       data: {
         clinicId: session.clinicId,
         name: name.trim(),
+        displayName: displayName?.trim() || null,
         description: description?.trim() || null,
         imageUrl: imageUrl || null,
         channelType: type,
@@ -200,6 +201,7 @@ export async function POST(request: NextRequest) {
         budget: budget ? parseInt(budget, 10) : null,
         distributionMethod: distributionMethod || null,
         distributionQuantity: distributionQuantity ? parseInt(distributionQuantity, 10) : null,
+        distributionPeriod: distributionPeriod?.trim() || null,
         code,
       },
     })) as Channel;

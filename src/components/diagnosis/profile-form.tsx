@@ -13,9 +13,10 @@ import Link from "next/link";
 
 interface Props {
   diagnosisName: string;
+  channelDisplayName?: string;
 }
 
-export function ProfileForm({ diagnosisName }: Props) {
+export function ProfileForm({ diagnosisName, channelDisplayName }: Props) {
   const [age, setAge] = useState("");
   const [gender, setGender] = useState<string | null>(null);
   const [agreed, setAgreed] = useState(false);
@@ -144,7 +145,12 @@ export function ProfileForm({ diagnosisName }: Props) {
   return (
     <Card>
       <CardHeader className="text-center">
-        <CardTitle className="text-xl">{diagnosisName}</CardTitle>
+        {channelDisplayName && (
+          <p className="text-sm text-gray-500 mb-1">
+            簡単なアンケートにご協力ください
+          </p>
+        )}
+        <CardTitle className="text-xl">{channelDisplayName || diagnosisName}</CardTitle>
         <CardDescription>
           まずは簡単なプロフィールを教えてください
         </CardDescription>

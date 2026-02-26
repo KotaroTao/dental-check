@@ -164,6 +164,7 @@ export default async function ClinicDiagnosisPage({ params }: Props) {
         clinicName={clinic.name}
         mainColor={clinic.mainColor}
         channelId={channel.id}
+        channelDisplayName={(channel as Channel & { displayName?: string | null }).displayName || undefined}
       />
 
       {/* アクセストラッキング用の非表示コンポーネント */}

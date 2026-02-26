@@ -26,6 +26,7 @@ export default function NewChannelPage() {
   const [channelType, setChannelType] = useState<"diagnosis" | "link">("diagnosis");
   const [formData, setFormData] = useState({
     name: "",
+    displayName: "",
     description: "",
     diagnosisTypeSlug: "",
     redirectUrl: "",
@@ -33,6 +34,7 @@ export default function NewChannelPage() {
     budget: "",
     distributionMethod: "",
     distributionQuantity: "",
+    distributionPeriod: "",
   });
   const [diagnosisTypes, setDiagnosisTypes] = useState<DiagnosisType[]>([]);
   const [isLoadingDiagnoses, setIsLoadingDiagnoses] = useState(true);
@@ -211,6 +213,7 @@ export default function NewChannelPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: formData.name,
+          displayName: formData.displayName || null,
           description: formData.description,
           channelType,
           diagnosisTypeSlug: channelType === "diagnosis" ? formData.diagnosisTypeSlug : null,
@@ -219,6 +222,7 @@ export default function NewChannelPage() {
           budget: formData.budget ? parseInt(formData.budget, 10) : null,
           distributionMethod: formData.distributionMethod || null,
           distributionQuantity: formData.distributionQuantity ? parseInt(formData.distributionQuantity, 10) : null,
+          distributionPeriod: formData.distributionPeriod || null,
           imageUrl,
         }),
       });
@@ -275,7 +279,7 @@ export default function NewChannelPage() {
 
           <div className="space-y-2">
             <Label htmlFor="name">
-              QRコード名 <span className="text-red-500">*</span>
+              QRコード名（管理用） <span className="text-red-500">*</span>
             </Label>
             <Input
               id="name"
@@ -287,7 +291,25 @@ export default function NewChannelPage() {
               disabled={isLoading}
             />
             <p className="text-xs text-gray-500">
-              どこで使うQRコードか分かる名前をつけてください
+              管理画面で表示される名前です。どこで使うQRコードか分かる名前をつけてください
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="displayName">
+              QRコード名（一般表示用）
+            </Label>
+            <Input
+              id="displayName"
+              name="displayName"
+              type="text"
+              placeholder="例: お口の健康チェック"
+              value={formData.displayName}
+              onChange={handleChange}
+              disabled={isLoading}
+            />
+            <p className="text-xs text-gray-500">
+              QRコードを読み込んだ際のアンケートページに表示される名前です
             </p>
           </div>
 
@@ -389,17 +411,21 @@ export default function NewChannelPage() {
             </div>
           )}
 
+          {/* 配布期間 */}
           <div className="space-y-2">
-            <Label htmlFor="description">説明（任意）</Label>
-            <textarea
-              id="description"
-              name="description"
-              className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              placeholder="例: 2024年1月から駅前で配布するチラシ用"
-              value={formData.description}
+            <Label htmlFor="distributionPeriod">配布期間（任意）</Label>
+            <Input
+              id="distributionPeriod"
+              name="distributionPeriod"
+              type="text"
+              placeholder="例: 2024年1月〜3月"
+              value={formData.distributionPeriod}
               onChange={handleChange}
               disabled={isLoading}
             />
+            <p className="text-xs text-gray-500">
+              チラシの配布期間を記録できます。
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -537,6 +563,21 @@ export default function NewChannelPage() {
             <p className="text-xs text-gray-500">
               配布枚数を入力すると、チラシの反応率（スキャン数÷配布枚数）を確認できます。
             </p>
+          </div>
+
+          {/* 備考 */}
+          <div className="space-y-2">
+            <Label htmlFor="description">備考</Label>
+            <textarea
+              id="description"
+              name="description"
+              rows={10}
+              className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              placeholder="メモや備考を自由に記入できます"
+              value={formData.description}
+              onChange={handleChange}
+              disabled={isLoading}
+            />
           </div>
 
           {/* 画像アップロード */}
