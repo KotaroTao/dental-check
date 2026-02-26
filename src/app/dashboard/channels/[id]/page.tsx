@@ -63,7 +63,7 @@ export default function ChannelDetailPage() {
   const [copied, setCopied] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
-  const { DemoModal, showDemoModal } = useDemoGuard();
+  const { DemoModal } = useDemoGuard();
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Form state
@@ -88,6 +88,10 @@ export default function ChannelDetailPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // 自動保存用: 初回データ読み込みフラグとデバウンスタイマー
+  const isInitialLoad = useRef(true);
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
   const isDemo = subscription?.isDemo;
 
@@ -129,6 +133,8 @@ export default function ChannelDetailPage() {
             distributionPeriod: data.channel.distributionPeriod || "",
             documents: data.channel.documents || [],
           });
+          // 初回読み込み完了 → 以降の変更で自動保存を有効化
+          setTimeout(() => { isInitialLoad.current = false; }, 100);
         }
       } catch (error) {
         console.error("Failed to fetch channel:", error);
@@ -215,6 +221,84 @@ export default function ChannelDetailPage() {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  // 自動保存の実行関数（デバウンスなし、直接保存する）
+  const saveData = useCallback(async (dataToSave: typeof formData) => {
+    if (!channel || isDemo) return;
+    if (!dataToSave.name.trim()) return; // 名前が空の場合は保存しない
+
+    if (channel.channelType === "link" && dataToSave.redirectUrl.trim()) {
+      try {
+        new URL(dataToSave.redirectUrl);
+      } catch {
+        return; // 無効なURLの場合は保存しない
+      }
+    }
+
+    setIsSaving(true);
+    setError("");
+    setSaveSuccess(false);
+
+    try {
+      const response = await fetch(`/api/channels/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: dataToSave.name,
+          displayName: dataToSave.displayName || null,
+          description: dataToSave.description,
+          isActive: dataToSave.isActive,
+          imageUrl: dataToSave.imageUrl,
+          imageUrl2: dataToSave.imageUrl2,
+          expiresAt: dataToSave.expiresAt || null,
+          redirectUrl: channel.channelType === "link" ? dataToSave.redirectUrl : null,
+          budget: dataToSave.budget || null,
+          distributionMethod: dataToSave.distributionMethod || null,
+          distributionQuantity: dataToSave.distributionQuantity || null,
+          distributionPeriod: dataToSave.distributionPeriod || null,
+          documents: dataToSave.documents,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || "保存に失敗しました");
+        return;
+      }
+
+      setChannel((prev) => prev ? { ...prev, ...data.channel } : data.channel);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2000);
+    } catch {
+      setError("通信エラーが発生しました");
+    } finally {
+      setIsSaving(false);
+    }
+  }, [channel, id, isDemo]);
+
+  // formData が変わるたびにデバウンス付き自動保存
+  useEffect(() => {
+    // 初回読み込み時は保存しない
+    if (isInitialLoad.current) return;
+    if (isDemo) return;
+
+    // 前のタイマーをクリア
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+
+    // 1秒後に保存
+    debounceTimer.current = setTimeout(() => {
+      saveData(formData);
+    }, 1000);
+
+    return () => {
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
+    };
+  }, [formData, saveData, isDemo]);
 
   // Form handlers
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -306,74 +390,6 @@ export default function ChannelDetailPage() {
     setFormData((prev) => ({ ...prev, [target]: null }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setSaveSuccess(false);
-
-    if (isDemo) {
-      showDemoModal();
-      return;
-    }
-
-    if (!formData.name.trim()) {
-      setError("QRコード名を入力してください");
-      return;
-    }
-
-    if (channel?.channelType === "link") {
-      if (!formData.redirectUrl.trim()) {
-        setError("リダイレクト先URLを入力してください");
-        return;
-      }
-      try {
-        new URL(formData.redirectUrl);
-      } catch {
-        setError("有効なURLを入力してください（https://で始まる形式）");
-        return;
-      }
-    }
-
-    setIsSaving(true);
-    try {
-      const response = await fetch(`/api/channels/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: formData.name,
-          displayName: formData.displayName || null,
-          description: formData.description,
-          isActive: formData.isActive,
-          imageUrl: formData.imageUrl,
-          imageUrl2: formData.imageUrl2,
-          expiresAt: formData.expiresAt || null,
-          redirectUrl: channel?.channelType === "link" ? formData.redirectUrl : null,
-          budget: formData.budget || null,
-          distributionMethod: formData.distributionMethod || null,
-          distributionQuantity: formData.distributionQuantity || null,
-          distributionPeriod: formData.distributionPeriod || null,
-          documents: formData.documents,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.error || "QRコードの更新に失敗しました");
-        return;
-      }
-
-      // Update local channel data
-      setChannel((prev) => prev ? { ...prev, ...data.channel } : data.channel);
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
-    } catch {
-      setError("通信エラーが発生しました");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   if (isLoading) {
     return <div className="text-gray-500">読み込み中...</div>;
   }
@@ -460,18 +476,28 @@ export default function ChannelDetailPage() {
 
       {/* Edit Form Section */}
       <div className="bg-white rounded-xl shadow-sm border p-6">
-        <h2 className="text-lg font-bold mb-6">設定</h2>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-lg font-bold">設定</h2>
+          {/* 自動保存ステータス表示 */}
+          <div className="text-sm">
+            {isSaving && (
+              <span className="text-gray-400 flex items-center gap-1">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                保存中...
+              </span>
+            )}
+            {saveSuccess && !isSaving && (
+              <span className="text-green-600 flex items-center gap-1">
+                <Check className="w-3.5 h-3.5" />
+                保存しました
+              </span>
+            )}
+          </div>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="space-y-6">
           {error && (
             <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">{error}</div>
-          )}
-
-          {saveSuccess && (
-            <div className="bg-green-50 text-green-600 p-3 rounded-lg text-sm flex items-center gap-2">
-              <Check className="w-4 h-4" />
-              保存しました
-            </div>
           )}
 
           {/* 1. サムネイル画像（最大2枚） */}
@@ -1003,15 +1029,7 @@ export default function ChannelDetailPage() {
             </Label>
           </div>
 
-          {/* Submit */}
-          {!isDemo && (
-            <div className="pt-4">
-              <Button type="submit" disabled={isSaving || isUploading} className="w-full">
-                {isSaving ? "保存中..." : "変更を保存"}
-              </Button>
-            </div>
-          )}
-        </form>
+        </div>
       </div>
 
       {/* Image modal */}
