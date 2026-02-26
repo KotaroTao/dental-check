@@ -16,6 +16,10 @@ import {
   AlertTriangle,
   CreditCard,
   Loader2,
+  Share2,
+  Copy,
+  Check,
+  LinkIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { LocationSection } from "@/components/dashboard/location-section";
@@ -69,6 +73,12 @@ export default function DashboardPage() {
   } | null>(null);
   // B4: データ更新中のローディング表示
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // 共有機能
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareToken, setShareToken] = useState<string | null>(null);
+  const [isLoadingShare, setIsLoadingShare] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
 
   // QRコードソート
   type ChannelSortField = "createdAt" | "accessCount" | "budget" | "costPerAccess" | "ctaCount" | "ctaRate";
@@ -417,6 +427,73 @@ export default function DashboardPage() {
     });
   };
 
+  // 共有機能
+  const fetchShareToken = async () => {
+    try {
+      const response = await fetch("/api/dashboard/share");
+      if (response.ok) {
+        const data = await response.json();
+        setShareToken(data.shareToken);
+      }
+    } catch {
+      // エラーは無視
+    }
+  };
+
+  const handleOpenShareModal = async () => {
+    setShowShareModal(true);
+    setIsLoadingShare(true);
+    await fetchShareToken();
+    setIsLoadingShare(false);
+  };
+
+  const handleCreateShareLink = async () => {
+    if (subscription?.isDemo) {
+      showDemoModal();
+      return;
+    }
+    setIsLoadingShare(true);
+    try {
+      const response = await fetch("/api/dashboard/share", { method: "POST" });
+      if (response.ok) {
+        const data = await response.json();
+        setShareToken(data.shareToken);
+        showToast("success", "共有リンクを作成しました");
+      } else {
+        showToast("error", "共有リンクの作成に失敗しました");
+      }
+    } catch {
+      showToast("error", "共有リンクの作成に失敗しました");
+    } finally {
+      setIsLoadingShare(false);
+    }
+  };
+
+  const handleDeleteShareLink = async () => {
+    setIsLoadingShare(true);
+    try {
+      const response = await fetch("/api/dashboard/share", { method: "DELETE" });
+      if (response.ok) {
+        setShareToken(null);
+        showToast("success", "共有リンクを無効化しました");
+      } else {
+        showToast("error", "共有リンクの無効化に失敗しました");
+      }
+    } catch {
+      showToast("error", "共有リンクの無効化に失敗しました");
+    } finally {
+      setIsLoadingShare(false);
+    }
+  };
+
+  const handleCopyShareLink = async () => {
+    if (!shareToken) return;
+    const url = `${window.location.origin}/shared/${shareToken}`;
+    await navigator.clipboard.writeText(url);
+    setShareCopied(true);
+    setTimeout(() => setShareCopied(false), 2000);
+  };
+
   // 新規作成ボタンクリック
   const handleNewQRCodeClick = () => {
     if (!subscription) {
@@ -607,6 +684,13 @@ export default function DashboardPage() {
           <p className="text-sm text-gray-500 mt-1">QRコードの効果測定と管理</p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={handleOpenShareModal}
+            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            title="ダッシュボードを共有"
+          >
+            <Share2 className="w-5 h-5" />
+          </button>
           <div className="flex items-center bg-white border rounded-lg px-1 py-1">
             {PERIOD_OPTIONS.map((opt) => (
               <button
@@ -1077,6 +1161,92 @@ export default function DashboardPage() {
             >
               <X className="w-5 h-5" />
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* 共有モーダル */}
+      {showShareModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowShareModal(false)}>
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <Share2 className="w-5 h-5" />
+                ダッシュボードを共有
+              </h3>
+              <button onClick={() => setShowShareModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-sm text-gray-500 mb-4">
+              共有リンクを作成すると、ログインなしでダッシュボードの統計データを閲覧できるURLが発行されます。
+              設定や課金情報、個別の履歴データは共有されません。
+            </p>
+
+            {isLoadingShare ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 text-gray-400 animate-spin" />
+              </div>
+            ) : shareToken ? (
+              <div className="space-y-4">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <div className="text-xs text-green-600 font-medium mb-1 flex items-center gap-1">
+                    <LinkIcon className="w-3.5 h-3.5" />
+                    共有リンク（有効）
+                  </div>
+                  <div className="text-sm text-gray-700 break-all font-mono bg-white rounded px-2 py-1.5 border">
+                    {typeof window !== "undefined" ? `${window.location.origin}/shared/${shareToken}` : ""}
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleCopyShareLink}
+                    className="flex-1 gap-2"
+                  >
+                    {shareCopied ? (
+                      <>
+                        <Check className="w-4 h-4" />
+                        コピーしました
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4" />
+                        URLをコピー
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleDeleteShareLink}
+                    disabled={isLoadingShare}
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    無効化
+                  </Button>
+                </div>
+
+                <p className="text-xs text-gray-400">
+                  無効化すると共有リンクは使えなくなります。再度「共有リンクを作成」で新しいリンクを発行できます。
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="bg-gray-50 border rounded-lg p-4 text-center">
+                  <Share2 className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500">共有リンクはまだ作成されていません</p>
+                </div>
+                <Button
+                  onClick={handleCreateShareLink}
+                  disabled={isLoadingShare}
+                  className="w-full gap-2"
+                >
+                  <LinkIcon className="w-4 h-4" />
+                  共有リンクを作成
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       )}
