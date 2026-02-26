@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import QRCode from "qrcode";
 import {
   QrCode, Settings, Trash2, Download,
@@ -28,7 +29,23 @@ export function QRCodeRow({
   isDemo?: boolean;
   onDemoClick?: () => void;
 }) {
+  const router = useRouter();
   const isExpired = channel.expiresAt && new Date() > new Date(channel.expiresAt);
+  const detailUrl = `/dashboard/channels/${channel.id}`;
+
+  // 行クリック時に詳細ページへ遷移（メニューやリンク自体のクリックは除外）
+  const handleRowClick = (e: React.MouseEvent) => {
+    // ボタン、リンク、ドロップダウンメニューのクリックは無視
+    const target = e.target as HTMLElement;
+    if (target.closest("button") || target.closest("a") || target.closest("[data-dropdown-menu]")) {
+      return;
+    }
+    if (isDemo) {
+      onDemoClick?.();
+      return;
+    }
+    router.push(detailUrl);
+  };
 
   // QRコードURL生成
   const baseUrl = typeof window !== "undefined"
@@ -115,7 +132,7 @@ export function QRCodeRow({
 
   // PC用: テーブル行
   const desktopRow = (
-    <tr className="hidden md:table-row hover:bg-gray-50/80 transition-colors group">
+    <tr className="hidden md:table-row hover:bg-gray-50/80 transition-colors group cursor-pointer" onClick={handleRowClick}>
       {/* 名前 */}
       <td className="px-4 py-3">
         <div className="flex items-center gap-3">
@@ -210,7 +227,7 @@ export function QRCodeRow({
 
   // モバイル用: コンパクトカード
   const mobileCard = (
-    <div className="md:hidden px-4 py-3 hover:bg-gray-50/80 transition-colors">
+    <div className="md:hidden px-4 py-3 hover:bg-gray-50/80 transition-colors cursor-pointer" onClick={handleRowClick}>
       <div className="flex items-center gap-3">
         <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
         {channel.imageUrl || channel.imageUrl2 ? (

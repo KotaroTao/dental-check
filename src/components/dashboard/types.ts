@@ -4,6 +4,7 @@ export interface Channel {
   id: string;
   code: string;
   name: string;
+  displayName: string | null;
   description: string | null;
   imageUrl: string | null;
   imageUrl2: string | null;
@@ -15,6 +16,10 @@ export interface Channel {
   expiresAt: string | null;
   scanCount: number;
   budget: number | null;
+  distributionMethod: string | null;
+  distributionQuantity: number | null;
+  distributionPeriod: string | null;
+  documents: { url: string; name: string; size: number; uploadedAt: string }[];
   createdAt: string;
 }
 

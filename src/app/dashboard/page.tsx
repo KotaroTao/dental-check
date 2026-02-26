@@ -642,16 +642,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* 効果測定サマリー */}
-      <EffectivenessSummary
-        channels={channels}
-        overallStats={overallStats}
-        summaryChannelIds={summaryChannelIds}
-        setSummaryChannelIds={setSummaryChannelIds}
-        isDemo={subscription?.isDemo}
-        onDemoClick={() => showDemoModal()}
-      />
-
       {/* QRコードセクション */}
       <div className="bg-white rounded-2xl shadow-sm border">
         {/* ヘッダー */}
@@ -793,6 +783,16 @@ export default function DashboardPage() {
           </>
         )}
       </div>
+
+      {/* 効果測定サマリー */}
+      <EffectivenessSummary
+        channels={channels}
+        overallStats={overallStats}
+        summaryChannelIds={summaryChannelIds}
+        setSummaryChannelIds={setSummaryChannelIds}
+        isDemo={subscription?.isDemo}
+        onDemoClick={() => showDemoModal()}
+      />
 
       {/* QR読み込みエリア */}
       <LocationSection

@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import {
   ArrowLeft, Download, Copy, ExternalLink, Image as ImageIcon, X,
   Calendar, Link2, Wallet, Upload, Loader2, Check, Megaphone, Hash,
+  FileText, Trash2, CalendarRange, Paperclip,
 } from "lucide-react";
 import { useDemoGuard } from "@/components/dashboard/demo-guard";
 
@@ -22,10 +23,18 @@ const DIAGNOSIS_TYPE_NAMES: Record<string, string> = {
   "whitening-check": "ホワイトニング適正診断",
 };
 
+interface DocumentItem {
+  url: string;
+  name: string;
+  size: number;
+  uploadedAt: string;
+}
+
 interface Channel {
   id: string;
   code: string;
   name: string;
+  displayName: string | null;
   description: string | null;
   imageUrl: string | null;
   imageUrl2: string | null;
@@ -38,6 +47,8 @@ interface Channel {
   budget: number | null;
   distributionMethod: string | null;
   distributionQuantity: number | null;
+  distributionPeriod: string | null;
+  documents: DocumentItem[];
 }
 
 interface SubscriptionInfo {
@@ -58,6 +69,7 @@ export default function ChannelDetailPage() {
   // Form state
   const [formData, setFormData] = useState({
     name: "",
+    displayName: "",
     description: "",
     isActive: true,
     imageUrl: "" as string | null,
@@ -67,7 +79,10 @@ export default function ChannelDetailPage() {
     budget: "",
     distributionMethod: "",
     distributionQuantity: "",
+    distributionPeriod: "",
+    documents: [] as DocumentItem[],
   });
+  const [isUploadingDoc, setIsUploadingDoc] = useState(false);
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -101,6 +116,7 @@ export default function ChannelDetailPage() {
 
           setFormData({
             name: data.channel.name,
+            displayName: data.channel.displayName || "",
             description: data.channel.description || "",
             isActive: data.channel.isActive,
             imageUrl: data.channel.imageUrl || null,
@@ -110,6 +126,8 @@ export default function ChannelDetailPage() {
             budget: data.channel.budget !== null ? String(data.channel.budget) : "",
             distributionMethod: data.channel.distributionMethod || "",
             distributionQuantity: data.channel.distributionQuantity !== null ? String(data.channel.distributionQuantity) : "",
+            distributionPeriod: data.channel.distributionPeriod || "",
+            documents: data.channel.documents || [],
           });
         }
       } catch (error) {
@@ -323,6 +341,7 @@ export default function ChannelDetailPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: formData.name,
+          displayName: formData.displayName || null,
           description: formData.description,
           isActive: formData.isActive,
           imageUrl: formData.imageUrl,
@@ -332,6 +351,8 @@ export default function ChannelDetailPage() {
           budget: formData.budget || null,
           distributionMethod: formData.distributionMethod || null,
           distributionQuantity: formData.distributionQuantity || null,
+          distributionPeriod: formData.distributionPeriod || null,
+          documents: formData.documents,
         }),
       });
 
@@ -453,7 +474,7 @@ export default function ChannelDetailPage() {
             </div>
           )}
 
-          {/* Image upload */}
+          {/* 1. サムネイル画像（最大2枚） */}
           <div id="images" className="space-y-2">
             <Label>サムネイル画像（最大2枚）</Label>
             <div className="grid grid-cols-2 gap-3">
@@ -610,10 +631,10 @@ export default function ChannelDetailPage() {
             <p className="text-xs text-gray-400">JPG, PNG, GIF / 最大5MB</p>
           </div>
 
-          {/* Name */}
+          {/* 2. QRコード名（管理用） */}
           <div className="space-y-2">
             <Label htmlFor="name">
-              QRコード名 <span className="text-red-500">*</span>
+              QRコード名（管理用） <span className="text-red-500">*</span>
             </Label>
             <Input
               id="name"
@@ -624,6 +645,24 @@ export default function ChannelDetailPage() {
               onChange={handleChange}
               disabled={isSaving || !!isDemo}
             />
+            <p className="text-xs text-gray-500">管理画面で表示される名前です</p>
+          </div>
+
+          {/* 3. QRコード名（一般表示用） */}
+          <div className="space-y-2">
+            <Label htmlFor="displayName">
+              QRコード名（一般表示用）
+            </Label>
+            <Input
+              id="displayName"
+              name="displayName"
+              type="text"
+              placeholder="例: お口の健康チェック"
+              value={formData.displayName}
+              onChange={handleChange}
+              disabled={isSaving || !!isDemo}
+            />
+            <p className="text-xs text-gray-500">QRコードを読み込んだ際のアンケートページに表示される名前です</p>
           </div>
 
           {/* Diagnosis type (read-only) */}
@@ -657,42 +696,59 @@ export default function ChannelDetailPage() {
             </div>
           )}
 
-          {/* Description */}
+          {/* 4. 配布方法（任意） */}
           <div className="space-y-2">
-            <Label htmlFor="description">説明（任意）</Label>
-            <textarea
-              id="description"
-              name="description"
-              className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              placeholder="例: 2024年1月から駅前で配布するチラシ用"
-              value={formData.description}
+            <Label htmlFor="distributionMethod" className="flex items-center gap-2">
+              <Megaphone className="w-4 h-4 text-gray-500" />
+              配布方法（任意）
+            </Label>
+            <select
+              id="distributionMethod"
+              name="distributionMethod"
+              value={formData.distributionMethod}
               onChange={handleChange}
               disabled={isSaving || !!isDemo}
-            />
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <option value="">選択してください</option>
+              <option value="ポスティング">ポスティング</option>
+              <option value="手配り">手配り</option>
+              <option value="店頭設置">店頭設置</option>
+              <option value="新聞折込">新聞折込</option>
+              <option value="DM">DM</option>
+              <option value="その他">その他</option>
+            </select>
+            <p className="text-xs text-gray-500">
+              チラシの配布方法を選択すると、方法別の効果比較ができます。
+            </p>
           </div>
 
-          {/* Expires at */}
+          {/* 5. 配布枚数（任意） */}
           <div className="space-y-2">
-            <Label htmlFor="expiresAt" className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-gray-500" />
-              有効期限（任意）
+            <Label htmlFor="distributionQuantity" className="flex items-center gap-2">
+              <Hash className="w-4 h-4 text-gray-500" />
+              配布枚数（任意）
             </Label>
             <div className="flex gap-2">
-              <Input
-                id="expiresAt"
-                name="expiresAt"
-                type="datetime-local"
-                value={formData.expiresAt}
-                onChange={handleChange}
-                disabled={isSaving || !!isDemo}
-                className="flex-1"
-              />
-              {formData.expiresAt && !isDemo && (
+              <div className="relative flex-1">
+                <Input
+                  id="distributionQuantity"
+                  name="distributionQuantity"
+                  type="number"
+                  min="0"
+                  placeholder="例: 5000"
+                  value={formData.distributionQuantity}
+                  onChange={handleChange}
+                  disabled={isSaving || !!isDemo}
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">枚</span>
+              </div>
+              {formData.distributionQuantity && !isDemo && (
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => setFormData((prev) => ({ ...prev, expiresAt: "" }))}
+                  onClick={() => setFormData((prev) => ({ ...prev, distributionQuantity: "" }))}
                   disabled={isSaving}
                   className="shrink-0"
                 >
@@ -701,11 +757,31 @@ export default function ChannelDetailPage() {
               )}
             </div>
             <p className="text-xs text-gray-500">
-              期限を過ぎるとQRコードは無効になります。空欄の場合は無期限です。
+              配布枚数を入力すると、チラシの反応率（スキャン数÷配布枚数）を確認できます。
             </p>
           </div>
 
-          {/* Budget */}
+          {/* 6. 配布期間（任意） */}
+          <div className="space-y-2">
+            <Label htmlFor="distributionPeriod" className="flex items-center gap-2">
+              <CalendarRange className="w-4 h-4 text-gray-500" />
+              配布期間（任意）
+            </Label>
+            <Input
+              id="distributionPeriod"
+              name="distributionPeriod"
+              type="text"
+              placeholder="例: 2024年1月〜3月"
+              value={formData.distributionPeriod}
+              onChange={handleChange}
+              disabled={isSaving || !!isDemo}
+            />
+            <p className="text-xs text-gray-500">
+              チラシの配布期間を記録できます。
+            </p>
+          </div>
+
+          {/* 7. 予算（任意） */}
           <div id="budget" className="space-y-2">
             <Label htmlFor="budget" className="flex items-center gap-2">
               <Wallet className="w-4 h-4 text-gray-500" />
@@ -744,59 +820,28 @@ export default function ChannelDetailPage() {
             </p>
           </div>
 
-          {/* Distribution Method */}
+          {/* 8. 有効期限（任意） */}
           <div className="space-y-2">
-            <Label htmlFor="distributionMethod" className="flex items-center gap-2">
-              <Megaphone className="w-4 h-4 text-gray-500" />
-              配布方法（任意）
-            </Label>
-            <select
-              id="distributionMethod"
-              name="distributionMethod"
-              value={formData.distributionMethod}
-              onChange={handleChange}
-              disabled={isSaving || !!isDemo}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <option value="">選択してください</option>
-              <option value="ポスティング">ポスティング</option>
-              <option value="手配り">手配り</option>
-              <option value="店頭設置">店頭設置</option>
-              <option value="新聞折込">新聞折込</option>
-              <option value="DM">DM</option>
-              <option value="その他">その他</option>
-            </select>
-            <p className="text-xs text-gray-500">
-              チラシの配布方法を選択すると、方法別の効果比較ができます。
-            </p>
-          </div>
-
-          {/* Distribution Quantity */}
-          <div className="space-y-2">
-            <Label htmlFor="distributionQuantity" className="flex items-center gap-2">
-              <Hash className="w-4 h-4 text-gray-500" />
-              配布枚数（任意）
+            <Label htmlFor="expiresAt" className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-gray-500" />
+              有効期限（任意）
             </Label>
             <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Input
-                  id="distributionQuantity"
-                  name="distributionQuantity"
-                  type="number"
-                  min="0"
-                  placeholder="例: 5000"
-                  value={formData.distributionQuantity}
-                  onChange={handleChange}
-                  disabled={isSaving || !!isDemo}
-                />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">枚</span>
-              </div>
-              {formData.distributionQuantity && !isDemo && (
+              <Input
+                id="expiresAt"
+                name="expiresAt"
+                type="datetime-local"
+                value={formData.expiresAt}
+                onChange={handleChange}
+                disabled={isSaving || !!isDemo}
+                className="flex-1"
+              />
+              {formData.expiresAt && !isDemo && (
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => setFormData((prev) => ({ ...prev, distributionQuantity: "" }))}
+                  onClick={() => setFormData((prev) => ({ ...prev, expiresAt: "" }))}
                   disabled={isSaving}
                   className="shrink-0"
                 >
@@ -805,8 +850,141 @@ export default function ChannelDetailPage() {
               )}
             </div>
             <p className="text-xs text-gray-500">
-              配布枚数を入力すると、チラシの反応率（スキャン数÷配布枚数）を確認できます。
+              期限を過ぎるとQRコードは無効になります。空欄の場合は無期限です。
             </p>
+          </div>
+
+          {/* 9. 備考 */}
+          <div className="space-y-2">
+            <Label htmlFor="description">備考</Label>
+            <textarea
+              id="description"
+              name="description"
+              rows={10}
+              className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              placeholder="メモや備考を自由に記入できます"
+              value={formData.description}
+              onChange={handleChange}
+              disabled={isSaving || !!isDemo}
+            />
+          </div>
+
+          {/* 10. 資料アップロード */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Paperclip className="w-4 h-4 text-gray-500" />
+              資料アップロード（1ファイル10MBまで）
+            </Label>
+
+            {/* アップロード済みファイル一覧 */}
+            {formData.documents.length > 0 && (
+              <div className="space-y-2">
+                {formData.documents.map((doc, index) => (
+                  <div key={index} className="flex items-center gap-3 bg-gray-50 rounded-lg px-3 py-2">
+                    <FileText className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <a
+                        href={doc.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-blue-600 hover:underline truncate block"
+                      >
+                        {doc.name}
+                      </a>
+                      <span className="text-xs text-gray-400">
+                        {(doc.size / 1024 / 1024).toFixed(1)}MB
+                      </span>
+                    </div>
+                    {!isDemo && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setFormData((prev) => ({
+                            ...prev,
+                            documents: prev.documents.filter((_, i) => i !== index),
+                          }));
+                        }}
+                        disabled={isSaving}
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* アップロードボタン */}
+            {!isDemo && (
+              <div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => document.getElementById("doc-input")?.click()}
+                  disabled={isUploadingDoc || isSaving}
+                  className="gap-2"
+                >
+                  {isUploadingDoc ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      アップロード中...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4" />
+                      ファイルを追加
+                    </>
+                  )}
+                </Button>
+                <input
+                  id="doc-input"
+                  type="file"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (file.size > 10 * 1024 * 1024) {
+                      setError("ファイルサイズは10MB以下にしてください");
+                      return;
+                    }
+                    setIsUploadingDoc(true);
+                    setError("");
+                    try {
+                      const uploadFormData = new FormData();
+                      uploadFormData.append("file", file);
+                      uploadFormData.append("folder", "documents");
+                      const response = await fetch("/api/upload", {
+                        method: "POST",
+                        body: uploadFormData,
+                      });
+                      if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || "アップロードに失敗しました");
+                      }
+                      const { url } = await response.json();
+                      setFormData((prev) => ({
+                        ...prev,
+                        documents: [
+                          ...prev.documents,
+                          { url, name: file.name, size: file.size, uploadedAt: new Date().toISOString() },
+                        ],
+                      }));
+                    } catch (err) {
+                      setError(err instanceof Error ? err.message : "アップロードに失敗しました");
+                    } finally {
+                      setIsUploadingDoc(false);
+                      e.target.value = "";
+                    }
+                  }}
+                  className="hidden"
+                  disabled={isUploadingDoc || isSaving}
+                />
+              </div>
+            )}
+            <p className="text-xs text-gray-400">PDF、画像、Word、Excel など（1ファイル10MBまで、アップロード数無制限）</p>
           </div>
 
           {/* Active toggle */}

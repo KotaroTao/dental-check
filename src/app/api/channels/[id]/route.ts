@@ -74,6 +74,7 @@ export async function PATCH(
     const body = await request.json();
     const {
       name,
+      displayName,
       description,
       isActive,
       imageUrl,
@@ -83,6 +84,8 @@ export async function PATCH(
       budget,
       distributionMethod,
       distributionQuantity,
+      distributionPeriod,
+      documents,
     } = body;
 
     const existingChannel = await prisma.channel.findFirst({
@@ -130,6 +133,7 @@ export async function PATCH(
       where: { id },
       data: {
         ...(name !== undefined && { name: name.trim() }),
+        ...(displayName !== undefined && { displayName: displayName?.trim() || null }),
         ...(description !== undefined && { description: description?.trim() || null }),
         ...(isActive !== undefined && { isActive }),
         ...(imageUrl !== undefined && { imageUrl: imageUrl || null }),
@@ -139,6 +143,8 @@ export async function PATCH(
         ...(budget !== undefined && { budget: budget !== null && budget !== "" ? parseInt(budget, 10) : null }),
         ...(distributionMethod !== undefined && { distributionMethod: distributionMethod || null }),
         ...(distributionQuantity !== undefined && { distributionQuantity: distributionQuantity !== null && distributionQuantity !== "" ? parseInt(distributionQuantity, 10) : null }),
+        ...(distributionPeriod !== undefined && { distributionPeriod: distributionPeriod?.trim() || null }),
+        ...(documents !== undefined && { documents: documents || [] }),
       },
     })) as Channel;
 
