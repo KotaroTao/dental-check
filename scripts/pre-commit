@@ -1,0 +1,63 @@
+#!/bin/sh
+#
+# pre-commit hook: コミット前に自動でコードレビュー（チェック）を実行
+# - ESLint: コードの書き方ルールをチェック
+# - TypeScript: 型エラーがないかチェック
+# エラーがあるとコミットがストップします
+#
+# セットアップ方法:
+#   cp scripts/pre-commit .git/hooks/pre-commit
+#   chmod +x .git/hooks/pre-commit
+
+echo ""
+echo "============================================"
+echo "  コミット前チェックを実行中..."
+echo "============================================"
+echo ""
+
+# ステージされた .ts/.tsx ファイルだけを対象にする
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ts|tsx)$')
+
+# 対象ファイルがなければスキップ
+if [ -z "$STAGED_FILES" ]; then
+  echo "チェック対象の TypeScript ファイルがありません。スキップします。"
+  exit 0
+fi
+
+echo "対象ファイル:"
+echo "$STAGED_FILES" | sed 's/^/  /'
+echo ""
+
+# --- ESLint チェック ---
+echo "▶ ESLint（コードルール）チェック中..."
+npx next lint --file $STAGED_FILES 2>&1
+LINT_EXIT=$?
+
+if [ $LINT_EXIT -ne 0 ]; then
+  echo ""
+  echo "✗ ESLint エラーがあります。修正してから再度コミットしてください。"
+  echo ""
+  exit 1
+fi
+echo "✓ ESLint OK"
+echo ""
+
+# --- TypeScript 型チェック ---
+echo "▶ TypeScript（型）チェック中..."
+npx tsc --noEmit --pretty 2>&1
+TSC_EXIT=$?
+
+if [ $TSC_EXIT -ne 0 ]; then
+  echo ""
+  echo "✗ TypeScript の型エラーがあります。修正してから再度コミットしてください。"
+  echo ""
+  exit 1
+fi
+echo "✓ TypeScript OK"
+echo ""
+
+echo "============================================"
+echo "  すべてのチェックに合格しました！"
+echo "============================================"
+echo ""
+exit 0
