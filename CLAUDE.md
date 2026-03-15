@@ -81,19 +81,35 @@ prisma/
 
 ## 主要なDBモデル
 
-- **Clinic** — 医院（認証・設定・ブランディング）
-- **Channel** — QRコード経路（diagnosis型 / link型）
-- **DiagnosisSession** — 診断セッション
+- **Clinic** — 医院（認証・設定・ブランディング・ロック機能）
+- **Channel** — QRコード経路（diagnosis型 / link型、予算・配布方法・有効期限管理）
+- **DiagnosisType** — 診断タイプ（全医院共通 or 医院固有、質問・結果パターンをJSON保持）
+- **DiagnosisSession** — 診断セッション（回答・スコア・位置情報・論理削除対応）
 - **AccessLog / CTAClick** — アクセス解析・CTA計測
-- **Subscription** — Pay.jp連携のサブスク管理
+- **Subscription** — Pay.jp連携のサブスク管理（trial/active/canceled/past_due/expired）
+- **Admin / AuditLog** — 管理者・監査ログ
+- **InvitationToken** — 招待・パスワードリセット用トークン
 
 ## 認証の仕組み
 
-- 医院ユーザー: JWT + Cookie (`auth_token`)。`src/middleware.ts`で`/dashboard`を保護
-- 管理者: 別の認証フロー (`src/lib/admin-auth.ts`)
+- 医院ユーザー: JWT (HS256, 7日有効) + Cookie (`auth_token`)。`src/middleware.ts`で`/dashboard`を保護
+- 管理者: Cookie (`admin_auth_token`, 24時間有効)。`src/lib/admin-auth.ts`で管理
+- パスワード: bcryptjsでハッシュ化
 - ログイン済みユーザーが`/login`にアクセスすると`/dashboard`へリダイレクト
+
+## APIルート構成
+
+- `/api/auth/` — ログイン・サインアップ・ログアウト
+- `/api/admin/` — 管理者認証・医院CRUD・診断タイプCRUD
+- `/api/channels/` — QRコード管理
+- `/api/dashboard/` — ダッシュボードデータ取得
+- `/api/track/` — アクセスログ・診断完了・CTAクリック・位置情報更新
+- `/api/billing/` — Pay.jp決済
+- `/api/upload/` — ファイルアップロード
+- `/api/webhook/payjp/` — Pay.jpウェブフック
 
 ## デプロイ
 
 - GitHub Actions（mainブランチにpushで自動デプロイ: `.github/workflows/deploy.yml`）
 - VPSにSSHでgit pull → npm install → prisma db push → build → pm2 restart
+- Docker対応あり（Dockerfile / docker-compose.yml）
