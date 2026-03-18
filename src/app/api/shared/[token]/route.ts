@@ -123,6 +123,9 @@ export async function GET(
       // チャンネル別統計
       channelAccessCounts,
       channelCtaCounts,
+      // 日別・エリア
+      dailySessions,
+      regionStats,
     ] = await Promise.all([
       // QR読込数
       prisma.diagnosisSession.count({
@@ -219,6 +222,37 @@ export async function GET(
         },
         _count: { id: true },
       }),
+
+      // 日別アクセス推移（診断セッションの作成日ベース、直近30日分）
+      prisma.diagnosisSession.findMany({
+        where: {
+          clinicId,
+          isDeleted: false,
+          isDemo: false,
+          completedAt: { not: null },
+          ...dateFilter,
+          ...channelFilter,
+        },
+        select: { createdAt: true },
+        orderBy: { createdAt: "asc" },
+      }),
+
+      // エリア分布（都道府県別、上位10件）
+      prisma.diagnosisSession.groupBy({
+        by: ["region"],
+        where: {
+          clinicId,
+          isDeleted: false,
+          isDemo: false,
+          completedAt: { not: null },
+          region: { not: null },
+          ...dateFilter,
+          ...channelFilter,
+        },
+        _count: { id: true },
+        orderBy: { _count: { id: "desc" } },
+        take: 10,
+      }),
     ]);
 
     // CTAクリックをタイプ別に整理
@@ -306,6 +340,25 @@ export async function GET(
       };
     });
 
+    // 日別アクセス推移を集計
+    const dailyAccessMap: Record<string, number> = {};
+    for (const s of dailySessions) {
+      const dateKey = s.createdAt.toISOString().split("T")[0];
+      dailyAccessMap[dateKey] = (dailyAccessMap[dateKey] || 0) + 1;
+    }
+    const dailyAccess = Object.entries(dailyAccessMap)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-30) // 直近30日分
+      .map(([date, count]) => ({ date, count }));
+
+    // エリア分布を整形
+    const topRegions = (regionStats as { region: string | null; _count: { id: number } }[])
+      .filter((item) => item.region)
+      .map((item) => ({
+        region: item.region as string,
+        count: item._count.id,
+      }));
+
     return NextResponse.json({
       clinic: {
         name: clinic.name,
@@ -326,6 +379,9 @@ export async function GET(
         ageRanges,
       },
       channels: channelsWithStats,
+      dailyAccess,
+      topRegions,
+      generatedAt: new Date().toISOString(),
     });
   } catch (error) {
     console.error("Shared dashboard error:", error);
