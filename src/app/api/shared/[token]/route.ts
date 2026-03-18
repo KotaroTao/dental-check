@@ -123,8 +123,9 @@ export async function GET(
       // チャンネル別統計
       channelAccessCounts,
       channelCtaCounts,
-      // 日別・エリア
+      // 日別・エリア・日時一覧
       dailySessions,
+      scanHistory,
       regionStats,
     ] = await Promise.all([
       // QR読込数
@@ -235,6 +236,26 @@ export async function GET(
         },
         select: { createdAt: true },
         orderBy: { createdAt: "asc" },
+      }),
+
+      // QR読込日時一覧（新しい順、直近200件）
+      prisma.diagnosisSession.findMany({
+        where: {
+          clinicId,
+          isDeleted: false,
+          isDemo: false,
+          completedAt: { not: null },
+          ...dateFilter,
+          ...channelFilter,
+        },
+        select: {
+          createdAt: true,
+          channelId: true,
+          region: true,
+          city: true,
+        },
+        orderBy: { createdAt: "desc" },
+        take: 200,
       }),
 
       // エリア分布（都道府県別、上位10件）
@@ -359,6 +380,19 @@ export async function GET(
         count: item._count.id,
       }));
 
+    // チャンネルID→名前のマップを作成
+    const channelNameMap: Record<string, string> = {};
+    for (const ch of channels) {
+      channelNameMap[ch.id] = ch.name;
+    }
+
+    // 読込日時一覧を整形
+    const scanHistoryFormatted = scanHistory.map((s: { createdAt: Date; channelId: string | null; region: string | null; city: string | null }) => ({
+      scannedAt: s.createdAt.toISOString(),
+      channelName: s.channelId ? (channelNameMap[s.channelId] || "不明") : "不明",
+      area: [s.region, s.city].filter(Boolean).join(" ") || null,
+    }));
+
     return NextResponse.json({
       clinic: {
         name: clinic.name,
@@ -381,6 +415,7 @@ export async function GET(
       channels: channelsWithStats,
       dailyAccess,
       topRegions,
+      scanHistory: scanHistoryFormatted,
       generatedAt: new Date().toISOString(),
     });
   } catch (error) {

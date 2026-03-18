@@ -13,6 +13,8 @@ import {
   Calendar,
   ArrowRight,
   FileText,
+  Clock,
+  ChevronDown,
 } from "lucide-react";
 import {
   LineChart,
@@ -92,6 +94,12 @@ interface RegionData {
   count: number;
 }
 
+interface ScanRecord {
+  scannedAt: string;
+  channelName: string;
+  area: string | null;
+}
+
 export default function SharedDashboardPage() {
   const params = useParams();
   const token = params.token as string;
@@ -101,7 +109,9 @@ export default function SharedDashboardPage() {
   const [channels, setChannels] = useState<SharedChannel[]>([]);
   const [dailyAccess, setDailyAccess] = useState<DailyAccess[]>([]);
   const [topRegions, setTopRegions] = useState<RegionData[]>([]);
+  const [scanHistory, setScanHistory] = useState<ScanRecord[]>([]);
   const [generatedAt, setGeneratedAt] = useState<string>("");
+  const [showAllScans, setShowAllScans] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [period, setPeriod] = useState("all");
@@ -131,7 +141,9 @@ export default function SharedDashboardPage() {
       setChannels(data.channels);
       setDailyAccess(data.dailyAccess || []);
       setTopRegions(data.topRegions || []);
+      setScanHistory(data.scanHistory || []);
       setGeneratedAt(data.generatedAt || "");
+      setShowAllScans(false);
       setError("");
     } catch {
       setError("通信エラーが発生しました");
@@ -616,6 +628,63 @@ export default function SharedDashboardPage() {
                   })}
                 </div>
               </div>
+            )}
+          </div>
+        )}
+
+        {/* ===== QR読込日時一覧 ===== */}
+        {scanHistory.length > 0 && (
+          <div className="bg-white rounded-xl shadow-sm border p-5 mb-6">
+            <h2 className="text-base font-bold text-gray-800 mb-1 flex items-center gap-2">
+              <Clock className="w-4 h-4" style={{ color: mainColor }} />
+              QR読込日時一覧
+            </h2>
+            <p className="text-xs text-gray-400 mb-4">
+              QRコードが読み込まれた日時の一覧です（新しい順、最大200件）
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-gray-50">
+                    <th className="text-left py-2 px-3 text-gray-500 font-medium">#</th>
+                    <th className="text-left py-2 px-3 text-gray-500 font-medium">読込日時</th>
+                    <th className="text-left py-2 px-3 text-gray-500 font-medium">QRコード</th>
+                    <th className="text-left py-2 px-3 text-gray-500 font-medium">エリア</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(showAllScans ? scanHistory : scanHistory.slice(0, 20)).map((scan, idx) => (
+                    <tr key={idx} className="border-b last:border-0 hover:bg-gray-50">
+                      <td className="py-2 px-3 text-gray-400 text-xs">{idx + 1}</td>
+                      <td className="py-2 px-3 text-gray-700 whitespace-nowrap">
+                        {new Date(scan.scannedAt).toLocaleDateString("ja-JP", {
+                          year: "numeric",
+                          month: "2-digit",
+                          day: "2-digit",
+                        })}{" "}
+                        <span className="text-gray-500">
+                          {new Date(scan.scannedAt).toLocaleTimeString("ja-JP", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </td>
+                      <td className="py-2 px-3 text-gray-700">{scan.channelName}</td>
+                      <td className="py-2 px-3 text-gray-500 text-xs">{scan.area || "-"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {!showAllScans && scanHistory.length > 20 && (
+              <button
+                onClick={() => setShowAllScans(true)}
+                className="mt-3 w-full flex items-center justify-center gap-1 text-sm py-2 rounded-lg border hover:bg-gray-50 transition-colors"
+                style={{ color: mainColor }}
+              >
+                <ChevronDown className="w-4 h-4" />
+                残り{scanHistory.length - 20}件を表示
+              </button>
             )}
           </div>
         )}
