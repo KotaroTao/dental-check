@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Plus,
@@ -223,18 +223,28 @@ export default function NapManagement({ clinicId, onMessage }: Props) {
   };
 
   const updateTaskStatus = async (taskId: string, status: string) => {
-    await fetch(`/api/admin/clinics/${clinicId}/tasks/${taskId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
+    try {
+      const res = await fetch(`/api/admin/clinics/${clinicId}/tasks/${taskId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (!res.ok) onMessage({ type: "error", text: "ステータス更新に失敗しました" });
+    } catch {
+      onMessage({ type: "error", text: "通信エラーが発生しました" });
+    }
     loadData();
   };
 
   const deleteTask = async (taskId: string) => {
     if (!confirm("このタスクを削除しますか？")) return;
-    await fetch(`/api/admin/clinics/${clinicId}/tasks/${taskId}`, { method: "DELETE" });
-    onMessage({ type: "success", text: "タスクを削除しました" });
+    try {
+      const res = await fetch(`/api/admin/clinics/${clinicId}/tasks/${taskId}`, { method: "DELETE" });
+      if (res.ok) onMessage({ type: "success", text: "タスクを削除しました" });
+      else onMessage({ type: "error", text: "削除に失敗しました" });
+    } catch {
+      onMessage({ type: "error", text: "通信エラーが発生しました" });
+    }
     loadData();
   };
 
@@ -286,18 +296,28 @@ export default function NapManagement({ clinicId, onMessage }: Props) {
   };
 
   const updatePlatform = async (platformId: string, data: Record<string, unknown>) => {
-    await fetch(`/api/admin/clinics/${clinicId}/nap/platforms/${platformId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
+    try {
+      const res = await fetch(`/api/admin/clinics/${clinicId}/nap/platforms/${platformId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) onMessage({ type: "error", text: "更新に失敗しました" });
+    } catch {
+      onMessage({ type: "error", text: "通信エラーが発生しました" });
+    }
     loadData();
   };
 
   const deletePlatform = async (platformId: string) => {
     if (!confirm("この媒体を削除しますか？")) return;
-    await fetch(`/api/admin/clinics/${clinicId}/nap/platforms/${platformId}`, { method: "DELETE" });
-    onMessage({ type: "success", text: "媒体を削除しました" });
+    try {
+      const res = await fetch(`/api/admin/clinics/${clinicId}/nap/platforms/${platformId}`, { method: "DELETE" });
+      if (res.ok) onMessage({ type: "success", text: "媒体を削除しました" });
+      else onMessage({ type: "error", text: "削除に失敗しました" });
+    } catch {
+      onMessage({ type: "error", text: "通信エラーが発生しました" });
+    }
     loadData();
   };
 
@@ -328,37 +348,42 @@ export default function NapManagement({ clinicId, onMessage }: Props) {
     }
   };
 
-  const copyMessage = (targetType: "task" | "platform", targetId: string) => {
+  const copyMessage = async (targetType: "task" | "platform", targetId: string) => {
     navigator.clipboard.writeText(generatedMessage);
     onMessage({ type: "success", text: "メッセージをコピーしました" });
 
+    // ステータス自動更新のためのデータを決定（APIは1回だけ叩く）
+    let patchData: Record<string, unknown> | null = null;
+
     if (targetType === "task") {
       const task = tasks.find((t) => t.id === targetId);
-      if (messageType === "reminder") {
-        fetch(`/api/admin/clinics/${clinicId}/tasks/${targetId}`, {
+      if (messageType === "reminder") patchData = { reminded: true };
+      else if (messageType === "request" && task?.status === "pending") patchData = { status: "requested" };
+      else if (messageType === "thanks" && task?.status !== "completed") patchData = { status: "completed" };
+
+      if (patchData) {
+        await fetch(`/api/admin/clinics/${clinicId}/tasks/${targetId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ reminded: true }),
-        }).then(() => loadData());
-      }
-      if (messageType === "request" && task?.status === "pending") {
-        updateTaskStatus(targetId, "requested");
-      }
-      if (messageType === "thanks" && task?.status !== "completed") {
-        updateTaskStatus(targetId, "completed");
+          body: JSON.stringify(patchData),
+        });
       }
     } else {
       const platform = platforms.find((p) => p.id === targetId);
-      if (messageType === "reminder") {
-        updatePlatform(targetId, { reminded: true });
-      }
-      if (messageType === "request" && platform?.status === "unchecked") {
-        updatePlatform(targetId, { status: "requested" });
-      }
-      if (messageType === "thanks" && platform?.status !== "completed") {
-        updatePlatform(targetId, { status: "completed" });
+      if (messageType === "reminder") patchData = { reminded: true };
+      else if (messageType === "request" && platform?.status === "unchecked") patchData = { status: "requested" };
+      else if (messageType === "thanks" && platform?.status !== "completed") patchData = { status: "completed" };
+
+      if (patchData) {
+        await fetch(`/api/admin/clinics/${clinicId}/nap/platforms/${targetId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(patchData),
+        });
       }
     }
+
+    if (patchData) loadData();
   };
 
   // ========== メモ保存 ==========
@@ -481,18 +506,18 @@ export default function NapManagement({ clinicId, onMessage }: Props) {
 
   // ========== 統計計算 ==========
 
-  const platformStats = {
+  const platformStats = useMemo(() => ({
     total: platforms.length,
     unchecked: platforms.filter((p) => p.status === "unchecked").length,
     ok: platforms.filter((p) => p.status === "ok").length,
     requested: platforms.filter((p) => p.status === "requested").length,
     completed: platforms.filter((p) => p.status === "completed").length,
-  };
+  }), [platforms]);
 
-  const taskStats = {
+  const taskStats = useMemo(() => ({
     total: tasks.length,
     completed: tasks.filter((t) => t.status === "completed").length,
-  };
+  }), [tasks]);
 
   // ========== JSX ==========
 

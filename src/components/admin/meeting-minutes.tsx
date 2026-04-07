@@ -167,11 +167,15 @@ export default function MeetingMinutesAdmin({ clinicId, onMessage }: Props) {
   };
 
   const toggleVisibility = async (meeting: Meeting) => {
-    await fetch(`/api/admin/clinics/${clinicId}/meetings/${meeting.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isVisibleToClinic: !meeting.isVisibleToClinic }),
-    });
+    try {
+      await fetch(`/api/admin/clinics/${clinicId}/meetings/${meeting.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isVisibleToClinic: !meeting.isVisibleToClinic }),
+      });
+    } catch {
+      onMessage({ type: "error", text: "更新に失敗しました" });
+    }
     loadMeetings();
   };
 

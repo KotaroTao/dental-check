@@ -31,23 +31,17 @@ export async function PATCH(
     if (body.note !== undefined) updateData.note = body.note?.trim() || null;
 
     // NAP一致状態の更新
-    if (body.nameStatus !== undefined) {
-      const valid = ["unchecked", "match", "mismatch"];
-      if (valid.includes(body.nameStatus)) updateData.nameStatus = body.nameStatus;
-    }
-    if (body.addressStatus !== undefined) {
-      const valid = ["unchecked", "match", "mismatch"];
-      if (valid.includes(body.addressStatus)) updateData.addressStatus = body.addressStatus;
-    }
-    if (body.phoneStatus !== undefined) {
-      const valid = ["unchecked", "match", "mismatch"];
-      if (valid.includes(body.phoneStatus)) updateData.phoneStatus = body.phoneStatus;
+    const validNapStatuses = ["unchecked", "match", "mismatch"];
+    for (const field of ["nameStatus", "addressStatus", "phoneStatus"] as const) {
+      if (body[field] !== undefined && validNapStatuses.includes(body[field])) {
+        updateData[field] = body[field];
+      }
     }
 
     // 全体ステータスの更新
     if (body.status !== undefined) {
-      const validStatuses = ["unchecked", "ok", "requested", "completed"];
-      if (validStatuses.includes(body.status)) {
+      const validPlatformStatuses = ["unchecked", "ok", "requested", "completed"];
+      if (validPlatformStatuses.includes(body.status)) {
         updateData.status = body.status;
         if (body.status === "requested" && !platform.requestedAt) {
           updateData.requestedAt = new Date();
