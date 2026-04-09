@@ -43,10 +43,19 @@ export function sanitizeString(value: unknown, maxLength: number = 255): string 
 }
 
 /** CTAタイプを検証 */
-const VALID_CTA_TYPES = ["booking", "phone", "line", "instagram", "website", "email", "direct_link", "other"];
+const VALID_CTA_TYPES = [
+  "booking", "phone", "line", "instagram", "website", "email", "direct_link", "other",
+  // SNS系
+  "youtube", "facebook", "tiktok", "threads", "x",
+  // マップ・医院ページ系
+  "google_maps", "clinic_page", "clinic_homepage",
+];
 export function sanitizeCtaType(value: unknown): string | null {
   if (typeof value !== "string") return null;
-  return VALID_CTA_TYPES.includes(value) ? value : null;
+  // 完全一致チェック、またはカスタムCTA（custom_で始まるもの）を許可
+  if (VALID_CTA_TYPES.includes(value)) return value;
+  if (value.startsWith("custom_")) return value;
+  return null;
 }
 
 /** イベントタイプを検証 */

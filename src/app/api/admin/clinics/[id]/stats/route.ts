@@ -84,21 +84,26 @@ export async function GET(
         },
       }),
 
-      // 診断完了数
+      // 診断完了数（削除・デモを除外）
       prisma.diagnosisSession.count({
         where: {
           clinicId,
           isDemo: false,
+          isDeleted: false,
           completedAt: { not: null },
           ...dateFilter,
         },
       }),
 
-      // CTAクリック数
+      // CTAクリック数（削除済みセッションを除外）
       prisma.cTAClick.count({
         where: {
           clinicId,
           ...dateFilter,
+          OR: [
+            { sessionId: null },
+            { session: { isDeleted: false } },
+          ],
         },
       }),
 
