@@ -502,9 +502,8 @@ export default function NapManagement({ clinicId, onMessage }: Props) {
     </div>
   );
 
-  if (isLoading) return <div className="text-gray-500">読み込み中...</div>;
-
   // ========== 統計計算 ==========
+  // ※ React Hooksは条件分岐や早期returnより前に呼ぶ必要がある
 
   const platformStats = useMemo(() => ({
     total: platforms.length,
@@ -518,6 +517,8 @@ export default function NapManagement({ clinicId, onMessage }: Props) {
     total: tasks.length,
     completed: tasks.filter((t) => t.status === "completed").length,
   }), [tasks]);
+
+  if (isLoading) return <div className="text-gray-500">読み込み中...</div>;
 
   // ========== JSX ==========
 

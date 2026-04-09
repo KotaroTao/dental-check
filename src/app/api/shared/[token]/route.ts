@@ -123,6 +123,12 @@ export async function GET(
       // チャンネル別統計
       channelAccessCounts,
       channelCtaCounts,
+      // 都道府県別
+      regionSessionData,
+      regionAccessData,
+      // 日別トレンド
+      dailyAccessRaw,
+      dailyCtaRaw,
     ] = await Promise.all([
       // QR読込数
       prisma.diagnosisSession.count({
@@ -146,12 +152,9 @@ export async function GET(
         by: ["ctaType"],
         where: {
           clinicId,
+          isDeleted: false,
           ...dateFilter,
           ...channelFilter,
-          OR: [
-            { sessionId: null },
-            { session: { isDeleted: false } },
-          ],
         },
         _count: { id: true },
       }),
@@ -180,10 +183,10 @@ export async function GET(
       prisma.cTAClick.findMany({
         where: {
           clinicId,
+          isDeleted: false,
           ...dateFilter,
           ...channelFilter,
           sessionId: { not: null },
-          session: { isDeleted: false },
         },
         select: {
           sessionId: true,
@@ -210,14 +213,68 @@ export async function GET(
         by: ["channelId"],
         where: {
           clinicId,
+          isDeleted: false,
           ...dateFilter,
           channelId: { in: activeChannelIds },
-          OR: [
-            { sessionId: null },
-            { session: { isDeleted: false } },
-          ],
         },
         _count: { id: true },
+      }),
+
+      // 都道府県別集計（診断セッション）
+      prisma.diagnosisSession.groupBy({
+        by: ["region"],
+        where: {
+          clinicId,
+          isDeleted: false,
+          isDemo: false,
+          completedAt: { not: null },
+          ...dateFilter,
+          ...channelFilter,
+          region: { not: null },
+        },
+        _count: { id: true },
+      }),
+
+      // 都道府県別集計（QRスキャン）
+      prisma.accessLog.groupBy({
+        by: ["region"],
+        where: {
+          clinicId,
+          eventType: "qr_scan",
+          isDeleted: false,
+          ...dateFilter,
+          ...channelFilter,
+          region: { not: null },
+        },
+        _count: { id: true },
+      }),
+
+      // 日別トレンド用：診断セッション（createdAtを含む）
+      prisma.diagnosisSession.findMany({
+        where: {
+          clinicId,
+          isDeleted: false,
+          isDemo: false,
+          completedAt: { not: null },
+          ...dateFilter,
+          ...channelFilter,
+        },
+        select: { createdAt: true },
+        orderBy: { createdAt: "desc" },
+        take: 5000,
+      }),
+
+      // 日別トレンド用：CTAクリック
+      prisma.cTAClick.findMany({
+        where: {
+          clinicId,
+          isDeleted: false,
+          ...dateFilter,
+          ...channelFilter,
+        },
+        select: { createdAt: true },
+        orderBy: { createdAt: "desc" },
+        take: 5000,
       }),
     ]);
 
@@ -306,6 +363,44 @@ export async function GET(
       };
     });
 
+    // 都道府県別データを統合
+    const regionMap: Record<string, number> = {};
+    for (const item of regionSessionData) {
+      if (item.region) {
+        regionMap[item.region] = (regionMap[item.region] || 0) + item._count.id;
+      }
+    }
+    for (const item of regionAccessData) {
+      if (item.region) {
+        regionMap[item.region] = (regionMap[item.region] || 0) + item._count.id;
+      }
+    }
+    const topRegions = Object.entries(regionMap)
+      .map(([region, count]) => ({ region, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
+    // 日別トレンドデータを整形
+    const accessByDate: Record<string, number> = {};
+    for (const row of dailyAccessRaw) {
+      const d = row.createdAt.toISOString().slice(0, 10);
+      accessByDate[d] = (accessByDate[d] || 0) + 1;
+    }
+    const ctaByDate: Record<string, number> = {};
+    for (const row of dailyCtaRaw) {
+      const d = row.createdAt.toISOString().slice(0, 10);
+      ctaByDate[d] = (ctaByDate[d] || 0) + 1;
+    }
+    const allDates = new Set([...Object.keys(accessByDate), ...Object.keys(ctaByDate)]);
+    const dailyTrend = Array.from(allDates)
+      .sort()
+      .slice(-30)
+      .map((date) => ({
+        date,
+        accessCount: accessByDate[date] || 0,
+        ctaCount: ctaByDate[date] || 0,
+      }));
+
     return NextResponse.json({
       clinic: {
         name: clinic.name,
@@ -326,6 +421,8 @@ export async function GET(
         ageRanges,
       },
       channels: channelsWithStats,
+      topRegions,
+      dailyTrend,
     });
   } catch (error) {
     console.error("Shared dashboard error:", error);

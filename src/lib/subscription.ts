@@ -471,8 +471,8 @@ export async function canTrackSession(clinicId: string): Promise<boolean> {
 
   const planType = (subscription.planType as PlanType) || "starter";
 
-  // 無料プランは常に計測可能
-  if (planType === "free") return true;
+  // 無料プラン・デモプランは常に計測可能
+  if (planType === "free" || planType === "demo") return true;
 
   const now = new Date();
 

@@ -17,31 +17,47 @@ export async function GET() {
 
     const channelIds = channels.map((c) => c.id);
 
-    // 全体の統計を集計
+    // 全体の統計を集計（デモ・削除済みを除外）
     const [totalAccess, totalDiagnosis, totalCtaClick] = await Promise.all([
       prisma.accessLog.count({
-        where: { channelId: { in: channelIds } },
+        where: { channelId: { in: channelIds }, isDeleted: false },
       }),
       prisma.diagnosisSession.count({
-        where: { channelId: { in: channelIds }, completedAt: { not: null } },
+        where: {
+          channelId: { in: channelIds },
+          completedAt: { not: null },
+          isDemo: false,
+          isDeleted: false,
+        },
       }),
-      prisma.ctaClick.count({
-        where: { channelId: { in: channelIds } },
+      prisma.cTAClick.count({
+        where: {
+          channelId: { in: channelIds },
+          isDeleted: false,
+        },
       }),
     ]);
 
-    // QRコード別の統計を集計
+    // QRコード別の統計を集計（デモ・削除済みを除外）
     const channelStats = await Promise.all(
       channels.map(async (channel) => {
         const [accessCount, diagnosisCount, ctaClickCount] = await Promise.all([
           prisma.accessLog.count({
-            where: { channelId: channel.id },
+            where: { channelId: channel.id, isDeleted: false },
           }),
           prisma.diagnosisSession.count({
-            where: { channelId: channel.id, completedAt: { not: null } },
+            where: {
+              channelId: channel.id,
+              completedAt: { not: null },
+              isDemo: false,
+              isDeleted: false,
+            },
           }),
-          prisma.ctaClick.count({
-            where: { channelId: channel.id },
+          prisma.cTAClick.count({
+            where: {
+              channelId: channel.id,
+              isDeleted: false,
+            },
           }),
         ]);
 

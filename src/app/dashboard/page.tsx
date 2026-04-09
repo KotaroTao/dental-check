@@ -1180,8 +1180,8 @@ export default function DashboardPage() {
             </div>
 
             <p className="text-sm text-gray-500 mb-4">
-              共有リンクを作成すると、ログインなしでダッシュボードの統計データを閲覧できるURLが発行されます。
-              設定や課金情報、個別の履歴データは共有されません。
+              共有リンクを作成すると、ログインなしでダッシュボードの統計データ・履歴を閲覧できるURLが発行されます。
+              閲覧専用のため、設定変更や課金情報は共有されません。
             </p>
 
             {isLoadingShare ? (
