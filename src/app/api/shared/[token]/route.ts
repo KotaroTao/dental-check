@@ -123,6 +123,9 @@ export async function GET(
       // チャンネル別統計
       channelAccessCounts,
       channelCtaCounts,
+      // 都道府県別
+      regionSessionData,
+      regionAccessData,
     ] = await Promise.all([
       // QR読込数
       prisma.diagnosisSession.count({
@@ -219,6 +222,35 @@ export async function GET(
         },
         _count: { id: true },
       }),
+
+      // 都道府県別集計（診断セッション）
+      prisma.diagnosisSession.groupBy({
+        by: ["region"],
+        where: {
+          clinicId,
+          isDeleted: false,
+          isDemo: false,
+          completedAt: { not: null },
+          ...dateFilter,
+          ...channelFilter,
+          region: { not: null },
+        },
+        _count: { id: true },
+      }),
+
+      // 都道府県別集計（QRスキャン）
+      prisma.accessLog.groupBy({
+        by: ["region"],
+        where: {
+          clinicId,
+          eventType: "qr_scan",
+          isDeleted: false,
+          ...dateFilter,
+          ...channelFilter,
+          region: { not: null },
+        },
+        _count: { id: true },
+      }),
     ]);
 
     // CTAクリックをタイプ別に整理
@@ -306,6 +338,23 @@ export async function GET(
       };
     });
 
+    // 都道府県別データを統合
+    const regionMap: Record<string, number> = {};
+    for (const item of regionSessionData) {
+      if (item.region) {
+        regionMap[item.region] = (regionMap[item.region] || 0) + item._count.id;
+      }
+    }
+    for (const item of regionAccessData) {
+      if (item.region) {
+        regionMap[item.region] = (regionMap[item.region] || 0) + item._count.id;
+      }
+    }
+    const topRegions = Object.entries(regionMap)
+      .map(([region, count]) => ({ region, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
     return NextResponse.json({
       clinic: {
         name: clinic.name,
@@ -326,6 +375,7 @@ export async function GET(
         ageRanges,
       },
       channels: channelsWithStats,
+      topRegions,
     });
   } catch (error) {
     console.error("Shared dashboard error:", error);
