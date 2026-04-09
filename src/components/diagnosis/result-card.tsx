@@ -24,19 +24,18 @@ export function ResultCard({ diagnosis, isDemo, ctaConfig, clinicName, mainColor
   const { userAge, userGender, answers, totalScore, resultPattern, oralAge, latitude, longitude, reset, _hasHydrated } =
     useDiagnosisStore();
   const hasTrackedRef = useRef(false);
-  const [sessionId, setSessionId] = useState<string | null>(null);
   const [showCopied, setShowCopied] = useState(false);
 
+  // sessionIdをPromiseで管理（CTAクリック時に完了を待てるようにする）
+  const sessionIdPromiseRef = useRef<Promise<string | null> | null>(null);
+
   // 診断完了をトラッキング（非デモモードのみ、1回だけ）
-  // 位置情報はプロファイルページで事前に取得済み
-  // Zustandストアのハイドレーション完了を待つ
   useEffect(() => {
-    // Zustandストアがまだハイドレーションしていない場合は待つ
     if (!_hasHydrated) return;
     if (isDemo || !channelId || !resultPattern || hasTrackedRef.current) return;
     hasTrackedRef.current = true;
 
-    fetch("/api/track/complete", {
+    sessionIdPromiseRef.current = fetch("/api/track/complete", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -52,14 +51,8 @@ export function ResultCard({ diagnosis, isDemo, ctaConfig, clinicName, mainColor
       }),
     })
       .then((res) => res.json())
-      .then((data) => {
-        if (data.sessionId) {
-          setSessionId(data.sessionId);
-        }
-      })
-      .catch((err) => {
-        console.error("Track complete error:", err);
-      });
+      .then((data) => data.sessionId || null)
+      .catch(() => null);
   }, [_hasHydrated, isDemo, channelId, diagnosis.slug, resultPattern, userAge, userGender, answers, totalScore, latitude, longitude]);
 
   if (!resultPattern) return null;
@@ -153,8 +146,7 @@ export function ResultCard({ diagnosis, isDemo, ctaConfig, clinicName, mainColor
               clinicName={clinicName}
               mainColor={mainColor}
               channelId={channelId}
-              diagnosisType={diagnosis.slug}
-              sessionId={sessionId}
+              sessionIdPromise={sessionIdPromiseRef.current}
             />
           )}
 
@@ -207,27 +199,54 @@ function ClinicCTA({
   clinicName,
   mainColor,
   channelId,
-  diagnosisType,
-  sessionId,
+  sessionIdPromise,
 }: {
   ctaConfig?: CTAConfig;
   clinicName?: string;
   mainColor?: string;
   channelId?: string;
-  diagnosisType?: string;
-  sessionId?: string | null;
+  sessionIdPromise?: Promise<string | null> | null;
 }) {
   const buttonStyle = mainColor
     ? { backgroundColor: mainColor, borderColor: mainColor }
     : {};
 
-  const trackClick = (ctaType: string) => {
+  // CTA計測（sessionId完了待ち + sendBeaconフォールバック付き）
+  const trackClick = async (ctaType: string) => {
     if (!channelId) return;
-    fetch("/api/track/cta", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ channelId, ctaType, diagnosisType, sessionId }),
-    }).catch(() => {});
+
+    // sessionIdの完了を最大2秒待つ（まだ未取得の場合）
+    let sessionId: string | null = null;
+    if (sessionIdPromise) {
+      try {
+        sessionId = await Promise.race([
+          sessionIdPromise,
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000)),
+        ]);
+      } catch {
+        // タイムアウトや失敗時はnullのまま
+      }
+    }
+
+    const payload = JSON.stringify({ channelId, ctaType, sessionId });
+
+    // fetch で送信を試み、失敗したら sendBeacon にフォールバック
+    try {
+      const res = await fetch("/api/track/cta", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: payload,
+      });
+      if (!res.ok) throw new Error("fetch failed");
+    } catch {
+      // フォールバック: sendBeacon（ページ遷移時でも確実に送信）
+      if (typeof navigator.sendBeacon === "function") {
+        navigator.sendBeacon(
+          "/api/track/cta",
+          new Blob([payload], { type: "application/json" })
+        );
+      }
+    }
   };
 
   const hasAnyCTA =

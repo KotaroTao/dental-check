@@ -33,10 +33,7 @@ export async function GET() {
       prisma.cTAClick.count({
         where: {
           channelId: { in: channelIds },
-          OR: [
-            { sessionId: null },
-            { session: { isDeleted: false } },
-          ],
+          isDeleted: false,
         },
       }),
     ]);
@@ -59,10 +56,7 @@ export async function GET() {
           prisma.cTAClick.count({
             where: {
               channelId: channel.id,
-              OR: [
-                { sessionId: null },
-                { session: { isDeleted: false } },
-              ],
+              isDeleted: false,
             },
           }),
         ]);

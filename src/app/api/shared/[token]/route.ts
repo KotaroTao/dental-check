@@ -126,6 +126,9 @@ export async function GET(
       // 都道府県別
       regionSessionData,
       regionAccessData,
+      // 日別トレンド
+      dailyAccessRaw,
+      dailyCtaRaw,
     ] = await Promise.all([
       // QR読込数
       prisma.diagnosisSession.count({
@@ -149,12 +152,9 @@ export async function GET(
         by: ["ctaType"],
         where: {
           clinicId,
+          isDeleted: false,
           ...dateFilter,
           ...channelFilter,
-          OR: [
-            { sessionId: null },
-            { session: { isDeleted: false } },
-          ],
         },
         _count: { id: true },
       }),
@@ -183,10 +183,10 @@ export async function GET(
       prisma.cTAClick.findMany({
         where: {
           clinicId,
+          isDeleted: false,
           ...dateFilter,
           ...channelFilter,
           sessionId: { not: null },
-          session: { isDeleted: false },
         },
         select: {
           sessionId: true,
@@ -213,12 +213,9 @@ export async function GET(
         by: ["channelId"],
         where: {
           clinicId,
+          isDeleted: false,
           ...dateFilter,
           channelId: { in: activeChannelIds },
-          OR: [
-            { sessionId: null },
-            { session: { isDeleted: false } },
-          ],
         },
         _count: { id: true },
       }),
@@ -250,6 +247,34 @@ export async function GET(
           region: { not: null },
         },
         _count: { id: true },
+      }),
+
+      // 日別トレンド用：診断セッション（createdAtを含む）
+      prisma.diagnosisSession.findMany({
+        where: {
+          clinicId,
+          isDeleted: false,
+          isDemo: false,
+          completedAt: { not: null },
+          ...dateFilter,
+          ...channelFilter,
+        },
+        select: { createdAt: true },
+        orderBy: { createdAt: "desc" },
+        take: 5000,
+      }),
+
+      // 日別トレンド用：CTAクリック
+      prisma.cTAClick.findMany({
+        where: {
+          clinicId,
+          isDeleted: false,
+          ...dateFilter,
+          ...channelFilter,
+        },
+        select: { createdAt: true },
+        orderBy: { createdAt: "desc" },
+        take: 5000,
       }),
     ]);
 
@@ -355,6 +380,27 @@ export async function GET(
       .sort((a, b) => b.count - a.count)
       .slice(0, 10);
 
+    // 日別トレンドデータを整形
+    const accessByDate: Record<string, number> = {};
+    for (const row of dailyAccessRaw) {
+      const d = row.createdAt.toISOString().slice(0, 10);
+      accessByDate[d] = (accessByDate[d] || 0) + 1;
+    }
+    const ctaByDate: Record<string, number> = {};
+    for (const row of dailyCtaRaw) {
+      const d = row.createdAt.toISOString().slice(0, 10);
+      ctaByDate[d] = (ctaByDate[d] || 0) + 1;
+    }
+    const allDates = new Set([...Object.keys(accessByDate), ...Object.keys(ctaByDate)]);
+    const dailyTrend = Array.from(allDates)
+      .sort()
+      .slice(-30)
+      .map((date) => ({
+        date,
+        accessCount: accessByDate[date] || 0,
+        ctaCount: ctaByDate[date] || 0,
+      }));
+
     return NextResponse.json({
       clinic: {
         name: clinic.name,
@@ -376,6 +422,7 @@ export async function GET(
       },
       channels: channelsWithStats,
       topRegions,
+      dailyTrend,
     });
   } catch (error) {
     console.error("Shared dashboard error:", error);

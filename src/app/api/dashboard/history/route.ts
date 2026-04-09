@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getCtaTypeName } from "@/lib/cta-types";
 
 // 診断タイプの表示名
 const DIAGNOSIS_TYPE_NAMES: Record<string, string> = {
@@ -143,17 +144,6 @@ export async function GET(request: NextRequest) {
     const hasMore = sessions.length > limit;
     const sessionsToReturn = hasMore ? sessions.slice(0, limit) : sessions;
 
-    // CTAクリックタイプの表示名
-    const CTA_TYPE_NAMES: Record<string, string> = {
-      booking: "予約クリック",
-      phone: "電話クリック",
-      line: "LINEクリック",
-      instagram: "Instagramクリック",
-      clinic_page: "医院ページクリック",
-      clinic_homepage: "ホームページクリック",
-      direct_link: "直リンク",
-    };
-
     // 性別の表示名
     const GENDER_NAMES: Record<string, string> = {
       male: "男性",
@@ -220,7 +210,7 @@ export async function GET(request: NextRequest) {
         channelName: s.channel?.name || "不明",
         channelId: s.channel?.id,
         area,
-        ctaType: ctaClick ? CTA_TYPE_NAMES[ctaClick.ctaType] || ctaClick.ctaType : null,
+        ctaType: ctaClick ? getCtaTypeName(ctaClick.ctaType) : null,
         ctaClickCount: s._count.ctaClicks,
         ctaByType,
       };

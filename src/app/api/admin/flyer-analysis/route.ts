@@ -74,6 +74,7 @@ export async function GET(request: Request) {
             by: ["channelId"],
             where: {
               channelId: { in: channelIds },
+              isDeleted: false,
               createdAt: { gte: startDate },
             },
             _count: { id: true },

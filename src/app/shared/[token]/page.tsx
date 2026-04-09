@@ -15,22 +15,7 @@ import {
   ChevronUp,
   Eye,
 } from "lucide-react";
-
-const CTA_TYPE_NAMES: Record<string, string> = {
-  booking: "予約",
-  phone: "電話",
-  line: "LINE",
-  instagram: "Instagram",
-  youtube: "YouTube",
-  facebook: "Facebook",
-  tiktok: "TikTok",
-  threads: "Threads",
-  x: "X",
-  google_maps: "マップ",
-  clinic_page: "医院ページ",
-  clinic_homepage: "ホームページ",
-  direct_link: "直リンク",
-};
+import { getCtaTypeName } from "@/lib/cta-types";
 
 const PERIOD_OPTIONS = [
   { value: "today", label: "今日" },
@@ -76,6 +61,12 @@ interface TopRegion {
   count: number;
 }
 
+interface DailyTrend {
+  date: string;
+  accessCount: number;
+  ctaCount: number;
+}
+
 interface HistoryItem {
   id: string;
   type: string;
@@ -107,6 +98,7 @@ export default function SharedDashboardPage() {
   const [stats, setStats] = useState<SharedStats | null>(null);
   const [channels, setChannels] = useState<SharedChannel[]>([]);
   const [topRegions, setTopRegions] = useState<TopRegion[]>([]);
+  const [dailyTrend, setDailyTrend] = useState<DailyTrend[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [period, setPeriod] = useState("all");
@@ -143,6 +135,7 @@ export default function SharedDashboardPage() {
       setStats(data.stats);
       setChannels(data.channels);
       setTopRegions(data.topRegions || []);
+      setDailyTrend(data.dailyTrend || []);
       setError("");
     } catch {
       setError("通信エラーが発生しました");
@@ -373,6 +366,63 @@ export default function SharedDashboardPage() {
           </div>
         )}
 
+        {/* 日別トレンドグラフ */}
+        {dailyTrend.length > 1 && (
+          <div className="bg-white rounded-xl shadow-sm border p-4 sm:p-6 mb-6">
+            <h2 className="text-base font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <TrendingUp className="w-4 h-4" style={{ color: accentColor }} />
+              日別トレンド
+            </h2>
+            <div className="flex items-center gap-4 mb-3 text-xs text-gray-500">
+              <span className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-sm" style={{ backgroundColor: accentColor }} />
+                診断完了
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-sm" style={{ backgroundColor: accentColor, opacity: 0.35 }} />
+                CTA
+              </span>
+            </div>
+            {(() => {
+              const maxVal = Math.max(...dailyTrend.map((d) => d.accessCount), 1);
+              return (
+                <div className="flex items-end gap-px h-32 overflow-x-auto">
+                  {dailyTrend.map((d) => {
+                    const accessH = (d.accessCount / maxVal) * 100;
+                    const ctaH = (d.ctaCount / maxVal) * 100;
+                    const label = d.date.slice(5); // "MM-DD"
+                    return (
+                      <div key={d.date} className="flex flex-col items-center flex-1 min-w-[14px] group relative">
+                        {/* ツールチップ */}
+                        <div className="absolute bottom-full mb-1 hidden group-hover:block bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10">
+                          {label}: {d.accessCount}件 / CTA {d.ctaCount}件
+                        </div>
+                        {/* 棒グラフ */}
+                        <div className="w-full flex items-end gap-px" style={{ height: "100px" }}>
+                          <div
+                            className="flex-1 rounded-t-sm transition-all"
+                            style={{ height: `${Math.max(accessH, 2)}%`, backgroundColor: accentColor }}
+                          />
+                          <div
+                            className="flex-1 rounded-t-sm transition-all"
+                            style={{ height: `${Math.max(ctaH, d.ctaCount > 0 ? 2 : 0)}%`, backgroundColor: accentColor, opacity: 0.35 }}
+                          />
+                        </div>
+                        {/* 日付ラベル（間引き表示） */}
+                        {dailyTrend.length <= 14 || dailyTrend.indexOf(d) % Math.ceil(dailyTrend.length / 7) === 0 ? (
+                          <span className="text-[9px] text-gray-400 mt-1 -rotate-45 origin-top-left whitespace-nowrap">
+                            {label}
+                          </span>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </div>
+        )}
+
         {/* QRコード別 効果 */}
         <div className="bg-white rounded-xl shadow-sm border p-4 sm:p-6 mb-6">
           <h2 className="text-base font-bold text-gray-800 mb-4 flex items-center gap-2">
@@ -446,7 +496,7 @@ export default function SharedDashboardPage() {
                   return (
                     <div key={type} className="flex items-center gap-3">
                       <div className="w-24 text-sm text-gray-600 shrink-0">
-                        {CTA_TYPE_NAMES[type] || type}
+                        {getCtaTypeName(type)}
                       </div>
                       <div className="flex-1 bg-gray-100 rounded-full h-5 overflow-hidden">
                         <div

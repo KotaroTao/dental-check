@@ -95,15 +95,12 @@ export async function GET(
         },
       }),
 
-      // CTAクリック数（削除済みセッションを除外）
+      // CTAクリック数（削除済みを除外）
       prisma.cTAClick.count({
         where: {
           clinicId,
+          isDeleted: false,
           ...dateFilter,
-          OR: [
-            { sessionId: null },
-            { session: { isDeleted: false } },
-          ],
         },
       }),
 

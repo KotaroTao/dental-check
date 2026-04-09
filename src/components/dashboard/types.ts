@@ -82,22 +82,8 @@ export interface SubscriptionInfo {
   isDemo: boolean;
 }
 
-// CTAタイプの表示名
-export const CTA_TYPE_NAMES: Record<string, string> = {
-  booking: "予約",
-  phone: "電話",
-  line: "LINE",
-  instagram: "Instagram",
-  youtube: "YouTube",
-  facebook: "Facebook",
-  tiktok: "TikTok",
-  threads: "Threads",
-  x: "X",
-  google_maps: "マップ",
-  clinic_page: "医院ページ",
-  clinic_homepage: "ホームページ",
-  direct_link: "直リンク",
-};
+// CTAタイプの表示名（統一定数からre-export）
+export { CTA_TYPE_NAMES } from "@/lib/cta-types";
 
 // チャンネルごとの色
 export const CHANNEL_COLORS = [

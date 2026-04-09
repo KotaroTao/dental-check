@@ -212,6 +212,7 @@ model CTAClick {
   clinicId  String?  @map("clinic_id")
   channelId String?  @map("channel_id")
   ctaType   String   @map("cta_type")
+  isDeleted Boolean  @default(false) @map("is_deleted")
   createdAt DateTime @default(now()) @map("created_at")
 
   session DiagnosisSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
@@ -220,6 +221,7 @@ model CTAClick {
 
   @@index([clinicId, createdAt])
   @@index([channelId, createdAt])
+  @@index([sessionId])
   @@map("cta_clicks")
 }
 

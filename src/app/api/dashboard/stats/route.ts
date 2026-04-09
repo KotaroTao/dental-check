@@ -170,15 +170,12 @@ export async function GET(request: NextRequest) {
         where: completedFilter,
       }),
 
-      // CTAクリック（タイプ別に集計）- 削除されていないセッションのみ
+      // CTAクリック（タイプ別に集計）- 削除されたものを除外
       prisma.cTAClick.groupBy({
         by: ['ctaType'],
         where: {
           ...ctaFilter,
-          OR: [
-            { sessionId: null }, // 医院ページからのCTA
-            { session: { isDeleted: false } }, // セッションが削除されていない
-          ],
+          isDeleted: false,
         },
         _count: { id: true },
       }),
@@ -193,15 +190,12 @@ export async function GET(request: NextRequest) {
         },
       }),
 
-      // 診断結果からのCTAクリック（channelIdがある）- 削除されていないセッションのみ
+      // 診断結果からのCTAクリック（channelIdがある）
       prisma.cTAClick.count({
         where: {
           ...ctaFilter,
+          isDeleted: false,
           channelId: { not: null },
-          OR: [
-            { sessionId: null },
-            { session: { isDeleted: false } },
-          ],
         },
       }),
 
@@ -209,6 +203,7 @@ export async function GET(request: NextRequest) {
       prisma.cTAClick.count({
         where: {
           clinicId: session.clinicId,
+          isDeleted: false,
           channelId: null,
           ...(dateFrom && dateTo ? { createdAt: { gte: dateFrom, lte: dateTo } } : {}),
         },
@@ -234,12 +229,12 @@ export async function GET(request: NextRequest) {
         _count: { id: true },
       }),
 
-      // セッションに紐づくCTAクリック（結果カテゴリ別CTA率計算用）- 削除されていないセッションのみ
+      // セッションに紐づくCTAクリック（結果カテゴリ別CTA率計算用）
       prisma.cTAClick.findMany({
         where: {
           ...ctaFilter,
+          isDeleted: false,
           sessionId: { not: null },
-          session: { isDeleted: false },
         },
         select: {
           sessionId: true,
@@ -267,14 +262,11 @@ export async function GET(request: NextRequest) {
         where: prevCompletedFilter,
       }),
 
-      // 前期CTAクリック数 - 削除されていないセッションのみ
+      // 前期CTAクリック数
       prisma.cTAClick.count({
         where: {
           ...prevCtaFilter,
-          OR: [
-            { sessionId: null },
-            { session: { isDeleted: false } },
-          ],
+          isDeleted: false,
         },
       }),
 

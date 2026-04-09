@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getCtaTypeName } from "@/lib/cta-types";
 
 // 診断タイプの表示名
 const DIAGNOSIS_TYPE_NAMES: Record<string, string> = {
@@ -14,16 +15,6 @@ const GENDER_NAMES: Record<string, string> = {
   male: "男性",
   female: "女性",
   other: "-",
-};
-
-const CTA_TYPE_NAMES: Record<string, string> = {
-  booking: "予約クリック",
-  phone: "電話クリック",
-  line: "LINEクリック",
-  instagram: "Instagramクリック",
-  clinic_page: "医院ページクリック",
-  clinic_homepage: "ホームページクリック",
-  direct_link: "直リンク",
 };
 
 // 共有ダッシュボードの履歴を取得（認証不要、トークンで医院を特定）
@@ -200,7 +191,7 @@ export async function GET(
         resultCategory: s.resultCategory,
         channelName: s.channel?.name || "不明",
         area,
-        ctaType: ctaClick ? CTA_TYPE_NAMES[ctaClick.ctaType] || ctaClick.ctaType : null,
+        ctaType: ctaClick ? getCtaTypeName(ctaClick.ctaType) : null,
         ctaClickCount: s._count.ctaClicks,
         ctaByType,
       };

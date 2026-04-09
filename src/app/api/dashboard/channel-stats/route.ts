@@ -101,32 +101,26 @@ export async function GET(request: NextRequest) {
         _count: { id: true },
       }),
 
-      // CTAクリック数（チャンネル別）- 削除されていないセッションのみ
+      // CTAクリック数（チャンネル別）
       prisma.cTAClick.groupBy({
         by: ["channelId"],
         where: {
           clinicId: session.clinicId,
           channelId: { in: channelIds },
+          isDeleted: false,
           ...dateFilter,
-          OR: [
-            { sessionId: null },
-            { session: { isDeleted: false } },
-          ],
         },
         _count: { id: true },
       }),
 
-      // CTA内訳（チャンネル・タイプ別）- 削除されていないセッションのみ
+      // CTA内訳（チャンネル・タイプ別）
       prisma.cTAClick.groupBy({
         by: ["channelId", "ctaType"],
         where: {
           clinicId: session.clinicId,
           channelId: { in: channelIds },
+          isDeleted: false,
           ...dateFilter,
-          OR: [
-            { sessionId: null },
-            { session: { isDeleted: false } },
-          ],
         },
         _count: { id: true },
       }),
