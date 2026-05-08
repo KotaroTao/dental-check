@@ -34,6 +34,9 @@ jobs:
             npm install --production=false
             npx prisma db push --accept-data-loss
 
+            echo "=== 2-1. 初期データ投入（シード） ==="
+            npm run db:seed
+
             echo "=== 3. PM2停止 → キャッシュ削除 → ビルド ==="
             pm2 stop dental-app || true
             rm -rf .next
