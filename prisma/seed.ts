@@ -719,6 +719,587 @@ const childOrthodonticsDiagnosis = {
   ],
 };
 
+// 歯の黄ばみ診断（高得点 = 着色リスクが低い）
+const teethYellowingDiagnosis = {
+  slug: "teeth-yellowing",
+  name: "歯の黄ばみ診断",
+  description:
+    "毎日の習慣から歯の黄ばみリスクをチェックし、ホワイトニングのヒントを提案します",
+  isActive: true,
+  questions: [
+    {
+      id: 1,
+      text: "コーヒー・紅茶・緑茶などをどのくらい飲みますか？",
+      choices: [
+        { text: "1日3杯以上", score: 0 },
+        { text: "1日1〜2杯", score: 3 },
+        { text: "週に数回", score: 7 },
+        { text: "ほとんど飲まない", score: 10 },
+      ],
+    },
+    {
+      id: 2,
+      text: "赤ワインやカレー、ミートソースなど色の濃い食事はよく摂りますか？",
+      choices: [
+        { text: "ほぼ毎日", score: 0 },
+        { text: "週に数回", score: 3 },
+        { text: "月に数回", score: 7 },
+        { text: "ほとんど摂らない", score: 10 },
+      ],
+    },
+    {
+      id: 3,
+      text: "喫煙習慣はありますか？",
+      choices: [
+        { text: "毎日吸う", score: 0 },
+        { text: "たまに吸う", score: 3 },
+        { text: "以前吸っていた", score: 6 },
+        { text: "吸わない", score: 10 },
+      ],
+    },
+    {
+      id: 4,
+      text: "色の濃い飲み物を飲んだあと、うがいや水を飲むことはありますか？",
+      choices: [
+        { text: "していない", score: 0 },
+        { text: "気が向いたら", score: 5 },
+        { text: "毎回している", score: 10 },
+      ],
+    },
+    {
+      id: 5,
+      text: "ホワイトニング効果のある歯磨き粉を使っていますか？",
+      choices: [
+        { text: "使っていない", score: 0 },
+        { text: "ときどき使う", score: 5 },
+        { text: "毎日使っている", score: 10 },
+      ],
+    },
+    {
+      id: 6,
+      text: "1日に何回歯磨きをしますか？",
+      choices: [
+        { text: "0〜1回", score: 0 },
+        { text: "2回", score: 7 },
+        { text: "3回以上", score: 10 },
+      ],
+    },
+    {
+      id: 7,
+      text: "歯の表面がザラザラしている感じはありますか？",
+      choices: [
+        { text: "よくある", score: 0 },
+        { text: "たまにある", score: 5 },
+        { text: "ない", score: 10 },
+      ],
+    },
+    {
+      id: 8,
+      text: "鏡で見て歯の色が黄ばんでいると感じますか？",
+      choices: [
+        { text: "全体的に黄ばんでいる", score: 0 },
+        { text: "部分的に気になる", score: 4 },
+        { text: "少し気になる程度", score: 7 },
+        { text: "気にならない", score: 10 },
+      ],
+    },
+    {
+      id: 9,
+      text: "歯科医院でクリーニング（PMTC）を受けたことはありますか？",
+      choices: [
+        { text: "受けたことがない", score: 0 },
+        { text: "1年以上前に受けた", score: 5 },
+        { text: "半年以内に受けた", score: 10 },
+      ],
+    },
+    {
+      id: 10,
+      text: "ホワイトニングへの関心はどのくらいありますか？",
+      choices: [
+        { text: "とても気になっている", score: 0 },
+        { text: "少し気になっている", score: 5 },
+        { text: "現状で満足している", score: 10 },
+      ],
+    },
+  ],
+  resultPatterns: [
+    {
+      minScore: 0,
+      maxScore: 30,
+      category: "高リスク",
+      title: "歯の黄ばみリスクがかなり高い状態です",
+      message:
+        "着色しやすい生活習慣が重なっています。歯科医院でのクリーニングやホワイトニングについて相談し、毎日のケアも見直しましょう。",
+    },
+    {
+      minScore: 31,
+      maxScore: 50,
+      category: "中リスク",
+      title: "黄ばみが進みやすい状態です",
+      message:
+        "いくつか着色の原因になる習慣があります。色の濃い飲食物の後に水を飲む、ホワイトニング歯磨き粉を使うなどの工夫を始めてみましょう。",
+    },
+    {
+      minScore: 51,
+      maxScore: 70,
+      category: "やや注意",
+      title: "予防を続けましょう",
+      message:
+        "比較的良い状態ですが油断は禁物です。定期的なクリーニングと丁寧なブラッシングで、白い歯をキープしましょう。",
+    },
+    {
+      minScore: 71,
+      maxScore: 85,
+      category: "低リスク",
+      title: "黄ばみにくい習慣ができています",
+      message:
+        "着色しにくい生活習慣が身についています。今のケアを続けながら、定期検診で歯の色味もチェックしてもらいましょう。",
+    },
+    {
+      minScore: 86,
+      maxScore: 100,
+      category: "優良",
+      title: "白い歯を保てる理想的な状態です",
+      message:
+        "黄ばみリスクは非常に低い状態です。素晴らしいケアと習慣が身についています。この調子で継続しましょう。",
+    },
+  ],
+};
+
+// 受診タイミング診断（高得点 = 今すぐ受診すべきサインが多い）
+const visitTimingDiagnosis = {
+  slug: "visit-timing",
+  name: "受診タイミング診断",
+  description:
+    "今すぐ歯科医院に行くべきか、定期検診で十分かをチェックしましょう",
+  isActive: true,
+  questions: [
+    {
+      id: 1,
+      text: "最後に歯科医院に行ったのはいつですか？",
+      choices: [
+        { text: "2年以上前", score: 10 },
+        { text: "1〜2年前", score: 7 },
+        { text: "半年〜1年前", score: 4 },
+        { text: "半年以内", score: 0 },
+      ],
+    },
+    {
+      id: 2,
+      text: "今、歯や歯茎に痛みがありますか？",
+      choices: [
+        { text: "強い痛みがある", score: 10 },
+        { text: "鈍い痛みやしみる感じがある", score: 7 },
+        { text: "違和感がある程度", score: 4 },
+        { text: "ない", score: 0 },
+      ],
+    },
+    {
+      id: 3,
+      text: "歯茎の腫れや出血はありますか？",
+      choices: [
+        { text: "腫れて出血する", score: 10 },
+        { text: "歯磨きの時に出血する", score: 6 },
+        { text: "たまに出血する", score: 3 },
+        { text: "ない", score: 0 },
+      ],
+    },
+    {
+      id: 4,
+      text: "歯がグラグラしたり、噛むと違和感がありますか？",
+      choices: [
+        { text: "グラグラ動く歯がある", score: 10 },
+        { text: "噛むと違和感がある", score: 6 },
+        { text: "特にない", score: 0 },
+      ],
+    },
+    {
+      id: 5,
+      text: "詰め物・被せ物が取れたり欠けたりしていますか？",
+      choices: [
+        { text: "取れている／欠けている", score: 10 },
+        { text: "ぐらついている", score: 6 },
+        { text: "問題ない", score: 0 },
+      ],
+    },
+    {
+      id: 6,
+      text: "口臭が気になりますか？",
+      choices: [
+        { text: "強く気になる", score: 8 },
+        { text: "たまに気になる", score: 4 },
+        { text: "気にならない", score: 0 },
+      ],
+    },
+    {
+      id: 7,
+      text: "冷たいもの・熱いものがしみますか？",
+      choices: [
+        { text: "強くしみる", score: 8 },
+        { text: "たまにしみる", score: 4 },
+        { text: "しみない", score: 0 },
+      ],
+    },
+    {
+      id: 8,
+      text: "歯に黒い点や穴が見えますか？",
+      choices: [
+        { text: "見える／心当たりがある", score: 10 },
+        { text: "よくわからない", score: 5 },
+        { text: "見えない", score: 0 },
+      ],
+    },
+    {
+      id: 9,
+      text: "前回の検診で「次回〇か月後に来てください」と言われた予定は守れていますか？",
+      choices: [
+        { text: "予定を過ぎている", score: 8 },
+        { text: "もうすぐ予定の時期", score: 4 },
+        { text: "予定どおり通えている／予定はない", score: 0 },
+      ],
+    },
+    {
+      id: 10,
+      text: "近々、結婚式や面接など人前に出る予定はありますか？",
+      choices: [
+        { text: "1か月以内にある", score: 8 },
+        { text: "3か月以内にある", score: 5 },
+        { text: "特に予定はない", score: 0 },
+      ],
+    },
+  ],
+  resultPatterns: [
+    {
+      minScore: 0,
+      maxScore: 20,
+      category: "余裕あり",
+      title: "今は急いで受診する必要はなさそうです",
+      message:
+        "目立った不調はないようです。ただし定期検診はトラブルの早期発見に有効ですので、半年に1回を目安にチェックを受けましょう。",
+    },
+    {
+      minScore: 21,
+      maxScore: 40,
+      category: "そろそろ検診",
+      title: "そろそろ定期検診の時期です",
+      message:
+        "少し気になるサインが見られます。1か月以内をめどに、定期検診とクリーニングの予約を取りましょう。",
+    },
+    {
+      minScore: 41,
+      maxScore: 65,
+      category: "早めに受診",
+      title: "早めに歯科医院に行きましょう",
+      message:
+        "症状が進行している可能性があります。2週間以内を目安に受診し、原因を確認してもらいましょう。放置すると治療が大がかりになる場合があります。",
+    },
+    {
+      minScore: 66,
+      maxScore: 85,
+      category: "今週中に受診",
+      title: "今週中の受診をおすすめします",
+      message:
+        "気になるサインが多く見られます。今週中に歯科医院に連絡し、できるだけ早い予約を取りましょう。",
+    },
+    {
+      minScore: 86,
+      maxScore: 100,
+      category: "至急受診",
+      title: "できる限り早く受診してください",
+      message:
+        "強い症状やトラブルのサインが複数あります。痛みや腫れが強い場合は、当日または翌日の受診をおすすめします。早めの対応が治療を軽くします。",
+    },
+  ],
+};
+
+// 口臭リスク診断（高得点 = 口臭リスクが低い）
+const badBreathRiskDiagnosis = {
+  slug: "bad-breath-risk",
+  name: "口臭リスク診断",
+  description:
+    "生活習慣やお口の状態から、口臭が発生しやすい状態かをチェックします",
+  isActive: true,
+  questions: [
+    {
+      id: 1,
+      text: "自分の口臭が気になることはありますか？",
+      choices: [
+        { text: "いつも気になる", score: 0 },
+        { text: "よく気になる", score: 3 },
+        { text: "たまに気になる", score: 7 },
+        { text: "気にならない", score: 10 },
+      ],
+    },
+    {
+      id: 2,
+      text: "周囲から口臭を指摘されたことはありますか？",
+      choices: [
+        { text: "何度かある", score: 0 },
+        { text: "一度ある", score: 5 },
+        { text: "ない", score: 10 },
+      ],
+    },
+    {
+      id: 3,
+      text: "舌の表面に白い苔（舌苔）がついていますか？",
+      choices: [
+        { text: "厚く白くついている", score: 0 },
+        { text: "うっすらついている", score: 5 },
+        { text: "ほとんどない", score: 10 },
+      ],
+    },
+    {
+      id: 4,
+      text: "口の中が乾く感じはありますか？",
+      choices: [
+        { text: "いつも乾いている", score: 0 },
+        { text: "たまに乾く", score: 5 },
+        { text: "乾かない", score: 10 },
+      ],
+    },
+    {
+      id: 5,
+      text: "歯磨きは1日に何回していますか？",
+      choices: [
+        { text: "0〜1回", score: 0 },
+        { text: "2回", score: 7 },
+        { text: "3回以上", score: 10 },
+      ],
+    },
+    {
+      id: 6,
+      text: "フロスや歯間ブラシを使っていますか？",
+      choices: [
+        { text: "使っていない", score: 0 },
+        { text: "たまに使う", score: 5 },
+        { text: "毎日使っている", score: 10 },
+      ],
+    },
+    {
+      id: 7,
+      text: "歯茎から出血したり、腫れたりすることはありますか？",
+      choices: [
+        { text: "よくある", score: 0 },
+        { text: "たまにある", score: 5 },
+        { text: "ない", score: 10 },
+      ],
+    },
+    {
+      id: 8,
+      text: "鼻づまり・蓄膿症・後鼻漏などの症状はありますか？",
+      choices: [
+        { text: "よくある", score: 0 },
+        { text: "たまにある", score: 5 },
+        { text: "ない", score: 10 },
+      ],
+    },
+    {
+      id: 9,
+      text: "胃の不調（胃もたれ・逆流性食道炎など）はありますか？",
+      choices: [
+        { text: "よくある", score: 0 },
+        { text: "たまにある", score: 5 },
+        { text: "ない", score: 10 },
+      ],
+    },
+    {
+      id: 10,
+      text: "定期的に歯科でクリーニングを受けていますか？",
+      choices: [
+        { text: "受けていない", score: 0 },
+        { text: "1年に1回程度", score: 5 },
+        { text: "半年に1回以上", score: 10 },
+      ],
+    },
+  ],
+  resultPatterns: [
+    {
+      minScore: 0,
+      maxScore: 30,
+      category: "高リスク",
+      title: "口臭リスクがかなり高い状態です",
+      message:
+        "口臭の原因となる要素が多く見られます。歯周病や舌苔、ドライマウスなどが関わっていることがあります。早めに歯科医院で原因をチェックしてもらいましょう。",
+    },
+    {
+      minScore: 31,
+      maxScore: 50,
+      category: "中リスク",
+      title: "口臭が出やすい状態です",
+      message:
+        "気になるポイントがいくつかあります。フロスや舌のケアを取り入れ、こまめな水分補給で口の乾燥を防ぎましょう。歯科でのクリーニングもおすすめです。",
+    },
+    {
+      minScore: 51,
+      maxScore: 70,
+      category: "やや注意",
+      title: "予防を続けましょう",
+      message:
+        "現時点では大きな問題はなさそうですが油断は禁物です。歯間ケアと定期検診で、口臭の原因を作らない口内環境をキープしましょう。",
+    },
+    {
+      minScore: 71,
+      maxScore: 85,
+      category: "低リスク",
+      title: "良い口内環境が保てています",
+      message:
+        "口臭リスクは低めです。今のケアを続けながら、定期的なクリーニングで安心できる息をキープしましょう。",
+    },
+    {
+      minScore: 86,
+      maxScore: 100,
+      category: "優良",
+      title: "理想的なお口の状態です",
+      message:
+        "口臭リスクは非常に低い状態です。素晴らしいケアが習慣になっています。この調子で継続しましょう。",
+    },
+  ],
+};
+
+// 歯ぎしりリスク診断（高得点 = 歯ぎしり・食いしばりリスクが低い）
+const bruxismRiskDiagnosis = {
+  slug: "bruxism-risk",
+  name: "歯ぎしりリスク診断",
+  description:
+    "歯ぎしりや食いしばりの兆候があるかをチェックし、対策のヒントをお伝えします",
+  isActive: true,
+  questions: [
+    {
+      id: 1,
+      text: "家族やパートナーから「歯ぎしりの音がする」と言われたことはありますか？",
+      choices: [
+        { text: "よく言われる", score: 0 },
+        { text: "言われたことがある", score: 5 },
+        { text: "言われたことはない", score: 10 },
+      ],
+    },
+    {
+      id: 2,
+      text: "朝起きたときに、あごが疲れていたりだるかったりしますか？",
+      choices: [
+        { text: "ほぼ毎朝感じる", score: 0 },
+        { text: "週に数回ある", score: 3 },
+        { text: "たまにある", score: 7 },
+        { text: "ない", score: 10 },
+      ],
+    },
+    {
+      id: 3,
+      text: "あごの関節がカクッと鳴ったり、口が開きにくいことはありますか？",
+      choices: [
+        { text: "よくある", score: 0 },
+        { text: "たまにある", score: 5 },
+        { text: "ない", score: 10 },
+      ],
+    },
+    {
+      id: 4,
+      text: "頬の内側や舌のふちに、歯型のような跡がつくことはありますか？",
+      choices: [
+        { text: "よくある", score: 0 },
+        { text: "たまにある", score: 5 },
+        { text: "ない", score: 10 },
+      ],
+    },
+    {
+      id: 5,
+      text: "日中、気がつくと上下の歯を噛みしめていることがありますか？",
+      choices: [
+        { text: "よくある", score: 0 },
+        { text: "たまにある", score: 5 },
+        { text: "ない", score: 10 },
+      ],
+    },
+    {
+      id: 6,
+      text: "肩こり・頭痛・首のこりはありますか？",
+      choices: [
+        { text: "慢性的にある", score: 0 },
+        { text: "ときどきある", score: 5 },
+        { text: "ほとんどない", score: 10 },
+      ],
+    },
+    {
+      id: 7,
+      text: "歯がすり減っている、欠けたことがあると指摘されたことはありますか？",
+      choices: [
+        { text: "ある", score: 0 },
+        { text: "わからない", score: 5 },
+        { text: "ない", score: 10 },
+      ],
+    },
+    {
+      id: 8,
+      text: "知覚過敏（冷たいものがしみる）の症状はありますか？",
+      choices: [
+        { text: "よくある", score: 0 },
+        { text: "たまにある", score: 5 },
+        { text: "ない", score: 10 },
+      ],
+    },
+    {
+      id: 9,
+      text: "仕事や生活でストレスを感じていますか？",
+      choices: [
+        { text: "強く感じる", score: 0 },
+        { text: "ときどき感じる", score: 5 },
+        { text: "あまり感じない", score: 10 },
+      ],
+    },
+    {
+      id: 10,
+      text: "睡眠の質はどうですか？（眠りが浅い・夜中に目が覚めるなど）",
+      choices: [
+        { text: "悪い", score: 0 },
+        { text: "ふつう", score: 5 },
+        { text: "よく眠れている", score: 10 },
+      ],
+    },
+  ],
+  resultPatterns: [
+    {
+      minScore: 0,
+      maxScore: 30,
+      category: "高リスク",
+      title: "歯ぎしり・食いしばりの可能性が高い状態です",
+      message:
+        "歯や顎に大きな負担がかかっている可能性があります。歯のすり減りや破折、顎関節症の原因になることもあります。歯科医院でナイトガード（マウスピース）の作製を相談しましょう。",
+    },
+    {
+      minScore: 31,
+      maxScore: 50,
+      category: "中リスク",
+      title: "歯ぎしりの兆候が見られます",
+      message:
+        "気になるサインがいくつかあります。日中の食いしばりに気づいたらリラックスする、就寝前にストレッチをするなどの工夫をしながら、歯科で一度チェックを受けましょう。",
+    },
+    {
+      minScore: 51,
+      maxScore: 70,
+      category: "やや注意",
+      title: "予防を心がけましょう",
+      message:
+        "現時点で大きな問題はなさそうですが、ストレスや疲労がたまると歯ぎしりが出やすくなります。リラックスする時間を意識して取りましょう。",
+    },
+    {
+      minScore: 71,
+      maxScore: 85,
+      category: "低リスク",
+      title: "歯ぎしりリスクは低めです",
+      message:
+        "歯や顎にかかる負担は少ない状態です。今の生活リズムを大切にしながら、定期検診で歯のすり減りもチェックしてもらいましょう。",
+    },
+    {
+      minScore: 86,
+      maxScore: 100,
+      category: "優良",
+      title: "理想的な状態です",
+      message:
+        "歯ぎしり・食いしばりのリスクは非常に低い状態です。良い生活習慣が身についています。この調子で継続しましょう。",
+    },
+  ],
+};
+
 async function main() {
   console.log("🌱 Seeding diagnosis types...");
 
@@ -791,6 +1372,64 @@ async function main() {
     create: whiteningCheckDiagnosis,
   });
   console.log(`✅ Created/Updated: ${whitening.name} (${whitening.slug})`);
+
+  // 歯の黄ばみ診断を upsert
+  const teethYellowing = await prisma.diagnosisType.upsert({
+    where: { slug: "teeth-yellowing" },
+    update: {
+      name: teethYellowingDiagnosis.name,
+      description: teethYellowingDiagnosis.description,
+      questions: teethYellowingDiagnosis.questions,
+      resultPatterns: teethYellowingDiagnosis.resultPatterns,
+      isActive: teethYellowingDiagnosis.isActive,
+    },
+    create: teethYellowingDiagnosis,
+  });
+  console.log(
+    `✅ Created/Updated: ${teethYellowing.name} (${teethYellowing.slug})`,
+  );
+
+  // 受診タイミング診断を upsert
+  const visitTiming = await prisma.diagnosisType.upsert({
+    where: { slug: "visit-timing" },
+    update: {
+      name: visitTimingDiagnosis.name,
+      description: visitTimingDiagnosis.description,
+      questions: visitTimingDiagnosis.questions,
+      resultPatterns: visitTimingDiagnosis.resultPatterns,
+      isActive: visitTimingDiagnosis.isActive,
+    },
+    create: visitTimingDiagnosis,
+  });
+  console.log(`✅ Created/Updated: ${visitTiming.name} (${visitTiming.slug})`);
+
+  // 口臭リスク診断を upsert
+  const badBreath = await prisma.diagnosisType.upsert({
+    where: { slug: "bad-breath-risk" },
+    update: {
+      name: badBreathRiskDiagnosis.name,
+      description: badBreathRiskDiagnosis.description,
+      questions: badBreathRiskDiagnosis.questions,
+      resultPatterns: badBreathRiskDiagnosis.resultPatterns,
+      isActive: badBreathRiskDiagnosis.isActive,
+    },
+    create: badBreathRiskDiagnosis,
+  });
+  console.log(`✅ Created/Updated: ${badBreath.name} (${badBreath.slug})`);
+
+  // 歯ぎしりリスク診断を upsert
+  const bruxism = await prisma.diagnosisType.upsert({
+    where: { slug: "bruxism-risk" },
+    update: {
+      name: bruxismRiskDiagnosis.name,
+      description: bruxismRiskDiagnosis.description,
+      questions: bruxismRiskDiagnosis.questions,
+      resultPatterns: bruxismRiskDiagnosis.resultPatterns,
+      isActive: bruxismRiskDiagnosis.isActive,
+    },
+    create: bruxismRiskDiagnosis,
+  });
+  console.log(`✅ Created/Updated: ${bruxism.name} (${bruxism.slug})`);
 
   console.log("\n🎉 Seeding completed!");
 }

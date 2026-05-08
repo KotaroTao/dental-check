@@ -90,6 +90,10 @@ export async function generateStaticParams() {
     { type: "periodontal-risk" },
     { type: "cavity-risk" },
     { type: "whitening-check" },
+    { type: "teeth-yellowing" },
+    { type: "visit-timing" },
+    { type: "bad-breath-risk" },
+    { type: "bruxism-risk" },
   ];
 }
 
