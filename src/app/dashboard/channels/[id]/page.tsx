@@ -21,6 +21,10 @@ const DIAGNOSIS_TYPE_NAMES: Record<string, string> = {
   "periodontal-risk": "歯周病リスク診断",
   "cavity-risk": "虫歯リスク診断",
   "whitening-check": "ホワイトニング適正診断",
+  "teeth-yellowing": "歯の黄ばみ診断",
+  "visit-timing": "受診タイミング診断",
+  "bad-breath-risk": "口臭リスク診断",
+  "bruxism-risk": "歯ぎしりリスク診断",
 };
 
 interface DocumentItem {
