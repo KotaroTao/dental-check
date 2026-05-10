@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { headers } from "next/headers";
 import { getDiagnosisType } from "@/data/diagnosis-types";
 import { DiagnosisFlow } from "@/components/diagnosis/diagnosis-flow";
 import { prisma } from "@/lib/prisma";
@@ -6,6 +7,52 @@ import { checkSubscription } from "@/lib/subscription";
 import type { Channel, Clinic } from "@/types/clinic";
 import { ExpiredPage } from "@/components/channel/expired-page";
 import { getChannelPublicName } from "@/lib/channel-display";
+
+// bot/プリフェッチ判定（c/[code]/route.ts と同じロジック）
+// AccessLog の page_view が AdBlock 等で取りこぼされる問題を解決するため、
+// サーバーサイドで直接記録する
+function isBotOrPrefetchUA(headers: Headers): boolean {
+  const ua = (headers.get("user-agent") || "").toLowerCase();
+  if (!ua) return true;
+  const botPatterns = [
+    "bot", "crawler", "spider", "slurp", "preview", "fetch",
+    "monitor", "pingdom", "sentry", "headlesschrome", "lighthouse", "embedly",
+  ];
+  if (botPatterns.some((p) => ua.includes(p))) return true;
+  const purpose = (
+    headers.get("purpose") ||
+    headers.get("sec-purpose") ||
+    headers.get("x-purpose") ||
+    ""
+  ).toLowerCase();
+  if (purpose.includes("prefetch") || purpose.includes("prerender")) return true;
+  return false;
+}
+
+// 診断ページ到達を AccessLog に記録（page_view イベント）
+async function recordDiagnosisPageView(
+  reqHeaders: Headers,
+  channelId: string,
+  clinicId: string,
+  diagnosisTypeSlug: string
+): Promise<void> {
+  if (isBotOrPrefetchUA(reqHeaders)) return;
+  try {
+    await prisma.accessLog.create({
+      data: {
+        clinicId,
+        channelId,
+        diagnosisTypeSlug,
+        eventType: "page_view",
+        userAgent: reqHeaders.get("user-agent")?.slice(0, 500) || null,
+        referer: reqHeaders.get("referer")?.slice(0, 500) || null,
+      },
+    });
+  } catch (error) {
+    // トラッキング失敗は診断体験を絶対に壊さない
+    console.error("Diagnosis page view tracking error:", error);
+  }
+}
 
 interface Props {
   params: Promise<{
@@ -135,6 +182,13 @@ export default async function ClinicDiagnosisPage({ params }: Props) {
     return <ExpiredPage clinicName={clinic.name} logoUrl={clinic.logoUrl} />;
   }
 
+  // 診断ページ到達を記録（サーバーサイド・fire-and-forget）
+  // → 以前は <script> タグでクライアント側fetchしていたが、AdBlockerや
+  //   ブラウザのトラッキング防止機能で取りこぼしが多く、結果として
+  //   完了率が母数を超えて表示されてしまう問題があった
+  const reqHeaders = await headers();
+  await recordDiagnosisPageView(reqHeaders, channel.id, clinic.id, type);
+
   return (
     <main
       className="min-h-screen"
@@ -167,37 +221,7 @@ export default async function ClinicDiagnosisPage({ params }: Props) {
         channelId={channel.id}
         channelDisplayName={getChannelPublicName(channel as Channel)}
       />
-
-      {/* アクセストラッキング用の非表示コンポーネント */}
-      <AccessTracker channelId={channel.id} diagnosisType={type} />
     </main>
-  );
-}
-
-// アクセストラッキングコンポーネント
-function AccessTracker({
-  channelId,
-  diagnosisType,
-}: {
-  channelId: string;
-  diagnosisType: string;
-}) {
-  return (
-    <script
-      dangerouslySetInnerHTML={{
-        __html: `
-          fetch('/api/track/access', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              channelId: '${channelId}',
-              diagnosisType: '${diagnosisType}',
-              eventType: 'page_view'
-            })
-          }).catch(() => {});
-        `,
-      }}
-    />
   );
 }
 

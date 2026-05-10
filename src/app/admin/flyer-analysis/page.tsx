@@ -10,6 +10,7 @@ import {
   TrendingUp,
   Megaphone,
   Eye,
+  Link2,
 } from "lucide-react";
 import {
   BarChart,
@@ -207,14 +208,28 @@ export default function FlyerAnalysisPage() {
       全体CV率: m.avgOverallCvRate ?? 0,
     }));
 
-  // 全チャネルを合算した「サイト全体のファネル」
-  const totalQrScans = sortedChannels.reduce((acc, ch) => acc + ch.qrScans, 0);
-  const totalScans = sortedChannels.reduce((acc, ch) => acc + ch.scans, 0);
-  const totalDiagnosisStarts = sortedChannels.reduce((acc, ch) => acc + ch.diagnosisStarts, 0);
-  const totalCompletions = sortedChannels.reduce((acc, ch) => acc + ch.completions, 0);
-  const totalCtaClicks = sortedChannels.reduce((acc, ch) => acc + ch.ctaClicks, 0);
-  const totalQuantity = sortedChannels.reduce((acc, ch) => acc + (ch.distributionQuantity || 0), 0);
-  const totalBudget = sortedChannels.reduce((acc, ch) => acc + (ch.budget || 0), 0);
+  // ファネルは「診断付きQR」のみを集計対象にする
+  // リンク型QRは「診断ページ到達/完了」というステージが存在しないため、
+  // 一緒に集計すると完了率が母数を超えるなど、数値がおかしくなる
+  const diagnosisChannels = sortedChannels.filter((ch) => ch.channelType === "diagnosis");
+  const linkChannels = sortedChannels.filter((ch) => ch.channelType === "link");
+
+  // 診断付きQRのファネル合計
+  const totalQrScans = diagnosisChannels.reduce((acc, ch) => acc + ch.qrScans, 0);
+  const totalScans = diagnosisChannels.reduce((acc, ch) => acc + ch.scans, 0);
+  const totalDiagnosisStarts = diagnosisChannels.reduce((acc, ch) => acc + ch.diagnosisStarts, 0);
+  const totalCompletions = diagnosisChannels.reduce((acc, ch) => acc + ch.completions, 0);
+  const totalCtaClicks = diagnosisChannels.reduce((acc, ch) => acc + ch.ctaClicks, 0);
+  const totalQuantity = diagnosisChannels.reduce((acc, ch) => acc + (ch.distributionQuantity || 0), 0);
+  const totalBudget = diagnosisChannels.reduce((acc, ch) => acc + (ch.budget || 0), 0);
+
+  // リンク型QRサマリー（別カードで表示）
+  // リンク型は「スキャン → リダイレクト先（=CTAクリック）」の単純フロー
+  const linkTotalScans = linkChannels.reduce((acc, ch) => acc + ch.scans, 0);
+  const linkTotalCompletions = linkChannels.reduce((acc, ch) => acc + ch.completions, 0);
+  const linkTotalCtaClicks = linkChannels.reduce((acc, ch) => acc + ch.ctaClicks, 0);
+  const linkTotalQuantity = linkChannels.reduce((acc, ch) => acc + (ch.distributionQuantity || 0), 0);
+  const linkTotalBudget = linkChannels.reduce((acc, ch) => acc + (ch.budget || 0), 0);
 
   return (
     <div className="space-y-6">
@@ -253,8 +268,8 @@ export default function FlyerAnalysisPage() {
         </div>
       </div>
 
-      {/* 全体ファネル（スキャン → 診断到達 → 完了 → CTA） */}
-      {sortedChannels.length > 0 && (
+      {/* 全体ファネル（診断付きQRのみ）＋ リンク型QRサマリー */}
+      {diagnosisChannels.length > 0 && (
         <FunnelCard
           stages={[
             { label: "QRスキャン", count: totalScans, sub: totalQuantity > 0 ? `配布${totalQuantity.toLocaleString()}枚 / 反応率 ${((totalScans / totalQuantity) * 100).toFixed(2)}%` : undefined },
@@ -264,6 +279,19 @@ export default function FlyerAnalysisPage() {
           ]}
           isLegacy={totalQrScans === 0 && totalScans > 0}
           globalAvg={data.globalAvg}
+          channelCount={diagnosisChannels.length}
+        />
+      )}
+
+      {/* リンク型QRサマリー（診断なしで直接URLへ飛ばすタイプ） */}
+      {linkChannels.length > 0 && (
+        <LinkSummaryCard
+          channelCount={linkChannels.length}
+          scans={linkTotalScans}
+          completions={linkTotalCompletions}
+          ctaClicks={linkTotalCtaClicks}
+          quantity={linkTotalQuantity}
+          budget={linkTotalBudget}
         />
       )}
 
@@ -450,7 +478,11 @@ export default function FlyerAnalysisPage() {
                         )}
                       </td>
                       <td className="py-2 px-3 text-right tabular-nums whitespace-nowrap">
-                        {ch.diagnosisStarts.toLocaleString()}
+                        {ch.channelType === "link" ? (
+                          <span className="text-gray-400" title="リンク型は診断ページがありません">—</span>
+                        ) : (
+                          ch.diagnosisStarts.toLocaleString()
+                        )}
                       </td>
                       <td className="py-2 px-3 text-right tabular-nums whitespace-nowrap">
                         {ch.completions.toLocaleString()}
@@ -636,14 +668,17 @@ function ChannelCard({
         </div>
       </div>
 
-      {/* 中段: ファネル4段階 */}
+      {/* 中段: ファネル各段階（診断型は4段階、リンク型は3段階） */}
       <div className="grid grid-cols-4 gap-2 text-center mb-3">
         <CardMetric
           label="スキャン"
           value={ch.scans.toLocaleString()}
           warn={ch.qrScans === 0 && ch.diagnosisStarts > 0}
         />
-        <CardMetric label="診断到達" value={ch.diagnosisStarts.toLocaleString()} />
+        <CardMetric
+          label="診断到達"
+          value={ch.channelType === "link" ? "—" : ch.diagnosisStarts.toLocaleString()}
+        />
         <CardMetric label="完了" value={ch.completions.toLocaleString()} />
         <CardMetric label="CTA" value={ch.ctaClicks.toLocaleString()} />
       </div>
@@ -703,6 +738,75 @@ function CardMetric({
   );
 }
 
+// リンク型QRサマリーカード
+// リンク型は「スキャン → リダイレクト先（=CTAクリック）」の2段階の単純フローのため、
+// 診断付きQRのファネルとは分けて表示する
+function LinkSummaryCard({
+  channelCount,
+  scans,
+  completions,
+  ctaClicks,
+  quantity,
+  budget,
+}: {
+  channelCount: number;
+  scans: number;
+  completions: number;
+  ctaClicks: number;
+  quantity: number;
+  budget: number;
+}) {
+  const responseRate = quantity > 0 ? (scans / quantity) * 100 : null;
+  const cvRate = scans > 0 ? (ctaClicks / scans) * 100 : null;
+  const costPerCv = budget > 0 && ctaClicks > 0 ? Math.round(budget / ctaClicks) : null;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 flex-wrap">
+          <Link2 className="w-5 h-5" />
+          リンク型QRサマリー
+          <span className="ml-auto text-xs text-gray-500 font-normal">{channelCount}件のQRを集計</span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="mb-3 text-[11px] text-gray-500">
+          ℹ️ リンク型は診断を介さず直接URLへ飛ばすため、「スキャン → CTAクリック」の単純フローで集計します。
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+          <div className="bg-gray-50 rounded p-3">
+            <div className="text-xs text-gray-500">スキャン</div>
+            <div className="text-xl font-bold text-blue-600 tabular-nums">{scans.toLocaleString()}</div>
+            {quantity > 0 && (
+              <div className="text-[10px] text-gray-400">配布{quantity.toLocaleString()}枚</div>
+            )}
+          </div>
+          <div className="bg-gray-50 rounded p-3">
+            <div className="text-xs text-gray-500">CTAクリック</div>
+            <div className="text-xl font-bold text-purple-600 tabular-nums">{ctaClicks.toLocaleString()}</div>
+            <div className="text-[10px] text-gray-400">完了 {completions.toLocaleString()}件</div>
+          </div>
+          <div className="bg-gray-50 rounded p-3">
+            <div className="text-xs text-gray-500">配布反応率</div>
+            <div className="text-xl font-bold text-blue-600 tabular-nums">
+              {responseRate !== null ? `${responseRate.toFixed(2)}%` : "-"}
+            </div>
+            <div className="text-[10px] text-gray-400">スキャン÷配布枚数</div>
+          </div>
+          <div className="bg-gray-50 rounded p-3">
+            <div className="text-xs text-gray-500">全体CV率</div>
+            <div className="text-xl font-bold text-amber-600 tabular-nums">
+              {cvRate !== null ? `${cvRate.toFixed(2)}%` : "-"}
+            </div>
+            <div className="text-[10px] text-gray-400">
+              {costPerCv !== null ? `1CV ¥${costPerCv.toLocaleString()}` : "スキャン→CTA"}
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ファネルカード（4段階の絞り込み可視化）
 // QRコード経由のユーザーは「スキャン → 診断到達 → 完了 → CTA」と人が減っていく流れ。
 // 各段階で何人残ったか、何%離脱したかを一目で見られるようにする。
@@ -710,22 +814,30 @@ function FunnelCard({
   stages,
   isLegacy,
   globalAvg,
+  channelCount,
 }: {
   stages: { label: string; count: number; sub?: string }[];
   isLegacy: boolean;
   globalAvg?: { overallCvRate: number | null; responseRate: number | null; sampleScans: number };
+  channelCount?: number;
 }) {
   const top = stages[0]?.count ?? 0;
   const STAGE_COLORS = ["bg-blue-500", "bg-cyan-500", "bg-emerald-500", "bg-purple-500"];
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2 flex-wrap">
           <TrendingUp className="w-5 h-5" />
-          QR全体のファネル（絞り込み流れ）
+          診断付きQRのファネル（絞り込み流れ）
+          {channelCount !== undefined && (
+            <span className="ml-auto text-xs text-gray-500 font-normal">{channelCount}件のQRを集計</span>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent>
+        <div className="mb-3 text-[11px] text-gray-500 bg-blue-50/50 border border-blue-100 rounded px-3 py-2">
+          ℹ️ このファネルは「診断付きQR」のみを集計しています。リンク型QR（直接URLへ飛ばすタイプ）は別カードで集計されます。
+        </div>
         {isLegacy && (
           <div className="mb-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
             ⚠️ この期間はQRスキャン直接計測の前のデータです。「スキャン」は診断ページ到達数で代用しています。新しい計測が動き出すと、より正確な反応率が表示されます。
