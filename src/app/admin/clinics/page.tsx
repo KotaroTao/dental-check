@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Building2, Users, QrCode, CheckCircle, Eye, EyeOff, Trash2, Plus, X, Copy, Send, LogIn, MessageSquare, RotateCcw, AlertTriangle, ArrowUp, ArrowDown, Link2 } from "lucide-react";
+import { Building2, Users, QrCode, CheckCircle, Eye, EyeOff, Trash2, Plus, X, Copy, Send, LogIn, MessageSquare, RotateCcw, AlertTriangle, ArrowUp, ArrowDown, Link2, Search } from "lucide-react";
 
 interface Plan {
   type: string;
@@ -62,6 +62,9 @@ export default function AdminClinicsPage() {
   // ソート
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+
+  // 検索（医院名・メールで絞り込み）
+  const [searchQuery, setSearchQuery] = useState("");
 
   // 送信文面モーダル
   const [messageClinic, setMessageClinic] = useState<Clinic | null>(null);
@@ -401,7 +404,21 @@ https://qrqr-dental.com/login
     }
   };
 
-  const sortedClinics = [...clinics].sort((a, b) => {
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const filteredClinics = normalizedQuery
+    ? clinics.filter((c) => {
+        const name = c.name?.toLowerCase() || "";
+        const email = c.email?.toLowerCase() || "";
+        const slug = c.slug?.toLowerCase() || "";
+        return (
+          name.includes(normalizedQuery) ||
+          email.includes(normalizedQuery) ||
+          slug.includes(normalizedQuery)
+        );
+      })
+    : clinics;
+
+  const sortedClinics = [...filteredClinics].sort((a, b) => {
     if (!sortKey) return 0;
     const dir = sortDir === "asc" ? 1 : -1;
     switch (sortKey) {
@@ -460,7 +477,7 @@ https://qrqr-dental.com/login
       </div>
 
       {/* タブ切り替え */}
-      <div className="flex gap-2 mb-6">
+      <div className="flex gap-2 mb-4 flex-wrap">
         <button
           onClick={() => setActiveTab("active")}
           className={`px-4 py-2 rounded-lg font-medium transition-colors ${
@@ -483,6 +500,32 @@ https://qrqr-dental.com/login
           <EyeOff className="w-4 h-4 inline mr-2" />
           非表示の医院
         </button>
+      </div>
+
+      {/* 検索ボックス（医院名・メール・slugで部分一致） */}
+      <div className="mb-6 relative max-w-md">
+        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+        <Input
+          type="search"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="医院名・メール・slugで検索"
+          className="pl-9 pr-9"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery("")}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
+            title="クリア"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+        {searchQuery && (
+          <div className="text-xs text-gray-500 mt-1">
+            {filteredClinics.length}件 / {clinics.length}件中
+          </div>
+        )}
       </div>
 
       {message && (
@@ -584,9 +627,13 @@ https://qrqr-dental.com/login
               </div>
             </div>
           ))}
-          {clinics.length === 0 && (
+          {sortedClinics.length === 0 && (
             <div className="p-8 text-center text-gray-500">
-              {activeTab === "active" ? "表示中の医院がありません" : "非表示の医院がありません"}
+              {searchQuery
+                ? `「${searchQuery}」に一致する医院がありません`
+                : activeTab === "active"
+                ? "表示中の医院がありません"
+                : "非表示の医院がありません"}
             </div>
           )}
         </div>
@@ -761,9 +808,11 @@ https://qrqr-dental.com/login
             </tbody>
           </table>
 
-          {clinics.length === 0 && (
+          {sortedClinics.length === 0 && (
             <div className="p-8 text-center text-gray-500">
-              {activeTab === "active"
+              {searchQuery
+                ? `「${searchQuery}」に一致する医院がありません`
+                : activeTab === "active"
                 ? "表示中の医院がありません"
                 : "非表示の医院がありません"}
             </div>
