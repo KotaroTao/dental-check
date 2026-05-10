@@ -10,8 +10,32 @@ import { Label } from "@/components/ui/label";
 import {
   ArrowLeft, Download, Copy, ExternalLink, Image as ImageIcon, X,
   Calendar, Link2, Wallet, Upload, Loader2, Check, Megaphone, Hash,
-  FileText, Trash2, CalendarRange, Paperclip,
+  FileText, Trash2, CalendarRange, Paperclip, QrCode, BarChart3,
 } from "lucide-react";
+
+// フォーム内のセクション見出し（基本情報/効果分析設定/補足設定）
+function FormSection({
+  icon,
+  title,
+  hint,
+  children,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="space-y-4">
+      <div className="flex items-center gap-2 pb-2 border-b">
+        <span className="text-blue-600">{icon}</span>
+        <h3 className="font-semibold text-gray-800">{title}</h3>
+        {hint && <span className="text-xs text-gray-500 ml-auto">{hint}</span>}
+      </div>
+      {children}
+    </section>
+  );
+}
 import { useDemoGuard } from "@/components/dashboard/demo-guard";
 
 // 診断タイプの表示名
@@ -424,14 +448,14 @@ export default function ChannelDetailPage() {
     : null;
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-3xl mx-auto pb-24">
       <Link href="/dashboard" className="inline-flex items-center text-gray-500 hover:text-gray-700 mb-6">
         <ArrowLeft className="w-4 h-4 mr-1" />
         ダッシュボードに戻る
       </Link>
 
       {/* QR Code Section */}
-      <div className="bg-white rounded-xl shadow-sm border p-6 mb-6">
+      <div className="bg-white rounded-xl shadow-sm border p-4 sm:p-6 mb-6">
         <div className="flex flex-col items-center">
           <div className="bg-white p-4 rounded-lg border mb-4">
             <canvas ref={canvasRef} />
@@ -486,31 +510,23 @@ export default function ChannelDetailPage() {
       </div>
 
       {/* Edit Form Section */}
-      <div className="bg-white rounded-xl shadow-sm border p-6">
+      <div className="bg-white rounded-xl shadow-sm border p-4 sm:p-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-bold">設定</h2>
-          {/* 自動保存ステータス表示 */}
-          <div className="text-sm">
-            {isSaving && (
-              <span className="text-gray-400 flex items-center gap-1">
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                保存中...
-              </span>
-            )}
-            {saveSuccess && !isSaving && (
-              <span className="text-green-600 flex items-center gap-1">
-                <Check className="w-3.5 h-3.5" />
-                保存しました
-              </span>
-            )}
-          </div>
+          <span className="text-xs text-gray-500">自動保存されます</span>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-8">
           {error && (
             <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">{error}</div>
           )}
 
+          {/* セクション1: 基本情報 */}
+          <FormSection
+            icon={<QrCode className="w-4 h-4" />}
+            title="基本情報"
+            hint="QRコードの名前と種類"
+          >
           {/* 1. サムネイル画像（最大2枚） */}
           <div id="images" className="space-y-2">
             <Label>サムネイル画像（最大2枚）</Label>
@@ -668,7 +684,8 @@ export default function ChannelDetailPage() {
             <p className="text-xs text-gray-400">JPG, PNG, GIF / 最大5MB</p>
           </div>
 
-          {/* 2. QRコード名（管理用） */}
+          {/* 2-3. QRコード名 (PCで2カラム) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="name">
               QRコード名（管理用） <span className="text-red-500">*</span>
@@ -700,6 +717,7 @@ export default function ChannelDetailPage() {
               disabled={isSaving || !!isDemo}
             />
             <p className="text-xs text-gray-500">QRコードを読み込んだ際のアンケートページに表示される名前です</p>
+          </div>
           </div>
 
           {/* Diagnosis type (read-only) */}
@@ -733,7 +751,15 @@ export default function ChannelDetailPage() {
             </div>
           )}
 
-          {/* 4. QR掲載方法（必須） */}
+          </FormSection>
+
+          {/* セクション2: 効果分析設定 */}
+          <FormSection
+            icon={<BarChart3 className="w-4 h-4" />}
+            title="効果分析設定"
+            hint="QR掲載方法は必須・他は任意"
+          >
+          {/* QR掲載方法（必須） */}
           <div className="space-y-2">
             <Label htmlFor="distributionMethod" className="flex items-center gap-2">
               <Megaphone className="w-4 h-4 text-gray-500" />
@@ -767,7 +793,8 @@ export default function ChannelDetailPage() {
             </p>
           </div>
 
-          {/* 5. 配布枚数（任意） */}
+          {/* 配布枚数 + 予算 (PCで2カラム) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="distributionQuantity" className="flex items-center gap-2">
               <Hash className="w-4 h-4 text-gray-500" />
@@ -801,31 +828,11 @@ export default function ChannelDetailPage() {
               )}
             </div>
             <p className="text-xs text-gray-500">
-              配布枚数を入力すると、チラシの反応率（スキャン数÷配布枚数）を確認できます。
+              反応率（スキャン÷配布枚数）の算出に使われます
             </p>
           </div>
 
-          {/* 6. 配布期間（任意） */}
-          <div className="space-y-2">
-            <Label htmlFor="distributionPeriod" className="flex items-center gap-2">
-              <CalendarRange className="w-4 h-4 text-gray-500" />
-              配布期間（任意）
-            </Label>
-            <Input
-              id="distributionPeriod"
-              name="distributionPeriod"
-              type="text"
-              placeholder="例: 2024年1月〜3月"
-              value={formData.distributionPeriod}
-              onChange={handleChange}
-              disabled={isSaving || !!isDemo}
-            />
-            <p className="text-xs text-gray-500">
-              チラシの配布期間を記録できます。
-            </p>
-          </div>
-
-          {/* 7. 予算（任意） */}
+          {/* 予算（配布枚数の隣に配置） */}
           <div id="budget" className="space-y-2">
             <Label htmlFor="budget" className="flex items-center gap-2">
               <Wallet className="w-4 h-4 text-gray-500" />
@@ -860,11 +867,32 @@ export default function ChannelDetailPage() {
               )}
             </div>
             <p className="text-xs text-gray-500">
-              このQRコードにかけた広告費用を入力すると、QR読み込み単価を確認できます。
+              かけた広告費用。1スキャン単価・1CV単価の算出に使われます
+            </p>
+          </div>
+          </div>
+
+          {/* 配布期間 + 有効期限 (PCで2カラム) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="distributionPeriod" className="flex items-center gap-2">
+              <CalendarRange className="w-4 h-4 text-gray-500" />
+              配布期間（任意）
+            </Label>
+            <Input
+              id="distributionPeriod"
+              name="distributionPeriod"
+              type="text"
+              placeholder="例: 2024年1月〜3月"
+              value={formData.distributionPeriod}
+              onChange={handleChange}
+              disabled={isSaving || !!isDemo}
+            />
+            <p className="text-xs text-gray-500">
+              配布した期間を記録できます
             </p>
           </div>
 
-          {/* 8. 有効期限（任意） */}
           <div className="space-y-2">
             <Label htmlFor="expiresAt" className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-gray-500" />
@@ -894,11 +922,19 @@ export default function ChannelDetailPage() {
               )}
             </div>
             <p className="text-xs text-gray-500">
-              期限を過ぎるとQRコードは無効になります。空欄の場合は無期限です。
+              期限を過ぎるとQRコードは無効。空欄なら無期限
             </p>
           </div>
+          </div>
+          </FormSection>
 
-          {/* 9. 備考 */}
+          {/* セクション3: 補足設定 */}
+          <FormSection
+            icon={<FileText className="w-4 h-4" />}
+            title="補足設定"
+            hint="任意"
+          >
+          {/* 備考 */}
           <div className="space-y-2">
             <Label htmlFor="description">備考</Label>
             <textarea
@@ -1030,22 +1066,28 @@ export default function ChannelDetailPage() {
             )}
             <p className="text-xs text-gray-400">PDF、画像、Word、Excel など（1ファイル10MBまで、アップロード数無制限）</p>
           </div>
+          </FormSection>
 
-          {/* Active toggle */}
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="isActive"
-              name="isActive"
-              checked={formData.isActive}
-              onChange={handleChange}
-              disabled={isSaving || !!isDemo}
-              className="h-4 w-4 rounded border-gray-300"
-            />
-            <Label htmlFor="isActive" className="cursor-pointer">
-              このQRコードを有効にする
-            </Label>
-          </div>
+          {/* セクション4: ステータス（公開/非公開の切り替え） */}
+          <FormSection
+            icon={<Check className="w-4 h-4" />}
+            title="ステータス"
+          >
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="isActive"
+                name="isActive"
+                checked={formData.isActive}
+                onChange={handleChange}
+                disabled={isSaving || !!isDemo}
+                className="h-4 w-4 rounded border-gray-300"
+              />
+              <Label htmlFor="isActive" className="cursor-pointer">
+                このQRコードを有効にする
+              </Label>
+            </div>
+          </FormSection>
 
         </div>
       </div>
@@ -1083,6 +1125,33 @@ export default function ChannelDetailPage() {
 
       {/* D5: デモアカウント制限モーダル（共通コンポーネント） */}
       <DemoModal />
+
+      {/* スティッキー自動保存ステータスバー: 長いフォームでも常に保存状態が見える */}
+      {!isDemo && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-30">
+          <div className="max-w-3xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+            <Link href="/dashboard" className="text-sm text-gray-500 hover:text-gray-700 inline-flex items-center gap-1">
+              <ArrowLeft className="w-4 h-4" />
+              ダッシュボードへ
+            </Link>
+            <div className="text-sm">
+              {isSaving ? (
+                <span className="text-gray-500 flex items-center gap-1">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  保存中...
+                </span>
+              ) : saveSuccess ? (
+                <span className="text-green-600 flex items-center gap-1">
+                  <Check className="w-3.5 h-3.5" />
+                  保存しました
+                </span>
+              ) : (
+                <span className="text-gray-400">変更すると自動保存されます</span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
