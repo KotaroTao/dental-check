@@ -33,12 +33,18 @@ interface ChannelAnalysis {
   distributionMethod: string | null;
   distributionQuantity: number | null;
   budget: number | null;
-  scans: number;
+  // ファネル各段階の生カウント
+  qrScans: number;          // QRスキャンの瞬間（c/[code]リダイレクトで計測）
+  diagnosisStarts: number;  // 診断ページに到達した数（page_view）
+  scans: number;            // 実効スキャン数（後方互換）
   completions: number;
   ctaClicks: number;
+  // 各種率
   responseRate: number | null;
+  diagnosisStartRate: number | null;  // QRスキャン → 診断到達
   completionRate: number | null;
   ctaRate: number | null;
+  overallCvRate: number | null;       // QRスキャン → CTAクリック（全体CV率）
   costPerScan: number | null;
   costPerCta: number | null;
   createdAt: string;
@@ -48,12 +54,17 @@ interface MethodStat {
   method: string;
   count: number;
   totalScans: number;
+  totalQrScans: number;
+  totalDiagnosisStarts: number;
   totalCompletions: number;
   totalCtaClicks: number;
   avgResponseRate: number | null;
+  avgDiagnosisStartRate: number | null;
   avgCompletionRate: number | null;
   avgCtaRate: number | null;
+  avgOverallCvRate: number | null;
   avgCostPerScan: number | null;
+  avgCostPerCta: number | null;
 }
 
 interface AnalysisData {
@@ -62,7 +73,18 @@ interface AnalysisData {
   period: number;
 }
 
-type SortKey = "responseRate" | "completionRate" | "ctaRate" | "costPerScan" | "costPerCta" | "scans" | "completions" | "ctaClicks";
+type SortKey =
+  | "responseRate"
+  | "diagnosisStartRate"
+  | "completionRate"
+  | "ctaRate"
+  | "overallCvRate"
+  | "costPerScan"
+  | "costPerCta"
+  | "scans"
+  | "diagnosisStarts"
+  | "completions"
+  | "ctaClicks";
 
 export default function FlyerAnalysisPage() {
   const [data, setData] = useState<AnalysisData | null>(null);
@@ -136,9 +158,20 @@ export default function FlyerAnalysisPage() {
     .map((m) => ({
       method: m.method,
       反応率: m.avgResponseRate ?? 0,
+      診断到達率: m.avgDiagnosisStartRate ?? 0,
       完了率: m.avgCompletionRate ?? 0,
       CTA率: m.avgCtaRate ?? 0,
+      全体CV率: m.avgOverallCvRate ?? 0,
     }));
+
+  // 全チャネルを合算した「サイト全体のファネル」
+  const totalQrScans = sortedChannels.reduce((acc, ch) => acc + ch.qrScans, 0);
+  const totalScans = sortedChannels.reduce((acc, ch) => acc + ch.scans, 0);
+  const totalDiagnosisStarts = sortedChannels.reduce((acc, ch) => acc + ch.diagnosisStarts, 0);
+  const totalCompletions = sortedChannels.reduce((acc, ch) => acc + ch.completions, 0);
+  const totalCtaClicks = sortedChannels.reduce((acc, ch) => acc + ch.ctaClicks, 0);
+  const totalQuantity = sortedChannels.reduce((acc, ch) => acc + (ch.distributionQuantity || 0), 0);
+  const totalBudget = sortedChannels.reduce((acc, ch) => acc + (ch.budget || 0), 0);
 
   return (
     <div className="space-y-6">
@@ -177,6 +210,19 @@ export default function FlyerAnalysisPage() {
         </div>
       </div>
 
+      {/* 全体ファネル（スキャン → 診断到達 → 完了 → CTA） */}
+      {sortedChannels.length > 0 && (
+        <FunnelCard
+          stages={[
+            { label: "QRスキャン", count: totalScans, sub: totalQuantity > 0 ? `配布${totalQuantity.toLocaleString()}枚 / 反応率 ${((totalScans / totalQuantity) * 100).toFixed(2)}%` : undefined },
+            { label: "診断ページ到達", count: totalDiagnosisStarts },
+            { label: "診断完了", count: totalCompletions },
+            { label: "CTAクリック", count: totalCtaClicks, sub: totalBudget > 0 && totalCtaClicks > 0 ? `1CV ¥${Math.round(totalBudget / totalCtaClicks).toLocaleString()}` : undefined },
+          ]}
+          isLegacy={totalQrScans === 0 && totalScans > 0}
+        />
+      )}
+
       {/* 配布方法別サマリーカード */}
       {data.methodStats.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -190,29 +236,50 @@ export default function FlyerAnalysisPage() {
                   </div>
                   <span className="text-xs text-gray-500">{ms.count}件</span>
                 </div>
-                <div className="grid grid-cols-3 gap-3 text-center">
+                <div className="grid grid-cols-2 gap-3 text-center">
                   <div>
-                    <div className="text-xs text-gray-500">反応率</div>
+                    <div className="text-xs text-gray-500">配布反応率</div>
                     <div className="text-lg font-bold text-blue-600">
                       {ms.avgResponseRate !== null ? `${ms.avgResponseRate}%` : "-"}
                     </div>
+                    <div className="text-[10px] text-gray-400">スキャン÷配布枚数</div>
                   </div>
                   <div>
-                    <div className="text-xs text-gray-500">完了率</div>
-                    <div className="text-lg font-bold text-green-600">
+                    <div className="text-xs text-gray-500">全体CV率</div>
+                    <div className="text-lg font-bold text-purple-600">
+                      {ms.avgOverallCvRate !== null ? `${ms.avgOverallCvRate}%` : "-"}
+                    </div>
+                    <div className="text-[10px] text-gray-400">スキャン→CTA</div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-2 mt-3 text-center text-[11px]">
+                  <div>
+                    <div className="text-gray-400">診断到達</div>
+                    <div className="font-medium text-gray-700">
+                      {ms.avgDiagnosisStartRate !== null ? `${ms.avgDiagnosisStartRate}%` : "-"}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-gray-400">完了</div>
+                    <div className="font-medium text-gray-700">
                       {ms.avgCompletionRate !== null ? `${ms.avgCompletionRate}%` : "-"}
                     </div>
                   </div>
                   <div>
-                    <div className="text-xs text-gray-500">CTA率</div>
-                    <div className="text-lg font-bold text-purple-600">
+                    <div className="text-gray-400">CTA</div>
+                    <div className="font-medium text-gray-700">
                       {ms.avgCtaRate !== null ? `${ms.avgCtaRate}%` : "-"}
                     </div>
                   </div>
                 </div>
-                {ms.avgCostPerScan !== null && (
-                  <div className="mt-2 text-center text-xs text-gray-500">
-                    1QR読込あたり ¥{ms.avgCostPerScan.toLocaleString()}
+                {(ms.avgCostPerScan !== null || ms.avgCostPerCta !== null) && (
+                  <div className="mt-2 flex justify-around text-center text-xs text-gray-500">
+                    {ms.avgCostPerScan !== null && (
+                      <div>1スキャン ¥{ms.avgCostPerScan.toLocaleString()}</div>
+                    )}
+                    {ms.avgCostPerCta !== null && (
+                      <div>1CV ¥{ms.avgCostPerCta.toLocaleString()}</div>
+                    )}
                   </div>
                 )}
               </CardContent>
@@ -240,8 +307,10 @@ export default function FlyerAnalysisPage() {
                   <Tooltip formatter={(value) => `${value}%`} />
                   <Legend />
                   <Bar dataKey="反応率" fill="#3B82F6" />
+                  <Bar dataKey="診断到達率" fill="#06B6D4" />
                   <Bar dataKey="完了率" fill="#10B981" />
                   <Bar dataKey="CTA率" fill="#8B5CF6" />
+                  <Bar dataKey="全体CV率" fill="#F59E0B" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -268,17 +337,20 @@ export default function FlyerAnalysisPage() {
                   <th className="text-left py-3 px-4 font-medium">配布方法</th>
                   <th className="text-right py-3 px-4 font-medium">配布枚数</th>
                   <th className="text-right py-3 px-4 font-medium">予算</th>
-                  <SortHeader label="QR読込数" sortKey="scans" currentKey={sortKey} asc={sortAsc} onClick={handleSort} />
-                  <SortHeader label="反応率" sortKey="responseRate" currentKey={sortKey} asc={sortAsc} onClick={handleSort} />
+                  <SortHeader label="スキャン" sortKey="scans" currentKey={sortKey} asc={sortAsc} onClick={handleSort} />
+                  <SortHeader label="診断到達" sortKey="diagnosisStarts" currentKey={sortKey} asc={sortAsc} onClick={handleSort} />
+                  <SortHeader label="完了" sortKey="completions" currentKey={sortKey} asc={sortAsc} onClick={handleSort} />
+                  <SortHeader label="CTA" sortKey="ctaClicks" currentKey={sortKey} asc={sortAsc} onClick={handleSort} />
+                  <SortHeader label="配布反応率" sortKey="responseRate" currentKey={sortKey} asc={sortAsc} onClick={handleSort} />
                   <SortHeader label="完了率" sortKey="completionRate" currentKey={sortKey} asc={sortAsc} onClick={handleSort} />
-                  <SortHeader label="CTA率" sortKey="ctaRate" currentKey={sortKey} asc={sortAsc} onClick={handleSort} />
+                  <SortHeader label="全体CV率" sortKey="overallCvRate" currentKey={sortKey} asc={sortAsc} onClick={handleSort} />
                   <SortHeader label="1CVコスト" sortKey="costPerCta" currentKey={sortKey} asc={sortAsc} onClick={handleSort} />
                 </tr>
               </thead>
               <tbody>
                 {sortedChannels.length === 0 ? (
                   <tr>
-                    <td colSpan={11} className="py-12 text-center text-gray-500">
+                    <td colSpan={14} className="py-12 text-center text-gray-500">
                       データがありません
                     </td>
                   </tr>
@@ -316,7 +388,26 @@ export default function FlyerAnalysisPage() {
                       <td className="py-2 px-4 text-right tabular-nums">
                         {ch.budget !== null ? `¥${ch.budget.toLocaleString()}` : "-"}
                       </td>
-                      <td className="py-2 px-4 text-right tabular-nums font-medium">{ch.scans.toLocaleString()}</td>
+                      <td className="py-2 px-4 text-right tabular-nums font-medium">
+                        {ch.scans.toLocaleString()}
+                        {ch.qrScans === 0 && ch.diagnosisStarts > 0 && (
+                          <span
+                            className="ml-1 text-[10px] text-amber-600"
+                            title="この期間はQRスキャン直接計測の前のデータのため、診断ページ到達数を代用しています"
+                          >
+                            *
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2 px-4 text-right tabular-nums">
+                        {ch.diagnosisStarts.toLocaleString()}
+                      </td>
+                      <td className="py-2 px-4 text-right tabular-nums">
+                        {ch.completions.toLocaleString()}
+                      </td>
+                      <td className="py-2 px-4 text-right tabular-nums">
+                        {ch.ctaClicks.toLocaleString()}
+                      </td>
                       <td className="py-2 px-4 text-right tabular-nums">
                         <RateCell value={ch.responseRate} suffix="%" />
                       </td>
@@ -324,7 +415,7 @@ export default function FlyerAnalysisPage() {
                         <RateCell value={ch.completionRate} suffix="%" />
                       </td>
                       <td className="py-2 px-4 text-right tabular-nums">
-                        <RateCell value={ch.ctaRate} suffix="%" />
+                        <RateCell value={ch.overallCvRate} suffix="%" />
                       </td>
                       <td className="py-2 px-4 text-right tabular-nums">
                         {ch.costPerCta !== null ? `¥${ch.costPerCta.toLocaleString()}` : "-"}
@@ -394,5 +485,77 @@ function RateCell({ value, suffix }: { value: number | null; suffix: string }) {
     <span className={value > 0 ? "text-gray-900" : "text-gray-400"}>
       {value}{suffix}
     </span>
+  );
+}
+
+// ファネルカード（4段階の絞り込み可視化）
+// チラシは「スキャン → 診断到達 → 完了 → CTA」と人が減っていく流れ。
+// 各段階で何人残ったか、何%離脱したかを一目で見られるようにする。
+function FunnelCard({
+  stages,
+  isLegacy,
+}: {
+  stages: { label: string; count: number; sub?: string }[];
+  isLegacy: boolean;
+}) {
+  const top = stages[0]?.count ?? 0;
+  const STAGE_COLORS = ["bg-blue-500", "bg-cyan-500", "bg-emerald-500", "bg-purple-500"];
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <TrendingUp className="w-5 h-5" />
+          チラシ全体のファネル（絞り込み流れ）
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {isLegacy && (
+          <div className="mb-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+            ⚠️ この期間はQRスキャン直接計測の前のデータです。「スキャン」は診断ページ到達数で代用しています。新しい計測が動き出すと、より正確な反応率が表示されます。
+          </div>
+        )}
+        <div className="space-y-2">
+          {stages.map((s, i) => {
+            const ratio = top > 0 ? (s.count / top) * 100 : 0;
+            const dropFromPrev =
+              i > 0 && stages[i - 1].count > 0
+                ? Math.round((1 - s.count / stages[i - 1].count) * 1000) / 10
+                : null;
+            return (
+              <div key={s.label} className="flex items-center gap-3">
+                <div className="w-32 text-sm text-gray-700 shrink-0">{s.label}</div>
+                <div className="flex-1 relative h-8 bg-gray-100 rounded overflow-hidden">
+                  <div
+                    className={`h-full ${STAGE_COLORS[i] || "bg-gray-400"} transition-all`}
+                    style={{ width: `${Math.max(ratio, 1)}%` }}
+                  />
+                  <div className="absolute inset-0 flex items-center px-3 text-sm font-medium">
+                    {s.count.toLocaleString()}
+                    {top > 0 && (
+                      <span className="ml-2 text-xs text-gray-600">
+                        ({((s.count / top) * 100).toFixed(1)}%)
+                      </span>
+                    )}
+                    {s.sub && (
+                      <span className="ml-2 text-xs text-gray-500">{s.sub}</span>
+                    )}
+                  </div>
+                </div>
+                <div className="w-24 text-xs text-gray-500 text-right shrink-0">
+                  {dropFromPrev !== null && dropFromPrev > 0 ? (
+                    <span className="text-rose-600">▼ {dropFromPrev}% 離脱</span>
+                  ) : (
+                    "—"
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="mt-3 text-xs text-gray-500">
+          ※ 「スキャン → CTA」までの全体CV率: {top > 0 ? `${((stages[stages.length - 1].count / top) * 100).toFixed(2)}%` : "-"}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

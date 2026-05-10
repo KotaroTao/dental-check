@@ -1,10 +1,70 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { checkSubscription } from "@/lib/subscription";
+import { getClientIP } from "@/lib/geolocation";
 
 // ベースURLを取得（環境変数優先、フォールバックはrequest.url）
 function getBaseUrl(request: NextRequest): string {
   return process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
+}
+
+// bot/プリフェッチ判定（簡易版）
+// → スキャンしていない裏のリクエストを反応率にカウントしないためのフィルタ
+function isBotOrPrefetch(request: NextRequest): boolean {
+  const ua = (request.headers.get("user-agent") || "").toLowerCase();
+  if (!ua) return true; // UA無しは安全側でbot扱い
+  const botPatterns = [
+    "bot",
+    "crawler",
+    "spider",
+    "slurp",
+    "preview",
+    "fetch",
+    "monitor",
+    "pingdom",
+    "sentry",
+    "headlesschrome",
+    "lighthouse",
+    "embedly",
+  ];
+  if (botPatterns.some((p) => ua.includes(p))) return true;
+
+  // ブラウザのリンクプリフェッチ系ヘッダ
+  const purpose = (
+    request.headers.get("purpose") ||
+    request.headers.get("sec-purpose") ||
+    request.headers.get("x-purpose") ||
+    ""
+  ).toLowerCase();
+  if (purpose.includes("prefetch") || purpose.includes("prerender")) return true;
+
+  return false;
+}
+
+// QRスキャン1件を記録（失敗してもリダイレクトは妨げない）
+async function recordQrScan(
+  request: NextRequest,
+  channelId: string,
+  clinicId: string
+): Promise<void> {
+  try {
+    const ip = getClientIP(request);
+    await prisma.accessLog.create({
+      data: {
+        clinicId,
+        channelId,
+        eventType: "qr_scan",
+        userAgent: request.headers.get("user-agent")?.slice(0, 500) || null,
+        referer: request.headers.get("referer")?.slice(0, 500) || null,
+        ipAddress: ip !== "unknown" ? ip : null,
+        // 位置情報（country/region/city）は後段の page_view 側で記録される
+        // QRスキャン時は外部API呼び出しを避けてリダイレクトを高速化
+      },
+    });
+  } catch (error) {
+    // トラッキング失敗はユーザー体験を絶対に壊さない
+    console.error("QR scan tracking error:", error);
+  }
 }
 
 export async function GET(
@@ -34,6 +94,14 @@ export async function GET(
     if (channel.expiresAt && new Date() > new Date(channel.expiresAt)) {
       // 期限切れの場合は期限切れページへ
       return NextResponse.redirect(`${baseUrl}/c/${code}/expired`);
+    }
+
+    // ★ QRスキャンを記録（bot/プリフェッチは除外）
+    // diagnosis/link 両方のタイプで「スキャンされた瞬間」をここで1件カウントする
+    // → これまでは診断ページ到達時にしかカウントされず、プロフィール入力前で
+    //   離脱したユーザーが分母に入っていなかった（反応率が実態より低く出ていた）
+    if (!isBotOrPrefetch(request)) {
+      await recordQrScan(request, channel.id, channel.clinicId);
     }
 
     // diagnosisタイプの場合 → プロファイル入力ページへ
