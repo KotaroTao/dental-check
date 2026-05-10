@@ -177,7 +177,7 @@ export default function FlyerAnalysisPage() {
     <div className="space-y-6">
       {/* ヘッダー */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-2xl font-bold">チラシ効果分析</h1>
+        <h1 className="text-2xl font-bold">QR効果分析</h1>
         <div className="flex flex-wrap items-center gap-3">
           <select
             value={methodFilter}
@@ -512,7 +512,7 @@ function ChannelCard({
 }) {
   return (
     <div className="p-4 hover:bg-gray-50">
-      {/* 上段: 画像 + 医院名 + チラシ名 */}
+      {/* 上段: 画像 + 医院名 + QRコード名 */}
       <div className="flex items-start gap-3 mb-3">
         {ch.imageUrl ? (
           <img
@@ -617,7 +617,7 @@ function CardMetric({
 }
 
 // ファネルカード（4段階の絞り込み可視化）
-// チラシは「スキャン → 診断到達 → 完了 → CTA」と人が減っていく流れ。
+// QRコード経由のユーザーは「スキャン → 診断到達 → 完了 → CTA」と人が減っていく流れ。
 // 各段階で何人残ったか、何%離脱したかを一目で見られるようにする。
 function FunnelCard({
   stages,
@@ -633,7 +633,7 @@ function FunnelCard({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <TrendingUp className="w-5 h-5" />
-          チラシ全体のファネル（絞り込み流れ）
+          QR全体のファネル（絞り込み流れ）
         </CardTitle>
       </CardHeader>
       <CardContent>

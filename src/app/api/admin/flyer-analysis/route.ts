@@ -267,7 +267,7 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error("Get flyer analysis error:", error);
     return NextResponse.json(
-      { error: "チラシ効果分析の取得に失敗しました" },
+      { error: "QR効果分析の取得に失敗しました" },
       { status: 500 }
     );
   }

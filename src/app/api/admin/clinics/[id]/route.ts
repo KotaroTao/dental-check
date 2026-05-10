@@ -87,7 +87,7 @@ export async function PATCH(
     const body = await request.json();
     const { planType, isHidden, excludeFromAnalysis } = body;
 
-    // チラシ分析除外設定の更新
+    // QR効果分析除外設定の更新
     if (typeof excludeFromAnalysis === "boolean") {
       await prisma.clinic.update({
         where: { id },
@@ -95,7 +95,7 @@ export async function PATCH(
       });
       return NextResponse.json({
         success: true,
-        message: excludeFromAnalysis ? "チラシ分析から除外しました" : "チラシ分析に含めるようにしました",
+        message: excludeFromAnalysis ? "QR効果分析から除外しました" : "QR効果分析に含めるようにしました",
       });
     }
 
