@@ -12,6 +12,8 @@ import {
   Eye,
   Link2,
   Pencil,
+  ExternalLink,
+  Loader2,
 } from "lucide-react";
 import {
   BarChart,
@@ -560,14 +562,24 @@ export default function FlyerAnalysisPage() {
                       </td>
                       <td className="py-2 px-3 text-center whitespace-nowrap">
                         <Button
-                          variant="outline"
                           size="sm"
                           disabled={openingChannelId === ch.id}
                           onClick={() => handleOpenChannelEditor(ch.clinicId, ch.id)}
                           title="医院になりすましてQR編集ページを別タブで開く"
-                          className="h-7 px-2"
+                          className="h-8 bg-blue-600 hover:bg-blue-700 text-white gap-1"
                         >
-                          <Pencil className="w-3.5 h-3.5" />
+                          {openingChannelId === ch.id ? (
+                            <>
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              開いています…
+                            </>
+                          ) : (
+                            <>
+                              <Pencil className="w-3.5 h-3.5" />
+                              QRを編集
+                              <ExternalLink className="w-3 h-3 opacity-70" />
+                            </>
+                          )}
                         </Button>
                       </td>
                     </tr>
@@ -709,15 +721,24 @@ function ChannelCard({
       <div className="flex items-start justify-between gap-2 mb-2">
         <EffectivenessBadge ch={ch} />
         <Button
-          variant="outline"
           size="sm"
           disabled={isOpening}
           onClick={() => onEdit(ch.clinicId, ch.id)}
           title="医院になりすましてQR編集ページを別タブで開く"
-          className="h-7 px-2 shrink-0"
+          className="h-8 bg-blue-600 hover:bg-blue-700 text-white gap-1 shrink-0"
         >
-          <Pencil className="w-3.5 h-3.5 mr-1" />
-          編集
+          {isOpening ? (
+            <>
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              開いています…
+            </>
+          ) : (
+            <>
+              <Pencil className="w-3.5 h-3.5" />
+              QRを編集
+              <ExternalLink className="w-3 h-3 opacity-70" />
+            </>
+          )}
         </Button>
       </div>
       {/* 上段: 画像 + 医院名 + QRコード名 */}
