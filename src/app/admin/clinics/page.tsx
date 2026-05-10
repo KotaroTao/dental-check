@@ -351,14 +351,14 @@ https://qrqr-dental.com/login
   const getCtaBadge = (clinic: Clinic) => {
     if (clinic.ctaConfigured) {
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-green-100 text-green-700">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-green-100 text-green-700 whitespace-nowrap">
           <CheckCircle className="w-3 h-3" />
           設定済み
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-orange-100 text-orange-700">
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-orange-100 text-orange-700 whitespace-nowrap">
         <AlertTriangle className="w-3 h-3" />
         未設定
       </span>
@@ -369,14 +369,14 @@ https://qrqr-dental.com/login
     switch (clinic.invitationStatus) {
       case "pending":
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-yellow-100 text-yellow-700">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-yellow-100 text-yellow-700 whitespace-nowrap">
             <Send className="w-3 h-3" />
             未設定
           </span>
         );
       case "used":
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-green-100 text-green-700">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-green-100 text-green-700 whitespace-nowrap">
             <CheckCircle className="w-3 h-3" />
             設定済み
           </span>
@@ -557,7 +557,7 @@ https://qrqr-dental.com/login
               <div className="flex items-center gap-2 mb-3 flex-wrap">
                 <button
                   onClick={() => handleToggleExcludeFromAnalysis(clinic.id, clinic.excludeFromAnalysis)}
-                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs cursor-pointer ${
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs cursor-pointer whitespace-nowrap ${
                     clinic.excludeFromAnalysis
                       ? "bg-gray-100 text-gray-500"
                       : "bg-green-100 text-green-700"
@@ -639,8 +639,10 @@ https://qrqr-dental.com/login
         </div>
 
         {/* デスクトップ: テーブル表示 */}
+        {/* overflow-x-auto + min-w でiPad miniの横画面でも横スクロールで全列が見られる */}
         <div className="hidden md:block bg-white rounded-xl shadow-sm border overflow-hidden">
-          <table className="w-full">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[1100px]">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">医院名</th>
@@ -657,13 +659,13 @@ https://qrqr-dental.com/login
             <tbody className="divide-y">
               {sortedClinics.map((clinic) => (
                 <tr key={clinic.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <div>
                       <div className="font-medium">{clinic.name}</div>
                       <div className="text-sm text-gray-500">{clinic.email || "メール未設定"}</div>
                     </div>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     {editingClinic === clinic.id ? (
                       <select
                         value={selectedPlan}
@@ -703,7 +705,7 @@ https://qrqr-dental.com/login
                   <td className="px-4 py-3 text-center">
                     <button
                       onClick={() => handleToggleExcludeFromAnalysis(clinic.id, clinic.excludeFromAnalysis)}
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs cursor-pointer ${
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs cursor-pointer whitespace-nowrap ${
                         clinic.excludeFromAnalysis
                           ? "bg-gray-100 text-gray-500"
                           : "bg-green-100 text-green-700"
@@ -714,7 +716,7 @@ https://qrqr-dental.com/login
                   </td>
                   <td className="px-4 py-3 text-center text-sm">{clinic.channelCount}</td>
                   <td className="px-4 py-3 text-center text-sm">{clinic.sessionCount}</td>
-                  <td className="px-4 py-3 text-sm text-gray-500">
+                  <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
                     {formatDate(clinic.createdAt)}
                   </td>
                   <td className="px-4 py-3 text-right">
@@ -806,7 +808,8 @@ https://qrqr-dental.com/login
                 </tr>
               ))}
             </tbody>
-          </table>
+            </table>
+          </div>
 
           {sortedClinics.length === 0 && (
             <div className="p-8 text-center text-gray-500">
