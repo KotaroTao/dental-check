@@ -6,7 +6,31 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, X, Image as ImageIcon, Calendar, Link2, Stethoscope, QrCode, Wallet, Megaphone, Hash } from "lucide-react";
+import { ArrowLeft, X, Image as ImageIcon, Calendar, Link2, Stethoscope, QrCode, Wallet, Megaphone, Hash, FileText, BarChart3 } from "lucide-react";
+
+// フォーム内のセクション見出し（基本情報/効果分析設定/補足設定）
+function FormSection({
+  icon,
+  title,
+  hint,
+  children,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="space-y-4">
+      <div className="flex items-center gap-2 pb-2 border-b">
+        <span className="text-blue-600">{icon}</span>
+        <h2 className="font-semibold text-gray-800">{title}</h2>
+        {hint && <span className="text-xs text-gray-500 ml-auto">{hint}</span>}
+      </div>
+      {children}
+    </section>
+  );
+}
 
 interface DiagnosisType {
   slug: string;
@@ -189,6 +213,11 @@ export default function NewChannelPage() {
       return;
     }
 
+    if (!formData.distributionMethod) {
+      setError("QR掲載方法を選択してください");
+      return;
+    }
+
     // URL形式チェック
     if (channelType === "link") {
       try {
@@ -248,7 +277,7 @@ export default function NewChannelPage() {
   const customDiagnoses = diagnosisTypes.filter((d) => d.clinicId !== null);
 
   return (
-    <div className="max-w-xl mx-auto">
+    <div className="max-w-3xl mx-auto pb-28">
       <Link
         href="/dashboard"
         className="inline-flex items-center text-gray-500 hover:text-gray-700 mb-6"
@@ -257,7 +286,7 @@ export default function NewChannelPage() {
         ダッシュボードに戻る
       </Link>
 
-      <div className="bg-white rounded-xl shadow-sm border p-6">
+      <div className="bg-white rounded-xl shadow-sm border p-4 sm:p-6">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-xl font-bold">新しいQRコードを作成</h1>
           {subscription && subscription.qrCodeLimit !== null && (
@@ -270,383 +299,412 @@ export default function NewChannelPage() {
           )}
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form id="new-channel-form" onSubmit={handleSubmit} className="space-y-8">
           {error && (
             <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">
               {error}
             </div>
           )}
 
-          <div className="space-y-2">
-            <Label htmlFor="name">
-              QRコード名（管理用） <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="name"
-              name="name"
-              type="text"
-              placeholder="例: チラシ①（駅前配布）"
-              value={formData.name}
-              onChange={handleChange}
-              disabled={isLoading}
-            />
-            <p className="text-xs text-gray-500">
-              管理画面で表示される名前です。どこで使うQRコードか分かる名前をつけてください
-            </p>
-          </div>
+          {/* セクション1: 基本情報 */}
+          <FormSection
+            icon={<QrCode className="w-4 h-4" />}
+            title="基本情報"
+            hint="必須項目を含む"
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">
+                  QRコード名（管理用） <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="name"
+                  name="name"
+                  type="text"
+                  placeholder="例: チラシ①（駅前配布）"
+                  value={formData.name}
+                  onChange={handleChange}
+                  disabled={isLoading}
+                />
+                <p className="text-xs text-gray-500">
+                  管理画面で表示される名前。どこで使うか分かる名前を
+                </p>
+              </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="displayName">
-              QRコード名（一般表示用）
-            </Label>
-            <Input
-              id="displayName"
-              name="displayName"
-              type="text"
-              placeholder="例: お口の健康チェック"
-              value={formData.displayName}
-              onChange={handleChange}
-              disabled={isLoading}
-            />
-            <p className="text-xs text-gray-500">
-              QRコードを読み込んだ際のアンケートページに表示される名前です
-            </p>
-          </div>
-
-          {/* タイプ選択 */}
-          <div className="space-y-2">
-            <Label>タイプ <span className="text-red-500">*</span></Label>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setChannelType("diagnosis")}
-                disabled={isLoading}
-                className={`p-4 rounded-lg border-2 text-left transition-colors ${
-                  channelType === "diagnosis"
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-gray-200 hover:border-gray-300"
-                }`}
-              >
-                <Stethoscope className={`w-6 h-6 mb-2 ${channelType === "diagnosis" ? "text-blue-600" : "text-gray-400"}`} />
-                <div className="font-medium">診断付き</div>
-                <div className="text-xs text-gray-500">お口年齢診断などを実施</div>
-              </button>
-              <button
-                type="button"
-                onClick={() => setChannelType("link")}
-                disabled={isLoading}
-                className={`p-4 rounded-lg border-2 text-left transition-colors ${
-                  channelType === "link"
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-gray-200 hover:border-gray-300"
-                }`}
-              >
-                <Link2 className={`w-6 h-6 mb-2 ${channelType === "link" ? "text-blue-600" : "text-gray-400"}`} />
-                <div className="font-medium">リンクのみ</div>
-                <div className="text-xs text-gray-500">任意のURLへリダイレクト</div>
-              </button>
+              <div className="space-y-2">
+                <Label htmlFor="displayName">
+                  QRコード名（一般表示用）
+                </Label>
+                <Input
+                  id="displayName"
+                  name="displayName"
+                  type="text"
+                  placeholder="例: お口の健康チェック"
+                  value={formData.displayName}
+                  onChange={handleChange}
+                  disabled={isLoading}
+                />
+                <p className="text-xs text-gray-500">
+                  患者さんに見えるアンケートページのタイトル
+                </p>
+              </div>
             </div>
-          </div>
 
-          {/* 診断タイプ選択（診断付きの場合） */}
-          {channelType === "diagnosis" && (
+            {/* タイプ選択 */}
             <div className="space-y-2">
-              <Label htmlFor="diagnosisTypeSlug">
-                診断タイプ <span className="text-red-500">*</span>
+              <Label>タイプ <span className="text-red-500">*</span></Label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setChannelType("diagnosis")}
+                  disabled={isLoading}
+                  className={`p-4 rounded-lg border-2 text-left transition-colors ${
+                    channelType === "diagnosis"
+                      ? "border-blue-500 bg-blue-50"
+                      : "border-gray-200 hover:border-gray-300"
+                  }`}
+                >
+                  <Stethoscope className={`w-6 h-6 mb-2 ${channelType === "diagnosis" ? "text-blue-600" : "text-gray-400"}`} />
+                  <div className="font-medium">診断付き</div>
+                  <div className="text-xs text-gray-500">お口年齢診断などを実施</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setChannelType("link")}
+                  disabled={isLoading}
+                  className={`p-4 rounded-lg border-2 text-left transition-colors ${
+                    channelType === "link"
+                      ? "border-blue-500 bg-blue-50"
+                      : "border-gray-200 hover:border-gray-300"
+                  }`}
+                >
+                  <Link2 className={`w-6 h-6 mb-2 ${channelType === "link" ? "text-blue-600" : "text-gray-400"}`} />
+                  <div className="font-medium">リンクのみ</div>
+                  <div className="text-xs text-gray-500">任意のURLへリダイレクト</div>
+                </button>
+              </div>
+            </div>
+
+            {/* 診断タイプ選択（診断付きの場合） */}
+            {channelType === "diagnosis" && (
+              <div className="space-y-2">
+                <Label htmlFor="diagnosisTypeSlug">
+                  診断タイプ <span className="text-red-500">*</span>
+                </Label>
+                <select
+                  id="diagnosisTypeSlug"
+                  name="diagnosisTypeSlug"
+                  value={formData.diagnosisTypeSlug}
+                  onChange={handleChange}
+                  disabled={isLoading || isLoadingDiagnoses}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <option value="">
+                    {isLoadingDiagnoses ? "読み込み中..." : "選択してください"}
+                  </option>
+                  {customDiagnoses.length > 0 && (
+                    <optgroup label="オリジナル診断">
+                      {customDiagnoses.map((type) => (
+                        <option key={type.slug} value={type.slug}>
+                          {type.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {defaultDiagnoses.length > 0 && (
+                    <optgroup label="デフォルト診断">
+                      {defaultDiagnoses.map((type) => (
+                        <option key={type.slug} value={type.slug}>
+                          {type.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                </select>
+                <p className="text-xs text-gray-500">
+                  このQRコードで使用する診断を選択してください
+                </p>
+              </div>
+            )}
+
+            {/* リダイレクトURL（リンクのみの場合） */}
+            {channelType === "link" && (
+              <div className="space-y-2">
+                <Label htmlFor="redirectUrl">
+                  リダイレクト先URL <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="redirectUrl"
+                  name="redirectUrl"
+                  type="url"
+                  placeholder="https://example.com/page"
+                  value={formData.redirectUrl}
+                  onChange={handleChange}
+                  disabled={isLoading}
+                />
+                <p className="text-xs text-gray-500">
+                  QRコードをスキャンした際のリダイレクト先URLを入力してください
+                </p>
+              </div>
+            )}
+          </FormSection>
+
+          {/* セクション2: 効果分析設定 */}
+          <FormSection
+            icon={<BarChart3 className="w-4 h-4" />}
+            title="効果分析設定"
+            hint="QR掲載方法は必須・他は任意"
+          >
+            {/* QR掲載方法（必須・全幅） */}
+            <div className="space-y-2">
+              <Label htmlFor="distributionMethod" className="flex items-center gap-2">
+                <Megaphone className="w-4 h-4 text-gray-500" />
+                QR掲載方法
+                <span className="text-rose-600 text-xs font-medium">必須</span>
               </Label>
               <select
-                id="diagnosisTypeSlug"
-                name="diagnosisTypeSlug"
-                value={formData.diagnosisTypeSlug}
+                id="distributionMethod"
+                name="distributionMethod"
+                value={formData.distributionMethod}
                 onChange={handleChange}
-                disabled={isLoading || isLoadingDiagnoses}
+                disabled={isLoading}
+                required
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <option value="">
-                  {isLoadingDiagnoses ? "読み込み中..." : "選択してください"}
-                </option>
-                {customDiagnoses.length > 0 && (
-                  <optgroup label="オリジナル診断">
-                    {customDiagnoses.map((type) => (
-                      <option key={type.slug} value={type.slug}>
-                        {type.name}
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-                {defaultDiagnoses.length > 0 && (
-                  <optgroup label="デフォルト診断">
-                    {defaultDiagnoses.map((type) => (
-                      <option key={type.slug} value={type.slug}>
-                        {type.name}
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
+                <option value="">選択してください</option>
+                <option value="ポスティング">ポスティング</option>
+                <option value="手配り">手配り</option>
+                <option value="店頭設置">店頭設置</option>
+                <option value="新聞折込">新聞折込</option>
+                <option value="DM">DM</option>
+                <option value="その他">その他</option>
               </select>
               <p className="text-xs text-gray-500">
-                このQRコードで使用する診断を選択してください
+                QRコードを掲載した媒体（チラシ・LP・メールなど）の種別を選択すると、媒体別の効果比較ができます。
               </p>
             </div>
-          )}
 
-          {/* リダイレクトURL（リンクのみの場合） */}
-          {channelType === "link" && (
-            <div className="space-y-2">
-              <Label htmlFor="redirectUrl">
-                リダイレクト先URL <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="redirectUrl"
-                name="redirectUrl"
-                type="url"
-                placeholder="https://example.com/page"
-                value={formData.redirectUrl}
-                onChange={handleChange}
-                disabled={isLoading}
-              />
-              <p className="text-xs text-gray-500">
-                QRコードをスキャンした際のリダイレクト先URLを入力してください
-              </p>
-            </div>
-          )}
-
-          {/* 配布期間 */}
-          <div className="space-y-2">
-            <Label htmlFor="distributionPeriod">配布期間（任意）</Label>
-            <Input
-              id="distributionPeriod"
-              name="distributionPeriod"
-              type="text"
-              placeholder="例: 2024年1月〜3月"
-              value={formData.distributionPeriod}
-              onChange={handleChange}
-              disabled={isLoading}
-            />
-            <p className="text-xs text-gray-500">
-              チラシの配布期間を記録できます。
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="expiresAt" className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-gray-500" />
-              有効期限（任意）
-            </Label>
-            <div className="flex gap-2">
-              <Input
-                id="expiresAt"
-                name="expiresAt"
-                type="datetime-local"
-                value={formData.expiresAt}
-                onChange={handleChange}
-                disabled={isLoading}
-                className="flex-1"
-              />
-              {formData.expiresAt && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setFormData((prev) => ({ ...prev, expiresAt: "" }))}
-                  disabled={isLoading}
-                  className="shrink-0"
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              )}
-            </div>
-            <p className="text-xs text-gray-500">
-              期限を過ぎるとQRコードは無効になります。空欄の場合は無期限です。
-            </p>
-          </div>
-
-          {/* 予算 */}
-          <div className="space-y-2">
-            <Label htmlFor="budget" className="flex items-center gap-2">
-              <Wallet className="w-4 h-4 text-gray-500" />
-              予算（任意）
-            </Label>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">¥</span>
-                <Input
-                  id="budget"
-                  name="budget"
-                  type="number"
-                  min="0"
-                  placeholder="例: 50000"
-                  value={formData.budget}
-                  onChange={handleChange}
-                  disabled={isLoading}
-                  className="pl-7"
-                />
-              </div>
-              {formData.budget && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setFormData((prev) => ({ ...prev, budget: "" }))}
-                  disabled={isLoading}
-                  className="shrink-0"
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              )}
-            </div>
-            <p className="text-xs text-gray-500">
-              このQRコードにかけた広告費用を入力すると、QR読み込み単価を確認できます。
-            </p>
-          </div>
-
-          {/* 配布方法 */}
-          <div className="space-y-2">
-            <Label htmlFor="distributionMethod" className="flex items-center gap-2">
-              <Megaphone className="w-4 h-4 text-gray-500" />
-              配布方法（任意）
-            </Label>
-            <select
-              id="distributionMethod"
-              name="distributionMethod"
-              value={formData.distributionMethod}
-              onChange={handleChange}
-              disabled={isLoading}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <option value="">選択してください</option>
-              <option value="ポスティング">ポスティング</option>
-              <option value="手配り">手配り</option>
-              <option value="店頭設置">店頭設置</option>
-              <option value="新聞折込">新聞折込</option>
-              <option value="DM">DM</option>
-              <option value="その他">その他</option>
-            </select>
-            <p className="text-xs text-gray-500">
-              チラシの配布方法を選択すると、方法別の効果比較ができます。
-            </p>
-          </div>
-
-          {/* 配布枚数 */}
-          <div className="space-y-2">
-            <Label htmlFor="distributionQuantity" className="flex items-center gap-2">
-              <Hash className="w-4 h-4 text-gray-500" />
-              配布枚数（任意）
-            </Label>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Input
-                  id="distributionQuantity"
-                  name="distributionQuantity"
-                  type="number"
-                  min="0"
-                  placeholder="例: 5000"
-                  value={formData.distributionQuantity}
-                  onChange={handleChange}
-                  disabled={isLoading}
-                />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">枚</span>
-              </div>
-              {formData.distributionQuantity && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setFormData((prev) => ({ ...prev, distributionQuantity: "" }))}
-                  disabled={isLoading}
-                  className="shrink-0"
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              )}
-            </div>
-            <p className="text-xs text-gray-500">
-              配布枚数を入力すると、チラシの反応率（スキャン数÷配布枚数）を確認できます。
-            </p>
-          </div>
-
-          {/* 備考 */}
-          <div className="space-y-2">
-            <Label htmlFor="description">備考</Label>
-            <textarea
-              id="description"
-              name="description"
-              rows={10}
-              className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              placeholder="メモや備考を自由に記入できます"
-              value={formData.description}
-              onChange={handleChange}
-              disabled={isLoading}
-            />
-          </div>
-
-          {/* 画像アップロード */}
-          <div className="space-y-2">
-            <Label>チラシや看板の写真（任意）</Label>
-            <div
-              className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-                imagePreview ? "border-blue-300 bg-blue-50" : "border-gray-300 hover:border-gray-400"
-              }`}
-              onDrop={handleDrop}
-              onDragOver={handleDragOver}
-            >
-              {imagePreview ? (
-                <div className="relative inline-block">
-                  <img
-                    src={imagePreview}
-                    alt="プレビュー"
-                    className="max-h-48 rounded-lg mx-auto"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleImageRemove}
-                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
+            {/* 配布枚数 + 予算（PCで2カラム） */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="distributionQuantity" className="flex items-center gap-2">
+                  <Hash className="w-4 h-4 text-gray-500" />
+                  配布枚数（任意）
+                </Label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Input
+                      id="distributionQuantity"
+                      name="distributionQuantity"
+                      type="number"
+                      min="0"
+                      placeholder="例: 5000"
+                      value={formData.distributionQuantity}
+                      onChange={handleChange}
+                      disabled={isLoading}
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">枚</span>
+                  </div>
+                  {formData.distributionQuantity && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setFormData((prev) => ({ ...prev, distributionQuantity: "" }))}
+                      disabled={isLoading}
+                      className="shrink-0"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  )}
                 </div>
-              ) : (
-                <div className="space-y-2">
-                  <ImageIcon className="w-12 h-12 mx-auto text-gray-400" />
-                  <div className="text-sm text-gray-600">
-                    ドラッグ＆ドロップまたは
+                <p className="text-xs text-gray-500">
+                  反応率（スキャン÷配布枚数）の算出に使われます
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="budget" className="flex items-center gap-2">
+                  <Wallet className="w-4 h-4 text-gray-500" />
+                  予算（任意）
+                </Label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">¥</span>
+                    <Input
+                      id="budget"
+                      name="budget"
+                      type="number"
+                      min="0"
+                      placeholder="例: 50000"
+                      value={formData.budget}
+                      onChange={handleChange}
+                      disabled={isLoading}
+                      className="pl-7"
+                    />
+                  </div>
+                  {formData.budget && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setFormData((prev) => ({ ...prev, budget: "" }))}
+                      disabled={isLoading}
+                      className="shrink-0"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500">
+                  かけた広告費用。1スキャン単価・1CV単価の算出に使われます
+                </p>
+              </div>
+            </div>
+
+            {/* 配布期間 + 有効期限（PCで2カラム） */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="distributionPeriod">配布期間（任意）</Label>
+                <Input
+                  id="distributionPeriod"
+                  name="distributionPeriod"
+                  type="text"
+                  placeholder="例: 2024年1月〜3月"
+                  value={formData.distributionPeriod}
+                  onChange={handleChange}
+                  disabled={isLoading}
+                />
+                <p className="text-xs text-gray-500">
+                  配布した期間を記録できます
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="expiresAt" className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-gray-500" />
+                  有効期限（任意）
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="expiresAt"
+                    name="expiresAt"
+                    type="datetime-local"
+                    value={formData.expiresAt}
+                    onChange={handleChange}
+                    disabled={isLoading}
+                    className="flex-1"
+                  />
+                  {formData.expiresAt && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setFormData((prev) => ({ ...prev, expiresAt: "" }))}
+                      disabled={isLoading}
+                      className="shrink-0"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500">
+                  期限を過ぎるとQRコードは無効。空欄なら無期限
+                </p>
+              </div>
+            </div>
+          </FormSection>
+
+          {/* セクション3: 補足設定 */}
+          <FormSection
+            icon={<FileText className="w-4 h-4" />}
+            title="補足設定"
+            hint="任意"
+          >
+            <div className="space-y-2">
+              <Label htmlFor="description">備考</Label>
+              <textarea
+                id="description"
+                name="description"
+                rows={6}
+                className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                placeholder="メモや備考を自由に記入できます"
+                value={formData.description}
+                onChange={handleChange}
+                disabled={isLoading}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>チラシや看板の写真（任意）</Label>
+              <div
+                className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                  imagePreview ? "border-blue-300 bg-blue-50" : "border-gray-300 hover:border-gray-400"
+                }`}
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+              >
+                {imagePreview ? (
+                  <div className="relative inline-block">
+                    <img
+                      src={imagePreview}
+                      alt="プレビュー"
+                      className="max-h-48 rounded-lg mx-auto"
+                    />
                     <button
                       type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="text-blue-600 hover:underline mx-1"
+                      onClick={handleImageRemove}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
                     >
-                      ファイルを選択
+                      <X className="w-4 h-4" />
                     </button>
                   </div>
-                  <p className="text-xs text-gray-400">
-                    JPEG, PNG, WebP（最大5MB）
-                  </p>
-                </div>
-              )}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleImageSelect}
-                className="hidden"
-              />
+                ) : (
+                  <div className="space-y-2">
+                    <ImageIcon className="w-12 h-12 mx-auto text-gray-400" />
+                    <div className="text-sm text-gray-600">
+                      ドラッグ＆ドロップまたは
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="text-blue-600 hover:underline mx-1"
+                      >
+                        ファイルを選択
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-400">
+                      JPEG, PNG, WebP（最大5MB）
+                    </p>
+                  </div>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageSelect}
+                  className="hidden"
+                />
+              </div>
+              <p className="text-xs text-gray-500">
+                配布チラシのデザイン画像や、ポスター・看板の設置場所を登録しておくと、QRコードの管理がしやすくなります
+              </p>
             </div>
-            <p className="text-xs text-gray-500">
-              配布チラシのデザイン画像や、ポスター・看板の設置場所を登録しておくと、QRコードの管理がしやすくなります
-            </p>
-          </div>
-
-          <div className="flex gap-3 pt-4">
-            <Button type="submit" disabled={isLoading || isUploading} className="flex-1">
-              {isLoading || isUploading ? "作成中..." : "QRコードを作成"}
-            </Button>
-            <Link href="/dashboard">
-              <Button type="button" variant="outline" disabled={isLoading}>
-                キャンセル
-              </Button>
-            </Link>
-          </div>
+          </FormSection>
         </form>
+      </div>
+
+      {/* スティッキー保存バー: 長いフォームでも常に保存ボタンが見える */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-30">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-3 flex justify-end gap-3">
+          <Link href="/dashboard">
+            <Button type="button" variant="outline" disabled={isLoading}>
+              キャンセル
+            </Button>
+          </Link>
+          <Button form="new-channel-form" type="submit" disabled={isLoading || isUploading}>
+            {isLoading || isUploading ? "作成中..." : "QRコードを作成"}
+          </Button>
+        </div>
       </div>
     </div>
   );
