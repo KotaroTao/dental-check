@@ -22,6 +22,16 @@ import {
   Legend,
 } from "recharts";
 
+type EffectivenessTier =
+  | "excellent"  // 平均比 +30%以上
+  | "good"       // +10〜30%
+  | "avg"        // -10〜+10%
+  | "below"      // -30〜-10%
+  | "poor"       // -30%未満
+  | "insufficient"; // サンプル不足/CV未計測
+
+type ConfidenceTier = "high" | "medium" | "low" | "insufficient";
+
 interface ChannelAnalysis {
   id: string;
   clinicName: string;
@@ -47,6 +57,12 @@ interface ChannelAnalysis {
   overallCvRate: number | null;       // QRスキャン → CTAクリック（全体CV率）
   costPerScan: number | null;
   costPerCta: number | null;
+  // 効果判定（API側で計算）
+  effectivenessTier: EffectivenessTier;
+  confidence: ConfidenceTier;
+  benchmarkDeviation: number | null;     // 平均比 % (+25 なら平均より25%良い)
+  benchmarkPeerLabel: string;            // 「ポスティング平均」「全社平均」など
+  benchmarkPeerCvRate: number | null;    // 比較対象の全体CV率（参考）
   createdAt: string;
 }
 
@@ -70,6 +86,11 @@ interface MethodStat {
 interface AnalysisData {
   channels: ChannelAnalysis[];
   methodStats: MethodStat[];
+  globalAvg: {
+    overallCvRate: number | null;
+    responseRate: number | null;
+    sampleScans: number;
+  };
   period: number;
 }
 
@@ -84,7 +105,29 @@ type SortKey =
   | "scans"
   | "diagnosisStarts"
   | "completions"
-  | "ctaClicks";
+  | "ctaClicks"
+  | "benchmarkDeviation";
+
+// 効果ティアの表示設定（色・ラベル・並び順用の重み）
+const TIER_META: Record<
+  EffectivenessTier,
+  { label: string; color: string; weight: number }
+> = {
+  excellent:    { label: "優秀",     color: "bg-emerald-100 text-emerald-700 border-emerald-300", weight: 5 },
+  good:         { label: "良好",     color: "bg-green-50 text-green-700 border-green-200",       weight: 4 },
+  avg:          { label: "平均",     color: "bg-gray-100 text-gray-700 border-gray-300",         weight: 3 },
+  below:        { label: "やや不調", color: "bg-amber-50 text-amber-700 border-amber-200",       weight: 2 },
+  poor:         { label: "要改善",   color: "bg-rose-50 text-rose-700 border-rose-200",          weight: 1 },
+  insufficient: { label: "判定不能", color: "bg-gray-50 text-gray-500 border-gray-200",          weight: 0 },
+};
+
+// 信頼度ティアの表示設定
+const CONFIDENCE_META: Record<ConfidenceTier, { label: string; stars: string }> = {
+  high:         { label: "信頼度: 高（500件以上）",         stars: "★★★" },
+  medium:       { label: "信頼度: 中（100〜499件）",        stars: "★★☆" },
+  low:          { label: "信頼度: 低（30〜99件）",          stars: "★☆☆" },
+  insufficient: { label: "サンプル不足（30件未満）",        stars: "—" },
+};
 
 export default function FlyerAnalysisPage() {
   const [data, setData] = useState<AnalysisData | null>(null);
@@ -220,6 +263,7 @@ export default function FlyerAnalysisPage() {
             { label: "CTAクリック", count: totalCtaClicks, sub: totalBudget > 0 && totalCtaClicks > 0 ? `1CV ¥${Math.round(totalBudget / totalCtaClicks).toLocaleString()}` : undefined },
           ]}
           isLegacy={totalQrScans === 0 && totalScans > 0}
+          globalAvg={data.globalAvg}
         />
       )}
 
@@ -337,6 +381,7 @@ export default function FlyerAnalysisPage() {
                   <th className="text-left py-3 px-3 font-medium whitespace-nowrap">クリニック</th>
                   <th className="text-left py-3 px-3 font-medium whitespace-nowrap">QRコード名</th>
                   <th className="text-left py-3 px-3 font-medium whitespace-nowrap">配布方法</th>
+                  <SortHeader label="効果判定" sortKey="benchmarkDeviation" currentKey={sortKey} asc={sortAsc} onClick={handleSort} align="left" />
                   <th className="text-right py-3 px-3 font-medium whitespace-nowrap">配布枚数</th>
                   <th className="text-right py-3 px-3 font-medium whitespace-nowrap">予算</th>
                   <SortHeader label="スキャン" sortKey="scans" currentKey={sortKey} asc={sortAsc} onClick={handleSort} />
@@ -352,7 +397,7 @@ export default function FlyerAnalysisPage() {
               <tbody>
                 {sortedChannels.length === 0 ? (
                   <tr>
-                    <td colSpan={14} className="py-12 text-center text-gray-500">
+                    <td colSpan={15} className="py-12 text-center text-gray-500">
                       データがありません
                     </td>
                   </tr>
@@ -383,6 +428,9 @@ export default function FlyerAnalysisPage() {
                         ) : (
                           <span className="text-gray-400">-</span>
                         )}
+                      </td>
+                      <td className="py-2 px-3 whitespace-nowrap">
+                        <EffectivenessBadge ch={ch} />
                       </td>
                       <td className="py-2 px-3 text-right tabular-nums whitespace-nowrap">
                         {ch.distributionQuantity !== null ? ch.distributionQuantity.toLocaleString() : "-"}
@@ -467,17 +515,21 @@ function SortHeader({
   currentKey,
   asc,
   onClick,
+  align = "right",
 }: {
   label: string;
   sortKey: SortKey;
   currentKey: SortKey;
   asc: boolean;
   onClick: (key: SortKey) => void;
+  align?: "left" | "right";
 }) {
   const isActive = currentKey === key;
+  // Tailwindは文字列補間できないので明示的に切り替える
+  const alignClass = align === "left" ? "text-left" : "text-right";
   return (
     <th
-      className="text-right py-3 px-3 font-medium cursor-pointer hover:bg-gray-100 select-none whitespace-nowrap"
+      className={`${alignClass} py-3 px-3 font-medium cursor-pointer hover:bg-gray-100 select-none whitespace-nowrap`}
       onClick={() => onClick(key)}
     >
       <span className="inline-flex items-center gap-1">
@@ -501,6 +553,37 @@ function RateCell({ value, suffix }: { value: number | null; suffix: string }) {
   );
 }
 
+// 効果バッジ: 「優秀/良好/平均/やや不調/要改善/判定不能」を色付きで表示
+// 信頼度（★）と平均比（+25%など）も併記し、医院ごとの判断材料を1セルに集約
+function EffectivenessBadge({ ch }: { ch: ChannelAnalysis }) {
+  const meta = TIER_META[ch.effectivenessTier];
+  const conf = CONFIDENCE_META[ch.confidence];
+  const tooltip =
+    ch.effectivenessTier === "insufficient"
+      ? `データが少ないため判定できません（${conf.label}）`
+      : `${ch.benchmarkPeerLabel}比 ${ch.benchmarkDeviation! >= 0 ? "+" : ""}${ch.benchmarkDeviation}% / ${conf.label}\n` +
+        `比較対象の全体CV率: ${ch.benchmarkPeerCvRate ?? "-"}%`;
+
+  return (
+    <div className="flex flex-col gap-0.5" title={tooltip}>
+      <span
+        className={`inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-medium border ${meta.color} whitespace-nowrap w-fit`}
+      >
+        {meta.label}
+        {ch.benchmarkDeviation !== null && ch.effectivenessTier !== "insufficient" && (
+          <span className="ml-1 tabular-nums">
+            {ch.benchmarkDeviation >= 0 ? "+" : ""}
+            {ch.benchmarkDeviation}%
+          </span>
+        )}
+      </span>
+      <span className="text-[10px] text-gray-500 whitespace-nowrap pl-1">
+        {conf.stars} {ch.scans}件
+      </span>
+    </div>
+  );
+}
+
 // スマホ・タブレット向けのチャネルカード
 // → 横長テーブルが小画面で潰れて文字が縦書きになる問題を回避
 function ChannelCard({
@@ -512,6 +595,10 @@ function ChannelCard({
 }) {
   return (
     <div className="p-4 hover:bg-gray-50">
+      {/* 効果判定バッジ（最上部に大きく表示） */}
+      <div className="mb-2">
+        <EffectivenessBadge ch={ch} />
+      </div>
       {/* 上段: 画像 + 医院名 + QRコード名 */}
       <div className="flex items-start gap-3 mb-3">
         {ch.imageUrl ? (
@@ -622,9 +709,11 @@ function CardMetric({
 function FunnelCard({
   stages,
   isLegacy,
+  globalAvg,
 }: {
   stages: { label: string; count: number; sub?: string }[];
   isLegacy: boolean;
+  globalAvg?: { overallCvRate: number | null; responseRate: number | null; sampleScans: number };
 }) {
   const top = stages[0]?.count ?? 0;
   const STAGE_COLORS = ["bg-blue-500", "bg-cyan-500", "bg-emerald-500", "bg-purple-500"];
@@ -684,8 +773,17 @@ function FunnelCard({
             );
           })}
         </div>
-        <div className="mt-3 text-xs text-gray-500">
-          ※ 「スキャン → CTA」までの全体CV率: {top > 0 ? `${((stages[stages.length - 1].count / top) * 100).toFixed(2)}%` : "-"}
+        <div className="mt-3 text-xs text-gray-500 space-y-1">
+          <div>
+            ※ 「スキャン → CTA」までの全体CV率: {top > 0 ? `${((stages[stages.length - 1].count / top) * 100).toFixed(2)}%` : "-"}
+          </div>
+          {globalAvg && globalAvg.overallCvRate !== null && (
+            <div className="text-[11px] text-gray-500">
+              ベンチマーク基準: 全社平均CV率 <span className="font-semibold text-gray-700">{globalAvg.overallCvRate}%</span>
+              （サンプル {globalAvg.sampleScans.toLocaleString()}件）
+              ・各QRの「効果判定」はこの平均または同配布方法平均との比較で算出されています
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
