@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { getDiagnosisType } from "@/data/diagnosis-types";
 import { DiagnosisFlow } from "@/components/diagnosis/diagnosis-flow";
 import { prisma } from "@/lib/prisma";
-import { checkSubscription } from "@/lib/subscription";
+import { checkSubscription, canTrackSession } from "@/lib/subscription";
 import type { Channel, Clinic } from "@/types/clinic";
 import { ExpiredPage } from "@/components/channel/expired-page";
 import { getChannelPublicName } from "@/lib/channel-display";
@@ -186,8 +186,13 @@ export default async function ClinicDiagnosisPage({ params }: Props) {
   // → 以前は <script> タグでクライアント側fetchしていたが、AdBlockerや
   //   ブラウザのトラッキング防止機能で取りこぼしが多く、結果として
   //   完了率が母数を超えて表示されてしまう問題があった
+  // canTrackSession は checkSubscription より厳しく、grace_period では false。
+  // ユーザー体験はそのまま（診断は表示する）が、AccessLog のみスキップする。
   const reqHeaders = await headers();
-  await recordDiagnosisPageView(reqHeaders, channel.id, clinic.id, type);
+  const canTrack = await canTrackSession(clinic.id);
+  if (canTrack) {
+    await recordDiagnosisPageView(reqHeaders, channel.id, clinic.id, type);
+  }
 
   return (
     <main

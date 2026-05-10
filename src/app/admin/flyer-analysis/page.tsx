@@ -24,16 +24,6 @@ import {
   Legend,
 } from "recharts";
 
-type EffectivenessTier =
-  | "excellent"  // 平均比 +30%以上
-  | "good"       // +10〜30%
-  | "avg"        // -10〜+10%
-  | "below"      // -30〜-10%
-  | "poor"       // -30%未満
-  | "insufficient"; // サンプル不足/CV未計測
-
-type ConfidenceTier = "high" | "medium" | "low" | "insufficient";
-
 interface ChannelAnalysis {
   id: string;
   clinicId: string;
@@ -61,12 +51,6 @@ interface ChannelAnalysis {
   overallCvRate: number | null;       // QRスキャン → CTAクリック（全体CV率）
   costPerScan: number | null;
   costPerCta: number | null;
-  // 効果判定（API側で計算）
-  effectivenessTier: EffectivenessTier;
-  confidence: ConfidenceTier;
-  benchmarkDeviation: number | null;     // 平均比 % (+25 なら平均より25%良い)
-  benchmarkPeerLabel: string;            // 「ポスティング平均」「全社平均」など
-  benchmarkPeerCvRate: number | null;    // 比較対象の全体CV率（参考）
   createdAt: string;
 }
 
@@ -90,11 +74,6 @@ interface MethodStat {
 interface AnalysisData {
   channels: ChannelAnalysis[];
   methodStats: MethodStat[];
-  globalAvg: {
-    overallCvRate: number | null;
-    responseRate: number | null;
-    sampleScans: number;
-  };
   period: number;
 }
 

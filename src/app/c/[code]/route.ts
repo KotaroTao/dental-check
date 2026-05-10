@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { checkSubscription } from "@/lib/subscription";
+import { checkSubscription, canTrackSession } from "@/lib/subscription";
 import { getClientIP } from "@/lib/geolocation";
 
 // ベースURLを取得（環境変数優先、フォールバックはrequest.url）
@@ -96,12 +96,17 @@ export async function GET(
       return NextResponse.redirect(`${baseUrl}/c/${code}/expired`);
     }
 
-    // ★ QRスキャンを記録（bot/プリフェッチは除外）
+    // ★ QRスキャンを記録（bot/プリフェッチは除外、契約状態が計測可能な場合のみ）
     // diagnosis/link 両方のタイプで「スキャンされた瞬間」をここで1件カウントする
     // → これまでは診断ページ到達時にしかカウントされず、プロフィール入力前で
     //   離脱したユーザーが分母に入っていなかった（反応率が実態より低く出ていた）
+    // canTrackSession は checkSubscription より厳しく、grace_period では false を返す。
+    // ユーザーの遷移自体は止めず（リダイレクトは継続）、AccessLog のみスキップする。
     if (!isBotOrPrefetch(request)) {
-      await recordQrScan(request, channel.id, channel.clinicId);
+      const canTrack = await canTrackSession(channel.clinicId);
+      if (canTrack) {
+        await recordQrScan(request, channel.id, channel.clinicId);
+      }
     }
 
     // diagnosisタイプの場合 → プロファイル入力ページへ
