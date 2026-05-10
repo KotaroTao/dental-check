@@ -24,13 +24,24 @@ export async function GET(request: Request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const rawDays = parseInt(searchParams.get("days") || "90");
-    const days = Math.max(1, Math.min(365, isNaN(rawDays) ? 90 : rawDays));
+    const rawDays = parseInt(searchParams.get("days") || "365");
+    // days=0 は「全期間」を意味する特殊値（過去すべての期間を集計）
+    // それ以外は 1〜365 の範囲にクランプ
+    const days = isNaN(rawDays) || rawDays < 0
+      ? 365
+      : rawDays === 0
+      ? 0
+      : Math.min(365, Math.max(1, rawDays));
     const methodFilter = searchParams.get("method") || "";
 
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
-    startDate.setHours(0, 0, 0, 0);
+    // days=0 のときは startDate=null として全期間を対象にする
+    const startDate = days === 0 ? null : new Date();
+    if (startDate) {
+      startDate.setDate(startDate.getDate() - days);
+      startDate.setHours(0, 0, 0, 0);
+    }
+    // 期間フィルタを Prisma where 句で再利用するためのヘルパー
+    const dateFilter = startDate ? { gte: startDate } : undefined;
 
     // 全チャネルを取得（クリニック情報付き、デモ・除外クリニックを除く）
     const channels = await prisma.channel.findMany({
@@ -65,7 +76,7 @@ export async function GET(request: Request) {
               isDeleted: false,
               isDemo: false,
               completedAt: { not: null },
-              createdAt: { gte: startDate },
+              ...(dateFilter ? { createdAt: dateFilter } : {}),
             },
             _count: { id: true },
           })
@@ -76,7 +87,7 @@ export async function GET(request: Request) {
             where: {
               channelId: { in: channelIds },
               isDeleted: false,
-              createdAt: { gte: startDate },
+              ...(dateFilter ? { createdAt: dateFilter } : {}),
             },
             _count: { id: true },
           })
@@ -94,7 +105,7 @@ export async function GET(request: Request) {
             channelId: { in: channelIds },
             isDeleted: false,
             eventType: { in: ["qr_scan", "page_view"] },
-            createdAt: { gte: startDate },
+            ...(dateFilter ? { createdAt: dateFilter } : {}),
           },
           _count: { id: true },
         })
@@ -230,7 +241,11 @@ export async function GET(request: Request) {
       m.totalBudget += ch.budget || 0;
     }
 
-    const methodStats = Object.entries(methodSummary).map(([method, data]) => ({
+    // 「未設定」は分析対象として意味が薄いので比較統計から除外する
+    // （フロントの比較チャートとも条件を合わせる）
+    const methodStats = Object.entries(methodSummary)
+      .filter(([method]) => method !== "未設定")
+      .map(([method, data]) => ({
       method,
       count: data.count,
       totalScans: data.totalScans,
@@ -264,109 +279,11 @@ export async function GET(request: Request) {
       avgCostPerCta: data.totalBudget > 0 && data.totalCtaClicks > 0
         ? Math.round(data.totalBudget / data.totalCtaClicks)
         : null,
-    }));
-
-    // ====== ベンチマーク&信頼度計算 ======
-    // 「このチャネルは平均より良いか悪いか」「数字を信頼できるか」を判定するための値を作る
-    // - 全社平均: 期間内のすべてのチャネル合算
-    // - 配布方法平均: methodSummary をそのまま使う
-    // - 信頼度: スキャン数（=試行回数）でランク付け（少ないほど偶然のブレが大きい）
-    const totalGlobalScans = channelAnalysis.reduce((s, c) => s + c.scans, 0);
-    const totalGlobalCtaClicks = channelAnalysis.reduce((s, c) => s + c.ctaClicks, 0);
-    const totalGlobalQuantity = channelAnalysis.reduce((s, c) => s + (c.distributionQuantity || 0), 0);
-    const globalAvg = {
-      overallCvRate: totalGlobalScans > 0
-        ? (totalGlobalCtaClicks / totalGlobalScans) * 100
-        : null,
-      responseRate: totalGlobalQuantity > 0
-        ? (totalGlobalScans / totalGlobalQuantity) * 100
-        : null,
-      sampleScans: totalGlobalScans,
-    };
-
-    // 信頼度ティア（スキャン数ベース）
-    const getConfidence = (
-      scans: number,
-      hasCv: boolean
-    ): "high" | "medium" | "low" | "insufficient" => {
-      if (!hasCv || scans < 30) return "insufficient";
-      if (scans >= 500) return "high";
-      if (scans >= 100) return "medium";
-      return "low";
-    };
-
-    // 効果ティア判定（peerAvg比の偏差で5段階）
-    const getEffectivenessTier = (
-      deviation: number,
-      confidence: "high" | "medium" | "low" | "insufficient"
-    ): "excellent" | "good" | "avg" | "below" | "poor" | "insufficient" => {
-      if (confidence === "insufficient") return "insufficient";
-      if (deviation >= 30) return "excellent";
-      if (deviation >= 10) return "good";
-      if (deviation > -10) return "avg";
-      if (deviation > -30) return "below";
-      return "poor";
-    };
-
-    // 各チャネルにベンチマーク情報を付与
-    const channelAnalysisWithBenchmark = channelAnalysis.map((ch) => {
-      const method = ch.distributionMethod || "未設定";
-      const methodData = methodSummary[method];
-      // 同配布方法の母集団が3件以上ならそれを比較対象にする（自分含む）。
-      // 少なすぎる場合は全社平均にフォールバック（少数だと比較が不安定なため）
-      const useMethodPeer =
-        methodData && methodData.count >= 3 && methodData.totalScans > 0;
-      const peerCvRate = useMethodPeer
-        ? (methodData.totalCtaClicks / methodData.totalScans) * 100
-        : globalAvg.overallCvRate;
-      const peerLabel = useMethodPeer ? `${method}平均` : "全社平均";
-
-      const hasCv = ch.overallCvRate !== null;
-      const confidence = getConfidence(ch.scans, hasCv);
-
-      // 平均比（%偏差）。peer か self が0の場合は判定不能
-      let deviation: number | null = null;
-      if (
-        hasCv &&
-        ch.overallCvRate !== null &&
-        peerCvRate !== null &&
-        peerCvRate > 0
-      ) {
-        deviation = Math.round(((ch.overallCvRate - peerCvRate) / peerCvRate) * 100);
-      }
-
-      const tier = deviation !== null
-        ? getEffectivenessTier(deviation, confidence)
-        : "insufficient";
-
-      return {
-        ...ch,
-        // 効果判定
-        effectivenessTier: tier,
-        confidence,
-        // 平均比（%）。+25 なら平均より25%良い、-15 なら15%悪い
-        benchmarkDeviation: deviation,
-        // どの母集団と比べたかをUIに表示するためのラベル
-        benchmarkPeerLabel: peerLabel,
-        // peer の生の値（参考表示用）
-        benchmarkPeerCvRate: peerCvRate !== null
-          ? Math.round(peerCvRate * 100) / 100
-          : null,
-      };
-    });
+      }));
 
     return NextResponse.json({
-      channels: channelAnalysisWithBenchmark,
+      channels: channelAnalysis,
       methodStats,
-      globalAvg: {
-        overallCvRate: globalAvg.overallCvRate !== null
-          ? Math.round(globalAvg.overallCvRate * 100) / 100
-          : null,
-        responseRate: globalAvg.responseRate !== null
-          ? Math.round(globalAvg.responseRate * 100) / 100
-          : null,
-        sampleScans: globalAvg.sampleScans,
-      },
       period: days,
     });
   } catch (error) {

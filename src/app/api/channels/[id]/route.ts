@@ -130,15 +130,19 @@ export async function PATCH(
     }
 
     // QR掲載方法を「明示的にクリア」する更新は拒否（必須項目のため）
-    // 既存値を保持したい場合はクライアント側でフィールドを送らない設計
-    if (
-      distributionMethod !== undefined &&
-      (typeof distributionMethod !== "string" || distributionMethod.trim() === "")
-    ) {
-      return NextResponse.json(
-        { error: "QR掲載方法を選択してください" },
-        { status: 400 }
-      );
+    // 既存値を保持したい場合はクライアント側でフィールドを送らない設計。
+    // null / 非文字列 / 空文字 はすべて拒否対象（必須化との一貫性のため明示）
+    if (distributionMethod !== undefined) {
+      if (
+        distributionMethod === null ||
+        typeof distributionMethod !== "string" ||
+        distributionMethod.trim() === ""
+      ) {
+        return NextResponse.json(
+          { error: "QR掲載方法を選択してください" },
+          { status: 400 }
+        );
+      }
     }
 
     const channel = (await prisma.channel.update({
