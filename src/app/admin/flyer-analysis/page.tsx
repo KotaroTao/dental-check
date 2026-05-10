@@ -8,7 +8,6 @@ import {
   ArrowUpDown,
   Image as ImageIcon,
   TrendingUp,
-  Megaphone,
   Eye,
   Link2,
   Pencil,
@@ -352,78 +351,13 @@ export default function FlyerAnalysisPage() {
         />
       )}
 
-      {/* 配布方法別サマリーカード */}
-      {data.methodStats.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {data.methodStats.map((ms) => (
-            <Card key={ms.method}>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <Megaphone className="w-4 h-4 text-gray-500" />
-                    <span className="font-medium">{ms.method}</span>
-                  </div>
-                  <span className="text-xs text-gray-500">{ms.count}件</span>
-                </div>
-                <div className="grid grid-cols-2 gap-3 text-center">
-                  <div>
-                    <div className="text-xs text-gray-500">配布反応率</div>
-                    <div className="text-lg font-bold text-blue-600">
-                      {ms.avgResponseRate !== null ? `${ms.avgResponseRate}%` : "-"}
-                    </div>
-                    <div className="text-[10px] text-gray-400">スキャン÷配布枚数</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-500">全体CV率</div>
-                    <div className="text-lg font-bold text-purple-600">
-                      {ms.avgOverallCvRate !== null ? `${ms.avgOverallCvRate}%` : "-"}
-                    </div>
-                    <div className="text-[10px] text-gray-400">スキャン→CTA</div>
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-2 mt-3 text-center text-[11px]">
-                  <div>
-                    <div className="text-gray-400">診断到達</div>
-                    <div className="font-medium text-gray-700">
-                      {ms.avgDiagnosisStartRate !== null ? `${ms.avgDiagnosisStartRate}%` : "-"}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-gray-400">完了</div>
-                    <div className="font-medium text-gray-700">
-                      {ms.avgCompletionRate !== null ? `${ms.avgCompletionRate}%` : "-"}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-gray-400">CTA</div>
-                    <div className="font-medium text-gray-700">
-                      {ms.avgCtaRate !== null ? `${ms.avgCtaRate}%` : "-"}
-                    </div>
-                  </div>
-                </div>
-                {(ms.avgCostPerScan !== null || ms.avgCostPerCta !== null) && (
-                  <div className="mt-2 flex justify-around text-center text-xs text-gray-500">
-                    {ms.avgCostPerScan !== null && (
-                      <div>1スキャン ¥{ms.avgCostPerScan.toLocaleString()}</div>
-                    )}
-                    {ms.avgCostPerCta !== null && (
-                      <div>1CV ¥{ms.avgCostPerCta.toLocaleString()}</div>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-
       {/* 配布方法別比較チャート */}
       {methodChartData.length > 1 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="w-5 h-5" />
-              配布方法別の効果比較
+              QR掲載方法別の効果比較
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -447,12 +381,12 @@ export default function FlyerAnalysisPage() {
         </Card>
       )}
 
-      {/* チャネル一覧（lg以上はテーブル、それ以下はカード表示でスマホでも読みやすく） */}
+      {/* QR一覧（lg以上はテーブル、それ以下はカード表示でスマホでも読みやすく） */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Eye className="w-5 h-5" />
-            チャネル別詳細（{sortedChannels.length}件）
+            QR別詳細（{sortedChannels.length}件）
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
@@ -595,7 +529,7 @@ export default function FlyerAnalysisPage() {
               <div className="py-12 text-center text-gray-500">データがありません</div>
             ) : (
               sortedChannels.map((ch) => (
-                <ChannelCard
+                <QrCard
                   key={ch.id}
                   ch={ch}
                   onPreviewImage={setPreviewImage}
@@ -702,9 +636,9 @@ function EffectivenessBadge({ ch }: { ch: ChannelAnalysis }) {
   );
 }
 
-// スマホ・タブレット向けのチャネルカード
+// スマホ・タブレット向けのQRカード
 // → 横長テーブルが小画面で潰れて文字が縦書きになる問題を回避
-function ChannelCard({
+function QrCard({
   ch,
   onPreviewImage,
   onEdit,
