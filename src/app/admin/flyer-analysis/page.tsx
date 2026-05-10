@@ -231,25 +231,22 @@ export default function FlyerAnalysisPage() {
   const linkTotalQuantity = linkChannels.reduce((acc, ch) => acc + (ch.distributionQuantity || 0), 0);
   const linkTotalBudget = linkChannels.reduce((acc, ch) => acc + (ch.budget || 0), 0);
 
+  // QR掲載方法の選択肢（チップ式フィルタで使用）
+  const METHOD_OPTIONS = [
+    "ポスティング",
+    "新聞折込",
+    "DM",
+    "メール",
+    "LP (広告から誘導)",
+    "その他",
+  ];
+
   return (
     <div className="space-y-6">
-      {/* ヘッダー */}
+      {/* ヘッダー（タイトル + 期間フィルタ + リフレッシュ） */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-2xl font-bold">QR効果分析</h1>
         <div className="flex flex-wrap items-center gap-3">
-          <select
-            value={methodFilter}
-            onChange={(e) => setMethodFilter(e.target.value)}
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm"
-          >
-            <option value="">全掲載方法</option>
-            <option value="ポスティング">ポスティング</option>
-            <option value="新聞折込">新聞折込</option>
-            <option value="DM">DM</option>
-            <option value="メール">メール</option>
-            <option value="LP (広告から誘導)">LP (広告から誘導)</option>
-            <option value="その他">その他</option>
-          </select>
           <div className="flex gap-1">
             {[30, 90, 180, 365].map((days) => (
               <Button
@@ -268,26 +265,58 @@ export default function FlyerAnalysisPage() {
         </div>
       </div>
 
-      {/* 全体ファネル（診断付きQRのみ）＋ リンク型QRサマリー */}
+      {/* QR掲載方法フィルタ（チップ式・スマホでも横スクロール対応） */}
+      <div className="bg-white rounded-lg border p-3 flex items-center gap-2 overflow-x-auto">
+        <span className="text-xs text-gray-500 shrink-0 mr-1">掲載方法:</span>
+        <button
+          onClick={() => setMethodFilter("")}
+          className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+            methodFilter === ""
+              ? "bg-blue-600 text-white border-blue-600"
+              : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+          }`}
+        >
+          すべて
+        </button>
+        {METHOD_OPTIONS.map((method) => (
+          <button
+            key={method}
+            onClick={() => setMethodFilter(method)}
+            className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium border transition-colors whitespace-nowrap ${
+              methodFilter === method
+                ? "bg-blue-600 text-white border-blue-600"
+                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+            }`}
+          >
+            {method}
+          </button>
+        ))}
+      </div>
+
+      {/* 診断付きQR と リンク型QR を同じ表示形式で並べる
+          → 比較しやすくするため、両方とも QrSummaryCard を使う */}
       {diagnosisChannels.length > 0 && (
-        <FunnelCard
-          stages={[
-            { label: "QRスキャン", count: totalScans, sub: totalQuantity > 0 ? `配布${totalQuantity.toLocaleString()}枚 / 反応率 ${((totalScans / totalQuantity) * 100).toFixed(2)}%` : undefined },
-            { label: "診断ページ到達", count: totalDiagnosisStarts },
-            { label: "診断完了", count: totalCompletions },
-            { label: "CTAクリック", count: totalCtaClicks, sub: totalBudget > 0 && totalCtaClicks > 0 ? `1CV ¥${Math.round(totalBudget / totalCtaClicks).toLocaleString()}` : undefined },
-          ]}
-          isLegacy={totalQrScans === 0 && totalScans > 0}
-          globalAvg={data.globalAvg}
+        <QrSummaryCard
+          variant="diagnosis"
           channelCount={diagnosisChannels.length}
+          scans={totalScans}
+          qrScans={totalQrScans}
+          diagnosisStarts={totalDiagnosisStarts}
+          completions={totalCompletions}
+          ctaClicks={totalCtaClicks}
+          quantity={totalQuantity}
+          budget={totalBudget}
+          globalAvg={data.globalAvg}
         />
       )}
 
-      {/* リンク型QRサマリー（診断なしで直接URLへ飛ばすタイプ） */}
       {linkChannels.length > 0 && (
-        <LinkSummaryCard
+        <QrSummaryCard
+          variant="link"
           channelCount={linkChannels.length}
           scans={linkTotalScans}
+          qrScans={0}
+          diagnosisStarts={0}
           completions={linkTotalCompletions}
           ctaClicks={linkTotalCtaClicks}
           quantity={linkTotalQuantity}
@@ -738,166 +767,156 @@ function CardMetric({
   );
 }
 
-// リンク型QRサマリーカード
-// リンク型は「スキャン → リダイレクト先（=CTAクリック）」の2段階の単純フローのため、
-// 診断付きQRのファネルとは分けて表示する
-function LinkSummaryCard({
+// 診断付き/リンク型 共通サマリーカード
+// 両者を「同じ並びのタイル」で見比べられるようにし、リンク型では
+// 該当しない指標（診断到達・完了率）は「—」として明示する。
+//
+// 表示構成:
+//   上段4タイル: スキャン / 診断到達 / 完了 / CTA（生カウント）
+//   下段4タイル: 配布反応率 / 完了率 / 全体CV率 / 1CVコスト（指標）
+function QrSummaryCard({
+  variant,
   channelCount,
   scans,
+  qrScans,
+  diagnosisStarts,
   completions,
   ctaClicks,
   quantity,
   budget,
+  globalAvg,
 }: {
+  variant: "diagnosis" | "link";
   channelCount: number;
   scans: number;
+  qrScans: number;
+  diagnosisStarts: number;
   completions: number;
   ctaClicks: number;
   quantity: number;
   budget: number;
+  globalAvg?: { overallCvRate: number | null; responseRate: number | null; sampleScans: number };
 }) {
+  const isLink = variant === "link";
+
+  // 共通指標
   const responseRate = quantity > 0 ? (scans / quantity) * 100 : null;
-  const cvRate = scans > 0 ? (ctaClicks / scans) * 100 : null;
+  const overallCvRate = scans > 0 ? (ctaClicks / scans) * 100 : null;
   const costPerCv = budget > 0 && ctaClicks > 0 ? Math.round(budget / ctaClicks) : null;
+  // 完了率（診断のみ）: 診断到達→完了
+  const completionRate = !isLink && diagnosisStarts > 0 ? (completions / diagnosisStarts) * 100 : null;
+
+  // qr_scan未計測期間の警告（診断型のみ。リンク型はctaClicksフォールバックなので警告不要）
+  const isLegacy = !isLink && qrScans === 0 && scans > 0;
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 flex-wrap">
-          <Link2 className="w-5 h-5" />
-          リンク型QRサマリー
+          {isLink ? <Link2 className="w-5 h-5" /> : <TrendingUp className="w-5 h-5" />}
+          {isLink ? "リンク型QRサマリー" : "診断付きQRサマリー"}
           <span className="ml-auto text-xs text-gray-500 font-normal">{channelCount}件のQRを集計</span>
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="mb-3 text-[11px] text-gray-500">
-          ℹ️ リンク型は診断を介さず直接URLへ飛ばすため、「スキャン → CTAクリック」の単純フローで集計します。
+        {isLink ? (
+          <div className="mb-3 text-[11px] text-gray-500">
+            ℹ️ リンク型は診断を介さず直接URLへ飛ばすため、「診断ページ到達」「完了率」は対象外です。
+          </div>
+        ) : (
+          <div className="mb-3 text-[11px] text-gray-500 bg-blue-50/50 border border-blue-100 rounded px-3 py-2">
+            ℹ️ 診断付きQRは「スキャン → 診断ページ到達 → 診断完了 → CTAクリック」の4段階で計測します。
+          </div>
+        )}
+        {isLegacy && (
+          <div className="mb-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+            ⚠️ この期間はQRスキャン直接計測の前のデータです。「スキャン」は診断ページ到達数で代用しています。
+          </div>
+        )}
+
+        {/* 上段: 生カウント4タイル */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center mb-3">
+          <SummaryTile
+            label="QRスキャン"
+            value={scans.toLocaleString()}
+            sub={quantity > 0 ? `配布${quantity.toLocaleString()}枚` : undefined}
+            color="text-blue-600"
+          />
+          <SummaryTile
+            label="診断ページ到達"
+            value={isLink ? "—" : diagnosisStarts.toLocaleString()}
+            sub={isLink ? "対象外" : undefined}
+            color="text-cyan-600"
+          />
+          <SummaryTile
+            label="診断完了"
+            value={completions.toLocaleString()}
+            color="text-emerald-600"
+          />
+          <SummaryTile
+            label="CTAクリック"
+            value={ctaClicks.toLocaleString()}
+            color="text-purple-600"
+          />
         </div>
+
+        {/* 下段: 指標4タイル */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-          <div className="bg-gray-50 rounded p-3">
-            <div className="text-xs text-gray-500">スキャン</div>
-            <div className="text-xl font-bold text-blue-600 tabular-nums">{scans.toLocaleString()}</div>
-            {quantity > 0 && (
-              <div className="text-[10px] text-gray-400">配布{quantity.toLocaleString()}枚</div>
-            )}
-          </div>
-          <div className="bg-gray-50 rounded p-3">
-            <div className="text-xs text-gray-500">CTAクリック</div>
-            <div className="text-xl font-bold text-purple-600 tabular-nums">{ctaClicks.toLocaleString()}</div>
-            <div className="text-[10px] text-gray-400">完了 {completions.toLocaleString()}件</div>
-          </div>
-          <div className="bg-gray-50 rounded p-3">
-            <div className="text-xs text-gray-500">配布反応率</div>
-            <div className="text-xl font-bold text-blue-600 tabular-nums">
-              {responseRate !== null ? `${responseRate.toFixed(2)}%` : "-"}
-            </div>
-            <div className="text-[10px] text-gray-400">スキャン÷配布枚数</div>
-          </div>
-          <div className="bg-gray-50 rounded p-3">
-            <div className="text-xs text-gray-500">全体CV率</div>
-            <div className="text-xl font-bold text-amber-600 tabular-nums">
-              {cvRate !== null ? `${cvRate.toFixed(2)}%` : "-"}
-            </div>
-            <div className="text-[10px] text-gray-400">
-              {costPerCv !== null ? `1CV ¥${costPerCv.toLocaleString()}` : "スキャン→CTA"}
-            </div>
-          </div>
+          <SummaryTile
+            label="配布反応率"
+            value={responseRate !== null ? `${responseRate.toFixed(2)}%` : "—"}
+            sub="スキャン÷配布枚数"
+            color="text-blue-600"
+          />
+          <SummaryTile
+            label="完了率"
+            value={completionRate !== null ? `${completionRate.toFixed(1)}%` : "—"}
+            sub={isLink ? "対象外" : "診断到達→完了"}
+            color="text-emerald-600"
+          />
+          <SummaryTile
+            label="全体CV率"
+            value={overallCvRate !== null ? `${overallCvRate.toFixed(2)}%` : "—"}
+            sub="スキャン→CTA"
+            color="text-amber-600"
+          />
+          <SummaryTile
+            label="1CVコスト"
+            value={costPerCv !== null ? `¥${costPerCv.toLocaleString()}` : "—"}
+            sub="予算÷CTA"
+            color="text-gray-700"
+          />
         </div>
+
+        {!isLink && globalAvg && globalAvg.overallCvRate !== null && (
+          <div className="mt-3 text-[11px] text-gray-500">
+            ベンチマーク基準: 全社平均CV率 <span className="font-semibold text-gray-700">{globalAvg.overallCvRate}%</span>
+            （サンプル {globalAvg.sampleScans.toLocaleString()}件）
+            ・各QRの「効果判定」はこの平均または同掲載方法平均との比較で算出されています
+          </div>
+        )}
       </CardContent>
     </Card>
   );
 }
 
-// ファネルカード（4段階の絞り込み可視化）
-// QRコード経由のユーザーは「スキャン → 診断到達 → 完了 → CTA」と人が減っていく流れ。
-// 各段階で何人残ったか、何%離脱したかを一目で見られるようにする。
-function FunnelCard({
-  stages,
-  isLegacy,
-  globalAvg,
-  channelCount,
+// サマリータイル（数値1つ + ラベル + 補足）
+function SummaryTile({
+  label,
+  value,
+  sub,
+  color,
 }: {
-  stages: { label: string; count: number; sub?: string }[];
-  isLegacy: boolean;
-  globalAvg?: { overallCvRate: number | null; responseRate: number | null; sampleScans: number };
-  channelCount?: number;
+  label: string;
+  value: string;
+  sub?: string;
+  color?: string;
 }) {
-  const top = stages[0]?.count ?? 0;
-  const STAGE_COLORS = ["bg-blue-500", "bg-cyan-500", "bg-emerald-500", "bg-purple-500"];
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 flex-wrap">
-          <TrendingUp className="w-5 h-5" />
-          診断付きQRのファネル（絞り込み流れ）
-          {channelCount !== undefined && (
-            <span className="ml-auto text-xs text-gray-500 font-normal">{channelCount}件のQRを集計</span>
-          )}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="mb-3 text-[11px] text-gray-500 bg-blue-50/50 border border-blue-100 rounded px-3 py-2">
-          ℹ️ このファネルは「診断付きQR」のみを集計しています。リンク型QR（直接URLへ飛ばすタイプ）は別カードで集計されます。
-        </div>
-        {isLegacy && (
-          <div className="mb-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
-            ⚠️ この期間はQRスキャン直接計測の前のデータです。「スキャン」は診断ページ到達数で代用しています。新しい計測が動き出すと、より正確な反応率が表示されます。
-          </div>
-        )}
-        <div className="space-y-2">
-          {stages.map((s, i) => {
-            const ratio = top > 0 ? (s.count / top) * 100 : 0;
-            const dropFromPrev =
-              i > 0 && stages[i - 1].count > 0
-                ? Math.round((1 - s.count / stages[i - 1].count) * 1000) / 10
-                : null;
-            return (
-              <div key={s.label} className="flex items-center gap-2 sm:gap-3">
-                <div className="w-20 sm:w-32 text-xs sm:text-sm text-gray-700 shrink-0 whitespace-nowrap">
-                  {s.label}
-                </div>
-                <div className="flex-1 relative h-8 bg-gray-100 rounded overflow-hidden min-w-0">
-                  <div
-                    className={`h-full ${STAGE_COLORS[i] || "bg-gray-400"} transition-all`}
-                    style={{ width: `${Math.max(ratio, 1)}%` }}
-                  />
-                  <div className="absolute inset-0 flex items-center px-2 sm:px-3 text-xs sm:text-sm font-medium overflow-hidden">
-                    <span className="whitespace-nowrap">{s.count.toLocaleString()}</span>
-                    {top > 0 && (
-                      <span className="ml-1 sm:ml-2 text-[10px] sm:text-xs text-gray-600 whitespace-nowrap">
-                        ({((s.count / top) * 100).toFixed(1)}%)
-                      </span>
-                    )}
-                    {s.sub && (
-                      <span className="ml-2 text-[10px] sm:text-xs text-gray-500 truncate hidden sm:inline">
-                        {s.sub}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className="w-16 sm:w-24 text-[10px] sm:text-xs text-gray-500 text-right shrink-0 whitespace-nowrap">
-                  {dropFromPrev !== null && dropFromPrev > 0 ? (
-                    <span className="text-rose-600">▼ {dropFromPrev}%</span>
-                  ) : (
-                    "—"
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        <div className="mt-3 text-xs text-gray-500 space-y-1">
-          <div>
-            ※ 「スキャン → CTA」までの全体CV率: {top > 0 ? `${((stages[stages.length - 1].count / top) * 100).toFixed(2)}%` : "-"}
-          </div>
-          {globalAvg && globalAvg.overallCvRate !== null && (
-            <div className="text-[11px] text-gray-500">
-              ベンチマーク基準: 全社平均CV率 <span className="font-semibold text-gray-700">{globalAvg.overallCvRate}%</span>
-              （サンプル {globalAvg.sampleScans.toLocaleString()}件）
-              ・各QRの「効果判定」はこの平均または同配布方法平均との比較で算出されています
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+    <div className="bg-gray-50 rounded p-3">
+      <div className="text-xs text-gray-500">{label}</div>
+      <div className={`text-xl font-bold tabular-nums ${color || "text-gray-800"}`}>{value}</div>
+      {sub && <div className="text-[10px] text-gray-400">{sub}</div>}
+    </div>
   );
 }
