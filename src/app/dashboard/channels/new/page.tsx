@@ -473,10 +473,10 @@ export default function NewChannelPage() {
               >
                 <option value="">選択してください</option>
                 <option value="ポスティング">ポスティング</option>
-                <option value="手配り">手配り</option>
-                <option value="店頭設置">店頭設置</option>
                 <option value="新聞折込">新聞折込</option>
                 <option value="DM">DM</option>
+                <option value="メール">メール</option>
+                <option value="LP (広告から誘導)">LP (広告から誘導)</option>
                 <option value="その他">その他</option>
               </select>
               <p className="text-xs text-gray-500">

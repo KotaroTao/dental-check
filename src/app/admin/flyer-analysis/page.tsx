@@ -242,12 +242,12 @@ export default function FlyerAnalysisPage() {
             onChange={(e) => setMethodFilter(e.target.value)}
             className="h-9 rounded-md border border-input bg-background px-3 text-sm"
           >
-            <option value="">全配布方法</option>
+            <option value="">全掲載方法</option>
             <option value="ポスティング">ポスティング</option>
-            <option value="手配り">手配り</option>
-            <option value="店頭設置">店頭設置</option>
             <option value="新聞折込">新聞折込</option>
             <option value="DM">DM</option>
+            <option value="メール">メール</option>
+            <option value="LP (広告から誘導)">LP (広告から誘導)</option>
             <option value="その他">その他</option>
           </select>
           <div className="flex gap-1">
