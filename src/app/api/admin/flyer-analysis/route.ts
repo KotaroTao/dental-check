@@ -259,9 +259,107 @@ export async function GET(request: Request) {
         : null,
     }));
 
+    // ====== ベンチマーク&信頼度計算 ======
+    // 「このチャネルは平均より良いか悪いか」「数字を信頼できるか」を判定するための値を作る
+    // - 全社平均: 期間内のすべてのチャネル合算
+    // - 配布方法平均: methodSummary をそのまま使う
+    // - 信頼度: スキャン数（=試行回数）でランク付け（少ないほど偶然のブレが大きい）
+    const totalGlobalScans = channelAnalysis.reduce((s, c) => s + c.scans, 0);
+    const totalGlobalCtaClicks = channelAnalysis.reduce((s, c) => s + c.ctaClicks, 0);
+    const totalGlobalQuantity = channelAnalysis.reduce((s, c) => s + (c.distributionQuantity || 0), 0);
+    const globalAvg = {
+      overallCvRate: totalGlobalScans > 0
+        ? (totalGlobalCtaClicks / totalGlobalScans) * 100
+        : null,
+      responseRate: totalGlobalQuantity > 0
+        ? (totalGlobalScans / totalGlobalQuantity) * 100
+        : null,
+      sampleScans: totalGlobalScans,
+    };
+
+    // 信頼度ティア（スキャン数ベース）
+    const getConfidence = (
+      scans: number,
+      hasCv: boolean
+    ): "high" | "medium" | "low" | "insufficient" => {
+      if (!hasCv || scans < 30) return "insufficient";
+      if (scans >= 500) return "high";
+      if (scans >= 100) return "medium";
+      return "low";
+    };
+
+    // 効果ティア判定（peerAvg比の偏差で5段階）
+    const getEffectivenessTier = (
+      deviation: number,
+      confidence: "high" | "medium" | "low" | "insufficient"
+    ): "excellent" | "good" | "avg" | "below" | "poor" | "insufficient" => {
+      if (confidence === "insufficient") return "insufficient";
+      if (deviation >= 30) return "excellent";
+      if (deviation >= 10) return "good";
+      if (deviation > -10) return "avg";
+      if (deviation > -30) return "below";
+      return "poor";
+    };
+
+    // 各チャネルにベンチマーク情報を付与
+    const channelAnalysisWithBenchmark = channelAnalysis.map((ch) => {
+      const method = ch.distributionMethod || "未設定";
+      const methodData = methodSummary[method];
+      // 同配布方法の母集団が3件以上ならそれを比較対象にする（自分含む）。
+      // 少なすぎる場合は全社平均にフォールバック（少数だと比較が不安定なため）
+      const useMethodPeer =
+        methodData && methodData.count >= 3 && methodData.totalScans > 0;
+      const peerCvRate = useMethodPeer
+        ? (methodData.totalCtaClicks / methodData.totalScans) * 100
+        : globalAvg.overallCvRate;
+      const peerLabel = useMethodPeer ? `${method}平均` : "全社平均";
+
+      const hasCv = ch.overallCvRate !== null;
+      const confidence = getConfidence(ch.scans, hasCv);
+
+      // 平均比（%偏差）。peer か self が0の場合は判定不能
+      let deviation: number | null = null;
+      if (
+        hasCv &&
+        ch.overallCvRate !== null &&
+        peerCvRate !== null &&
+        peerCvRate > 0
+      ) {
+        deviation = Math.round(((ch.overallCvRate - peerCvRate) / peerCvRate) * 100);
+      }
+
+      const tier = deviation !== null
+        ? getEffectivenessTier(deviation, confidence)
+        : "insufficient";
+
+      return {
+        ...ch,
+        // 効果判定
+        effectivenessTier: tier,
+        confidence,
+        // 平均比（%）。+25 なら平均より25%良い、-15 なら15%悪い
+        benchmarkDeviation: deviation,
+        // どの母集団と比べたかをUIに表示するためのラベル
+        benchmarkPeerLabel: peerLabel,
+        // peer の生の値（参考表示用）
+        benchmarkPeerCvRate: peerCvRate !== null
+          ? Math.round(peerCvRate * 100) / 100
+          : null,
+      };
+    });
+
     return NextResponse.json({
-      channels: channelAnalysis,
+      channels: channelAnalysisWithBenchmark,
       methodStats,
+      globalAvg: {
+        overallCvRate: globalAvg.overallCvRate !== null
+          ? Math.round(globalAvg.overallCvRate * 100) / 100
+          : null,
+        responseRate: globalAvg.responseRate !== null
+          ? Math.round(globalAvg.responseRate * 100) / 100
+          : null,
+        sampleScans: globalAvg.sampleScans,
+      },
       period: days,
     });
   } catch (error) {
