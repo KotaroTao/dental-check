@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   RefreshCw,
-  ArrowUpDown,
   Image as ImageIcon,
   TrendingUp,
   Eye,
@@ -46,6 +45,7 @@ interface ChannelAnalysis {
   imageUrl2: string | null;
   distributionMethod: string | null;
   distributionQuantity: number | null;
+  distributionPeriod: string | null;
   budget: number | null;
   // ファネル各段階の生カウント
   qrScans: number;          // QRスキャンの瞬間（c/[code]リダイレクトで計測）
@@ -188,15 +188,6 @@ export default function FlyerAnalysisPage() {
       alert("通信エラーが発生しました");
     } finally {
       setOpeningChannelId(null);
-    }
-  };
-
-  const handleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      setSortAsc(!sortAsc);
-    } else {
-      setSortKey(key);
-      setSortAsc(false);
     }
   };
 
@@ -381,155 +372,43 @@ export default function FlyerAnalysisPage() {
         </Card>
       )}
 
-      {/* QR一覧（lg以上はテーブル、それ以下はカード表示でスマホでも読みやすく） */}
+      {/* QR別詳細（PC・モバイル共通カードレイアウト・3行構成） */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-3">
           <CardTitle className="flex items-center gap-2">
             <Eye className="w-5 h-5" />
             QR別詳細（{sortedChannels.length}件）
           </CardTitle>
+          {/* 並び替え（旧テーブルのソートヘッダの代わり） */}
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-xs text-gray-500">並び替え:</span>
+            <select
+              value={`${sortKey}:${sortAsc ? "asc" : "desc"}`}
+              onChange={(e) => {
+                const [key, dir] = e.target.value.split(":");
+                setSortKey(key as SortKey);
+                setSortAsc(dir === "asc");
+              }}
+              className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+            >
+              <option value="benchmarkDeviation:desc">効果判定（高い順）</option>
+              <option value="scans:desc">QRスキャン数（多い順）</option>
+              <option value="completions:desc">診断完了数（多い順）</option>
+              <option value="ctaClicks:desc">CTAクリック数（多い順）</option>
+              <option value="responseRate:desc">配布反応率（高い順）</option>
+              <option value="completionRate:desc">診断完了率（高い順）</option>
+              <option value="overallCvRate:desc">全体CV率（高い順）</option>
+              <option value="costPerCta:asc">1CVコスト（安い順）</option>
+            </select>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
-          {/* 大きい画面（lg=1024px以上）: テーブル表示 */}
-          {/* min-w-[1100px] で各カラムに十分な幅を確保し、画面が狭ければ横スクロール */}
-          <div className="hidden lg:block overflow-x-auto">
-            <table className="w-full min-w-[1100px] text-sm">
-              <thead>
-                <tr className="border-b bg-gray-50">
-                  <th className="text-left py-3 px-3 font-medium whitespace-nowrap">写真</th>
-                  <th className="text-left py-3 px-3 font-medium whitespace-nowrap">クリニック</th>
-                  <th className="text-left py-3 px-3 font-medium whitespace-nowrap">QRコード名</th>
-                  <th className="text-left py-3 px-3 font-medium whitespace-nowrap">配布方法</th>
-                  <SortHeader label="効果判定" sortKey="benchmarkDeviation" currentKey={sortKey} asc={sortAsc} onClick={handleSort} align="left" />
-                  <th className="text-right py-3 px-3 font-medium whitespace-nowrap">配布枚数</th>
-                  <th className="text-right py-3 px-3 font-medium whitespace-nowrap">予算</th>
-                  <SortHeader label="スキャン" sortKey="scans" currentKey={sortKey} asc={sortAsc} onClick={handleSort} />
-                  <SortHeader label="診断到達" sortKey="diagnosisStarts" currentKey={sortKey} asc={sortAsc} onClick={handleSort} />
-                  <SortHeader label="完了" sortKey="completions" currentKey={sortKey} asc={sortAsc} onClick={handleSort} />
-                  <SortHeader label="CTA" sortKey="ctaClicks" currentKey={sortKey} asc={sortAsc} onClick={handleSort} />
-                  <SortHeader label="配布反応率" sortKey="responseRate" currentKey={sortKey} asc={sortAsc} onClick={handleSort} />
-                  <SortHeader label="完了率" sortKey="completionRate" currentKey={sortKey} asc={sortAsc} onClick={handleSort} />
-                  <SortHeader label="全体CV率" sortKey="overallCvRate" currentKey={sortKey} asc={sortAsc} onClick={handleSort} />
-                  <SortHeader label="1CVコスト" sortKey="costPerCta" currentKey={sortKey} asc={sortAsc} onClick={handleSort} />
-                  <th className="text-center py-3 px-3 font-medium whitespace-nowrap">編集</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedChannels.length === 0 ? (
-                  <tr>
-                    <td colSpan={16} className="py-12 text-center text-gray-500">
-                      データがありません
-                    </td>
-                  </tr>
-                ) : (
-                  sortedChannels.map((ch) => (
-                    <tr key={ch.id} className="border-b hover:bg-gray-50">
-                      <td className="py-2 px-3">
-                        {ch.imageUrl ? (
-                          <img
-                            src={ch.imageUrl}
-                            alt=""
-                            className="w-12 h-12 object-cover rounded cursor-pointer hover:opacity-80"
-                            onClick={() => setPreviewImage(ch.imageUrl)}
-                          />
-                        ) : (
-                          <div className="w-12 h-12 bg-gray-100 rounded flex items-center justify-center">
-                            <ImageIcon className="w-5 h-5 text-gray-300" />
-                          </div>
-                        )}
-                      </td>
-                      <td className="py-2 px-3 text-gray-600 whitespace-nowrap">{ch.clinicName}</td>
-                      <td className="py-2 px-3 font-medium whitespace-nowrap">{ch.name}</td>
-                      <td className="py-2 px-3 whitespace-nowrap">
-                        {ch.distributionMethod ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-700 whitespace-nowrap">
-                            {ch.distributionMethod}
-                          </span>
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
-                      </td>
-                      <td className="py-2 px-3 whitespace-nowrap">
-                        <EffectivenessBadge ch={ch} />
-                      </td>
-                      <td className="py-2 px-3 text-right tabular-nums whitespace-nowrap">
-                        {ch.distributionQuantity !== null ? ch.distributionQuantity.toLocaleString() : "-"}
-                      </td>
-                      <td className="py-2 px-3 text-right tabular-nums whitespace-nowrap">
-                        {ch.budget !== null ? `¥${ch.budget.toLocaleString()}` : "-"}
-                      </td>
-                      <td className="py-2 px-3 text-right tabular-nums font-medium whitespace-nowrap">
-                        {ch.scans.toLocaleString()}
-                        {ch.qrScans === 0 && ch.diagnosisStarts > 0 && (
-                          <span
-                            className="ml-1 text-[10px] text-amber-600"
-                            title="この期間はQRスキャン直接計測の前のデータのため、診断ページ到達数を代用しています"
-                          >
-                            *
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-2 px-3 text-right tabular-nums whitespace-nowrap">
-                        {ch.channelType === "link" ? (
-                          <span className="text-gray-400" title="リンク型は診断ページがありません">—</span>
-                        ) : (
-                          ch.diagnosisStarts.toLocaleString()
-                        )}
-                      </td>
-                      <td className="py-2 px-3 text-right tabular-nums whitespace-nowrap">
-                        {ch.completions.toLocaleString()}
-                      </td>
-                      <td className="py-2 px-3 text-right tabular-nums whitespace-nowrap">
-                        {ch.ctaClicks.toLocaleString()}
-                      </td>
-                      <td className="py-2 px-3 text-right tabular-nums whitespace-nowrap">
-                        <RateCell value={ch.responseRate} suffix="%" />
-                      </td>
-                      <td className="py-2 px-3 text-right tabular-nums whitespace-nowrap">
-                        <RateCell value={ch.completionRate} suffix="%" />
-                      </td>
-                      <td className="py-2 px-3 text-right tabular-nums whitespace-nowrap">
-                        <RateCell value={ch.overallCvRate} suffix="%" />
-                      </td>
-                      <td className="py-2 px-3 text-right tabular-nums whitespace-nowrap">
-                        {ch.costPerCta !== null ? `¥${ch.costPerCta.toLocaleString()}` : "-"}
-                      </td>
-                      <td className="py-2 px-3 text-center whitespace-nowrap">
-                        <Button
-                          size="sm"
-                          disabled={openingChannelId === ch.id}
-                          onClick={() => handleOpenChannelEditor(ch.clinicId, ch.id)}
-                          title="医院になりすましてQR編集ページを別タブで開く"
-                          className="h-8 bg-blue-600 hover:bg-blue-700 text-white gap-1"
-                        >
-                          {openingChannelId === ch.id ? (
-                            <>
-                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              開いています…
-                            </>
-                          ) : (
-                            <>
-                              <Pencil className="w-3.5 h-3.5" />
-                              QRを編集
-                              <ExternalLink className="w-3 h-3 opacity-70" />
-                            </>
-                          )}
-                        </Button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* 小さい画面（lg未満=タブレット/スマホ）: カード表示 */}
-          <div className="lg:hidden divide-y">
+          <div className="divide-y">
             {sortedChannels.length === 0 ? (
               <div className="py-12 text-center text-gray-500">データがありません</div>
             ) : (
               sortedChannels.map((ch) => (
-                <QrCard
+                <QrDetailRow
                   key={ch.id}
                   ch={ch}
                   onPreviewImage={setPreviewImage}
@@ -560,50 +439,6 @@ export default function FlyerAnalysisPage() {
   );
 }
 
-// ソート可能なヘッダー
-function SortHeader({
-  label,
-  sortKey: key,
-  currentKey,
-  asc,
-  onClick,
-  align = "right",
-}: {
-  label: string;
-  sortKey: SortKey;
-  currentKey: SortKey;
-  asc: boolean;
-  onClick: (key: SortKey) => void;
-  align?: "left" | "right";
-}) {
-  const isActive = currentKey === key;
-  // Tailwindは文字列補間できないので明示的に切り替える
-  const alignClass = align === "left" ? "text-left" : "text-right";
-  return (
-    <th
-      className={`${alignClass} py-3 px-3 font-medium cursor-pointer hover:bg-gray-100 select-none whitespace-nowrap`}
-      onClick={() => onClick(key)}
-    >
-      <span className="inline-flex items-center gap-1">
-        {label}
-        <ArrowUpDown className={`w-3 h-3 ${isActive ? "text-blue-600" : "text-gray-400"}`} />
-        {isActive && (
-          <span className="text-xs text-blue-600">{asc ? "↑" : "↓"}</span>
-        )}
-      </span>
-    </th>
-  );
-}
-
-// 率表示セル
-function RateCell({ value, suffix }: { value: number | null; suffix: string }) {
-  if (value === null) return <span className="text-gray-400">-</span>;
-  return (
-    <span className={value > 0 ? "text-gray-900" : "text-gray-400"}>
-      {value}{suffix}
-    </span>
-  );
-}
 
 // 効果バッジ: 「優秀/良好/平均/やや不調/要改善/判定不能」を色付きで表示
 // 信頼度（★）と平均比（+25%など）も併記し、医院ごとの判断材料を1セルに集約
@@ -636,9 +471,13 @@ function EffectivenessBadge({ ch }: { ch: ChannelAnalysis }) {
   );
 }
 
-// スマホ・タブレット向けのQRカード
-// → 横長テーブルが小画面で潰れて文字が縦書きになる問題を回避
-function QrCard({
+// QR別詳細の1行（PC・モバイル共通）
+// 構成は3つの横ブロックに分かれる:
+//   1段目: 写真(表/裏) + クリニック + QRコード名 + 掲載方法 + 予算 + 配布期間
+//          + 効果判定バッジ + 「QRを編集」ボタン
+//   2段目: 配布枚数 / QRスキャン / 診断完了 / CTAクリック (生カウント)
+//   3段目: 配布反応率 / 診断完了率 / 全体CV率 / 1CVコスト (指標)
+function QrDetailRow({
   ch,
   onPreviewImage,
   onEdit,
@@ -650,124 +489,169 @@ function QrCard({
   isOpening: boolean;
 }) {
   return (
-    <div className="p-4 hover:bg-gray-50">
-      {/* 上段: 効果判定バッジ + 編集ボタン */}
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <EffectivenessBadge ch={ch} />
-        <Button
-          size="sm"
-          disabled={isOpening}
-          onClick={() => onEdit(ch.clinicId, ch.id)}
-          title="医院になりすましてQR編集ページを別タブで開く"
-          className="h-8 bg-blue-600 hover:bg-blue-700 text-white gap-1 shrink-0"
-        >
-          {isOpening ? (
-            <>
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              開いています…
-            </>
-          ) : (
-            <>
-              <Pencil className="w-3.5 h-3.5" />
-              QRを編集
-              <ExternalLink className="w-3 h-3 opacity-70" />
-            </>
-          )}
-        </Button>
-      </div>
-      {/* 上段: 画像 + 医院名 + QRコード名 */}
-      <div className="flex items-start gap-3 mb-3">
-        {ch.imageUrl ? (
-          <img
-            src={ch.imageUrl}
-            alt=""
-            className="w-14 h-14 object-cover rounded cursor-pointer hover:opacity-80 shrink-0"
-            onClick={() => onPreviewImage(ch.imageUrl!)}
-          />
-        ) : (
-          <div className="w-14 h-14 bg-gray-100 rounded flex items-center justify-center shrink-0">
-            <ImageIcon className="w-5 h-5 text-gray-300" />
-          </div>
-        )}
+    <div className="p-4 hover:bg-gray-50 space-y-3">
+      {/* 1段目: メタ情報 */}
+      <div className="flex items-start gap-3">
+        {/* 写真(表・裏) */}
+        <div className="flex gap-1 shrink-0">
+          <ThumbnailImage url={ch.imageUrl} alt="表" onClick={onPreviewImage} />
+          <ThumbnailImage url={ch.imageUrl2} alt="裏" onClick={onPreviewImage} />
+        </div>
+
+        {/* クリニック + QRコード名 + バッジ群 */}
         <div className="flex-1 min-w-0">
           <div className="text-xs text-gray-500 truncate">{ch.clinicName}</div>
-          <div className="text-sm font-medium truncate">{ch.name}</div>
-          <div className="mt-1 flex flex-wrap gap-1">
-            {ch.distributionMethod && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] bg-blue-50 text-blue-700 whitespace-nowrap">
+          <div className="text-sm sm:text-base font-medium truncate">{ch.name}</div>
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px]">
+            {ch.distributionMethod ? (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 whitespace-nowrap">
                 {ch.distributionMethod}
               </span>
-            )}
-            {ch.distributionQuantity !== null && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] bg-gray-100 text-gray-700 whitespace-nowrap">
-                配布 {ch.distributionQuantity.toLocaleString()}枚
+            ) : (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-gray-100 text-gray-400 whitespace-nowrap">
+                掲載方法未設定
               </span>
             )}
-            {ch.budget !== null && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] bg-gray-100 text-gray-700 whitespace-nowrap">
-                ¥{ch.budget.toLocaleString()}
+            <span className="text-gray-500 whitespace-nowrap">
+              予算: <span className="text-gray-800 font-medium">
+                {ch.budget !== null ? `¥${ch.budget.toLocaleString()}` : "—"}
               </span>
-            )}
+            </span>
+            <span className="text-gray-500 whitespace-nowrap">
+              配布期間: <span className="text-gray-800 font-medium">
+                {ch.distributionPeriod || "—"}
+              </span>
+            </span>
           </div>
+        </div>
+
+        {/* 効果判定 + 編集ボタン */}
+        <div className="flex flex-col items-end gap-2 shrink-0">
+          <EffectivenessBadge ch={ch} />
+          <Button
+            size="sm"
+            disabled={isOpening}
+            onClick={() => onEdit(ch.clinicId, ch.id)}
+            title="医院になりすましてQR編集ページを別タブで開く"
+            className="h-8 bg-blue-600 hover:bg-blue-700 text-white gap-1"
+          >
+            {isOpening ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                開いています…
+              </>
+            ) : (
+              <>
+                <Pencil className="w-3.5 h-3.5" />
+                QRを編集
+                <ExternalLink className="w-3 h-3 opacity-70" />
+              </>
+            )}
+          </Button>
         </div>
       </div>
 
-      {/* 中段: ファネル各段階（診断型は4段階、リンク型は3段階） */}
-      <div className="grid grid-cols-4 gap-2 text-center mb-3">
-        <CardMetric
-          label="スキャン"
+      {/* 2段目: 生カウント4タイル */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+        <DetailMetric
+          label="配布枚数"
+          value={ch.distributionQuantity !== null ? `${ch.distributionQuantity.toLocaleString()}枚` : "—"}
+        />
+        <DetailMetric
+          label="QRスキャン"
           value={ch.scans.toLocaleString()}
           warn={ch.qrScans === 0 && ch.diagnosisStarts > 0}
         />
-        <CardMetric
-          label="診断到達"
-          value={ch.channelType === "link" ? "—" : ch.diagnosisStarts.toLocaleString()}
-        />
-        <CardMetric label="完了" value={ch.completions.toLocaleString()} />
-        <CardMetric label="CTA" value={ch.ctaClicks.toLocaleString()} />
+        <DetailMetric label="診断完了" value={ch.completions.toLocaleString()} />
+        <DetailMetric label="CTAクリック" value={ch.ctaClicks.toLocaleString()} />
       </div>
 
-      {/* 下段: 主要指標 */}
+      {/* 3段目: 指標4タイル */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
-        <CardMetric
+        <DetailMetric
           label="配布反応率"
-          value={ch.responseRate !== null ? `${ch.responseRate}%` : "-"}
+          value={ch.responseRate !== null ? `${ch.responseRate}%` : "—"}
           color="text-blue-600"
+          sub="スキャン÷配布枚数"
         />
-        <CardMetric
-          label="完了率"
-          value={ch.completionRate !== null ? `${ch.completionRate}%` : "-"}
+        <DetailMetric
+          label="診断完了率"
+          value={
+            ch.channelType === "link"
+              ? "—"
+              : ch.completionRate !== null
+              ? `${ch.completionRate}%`
+              : "—"
+          }
           color="text-emerald-600"
+          sub={ch.channelType === "link" ? "対象外" : "診断到達→完了"}
         />
-        <CardMetric
+        <DetailMetric
           label="全体CV率"
-          value={ch.overallCvRate !== null ? `${ch.overallCvRate}%` : "-"}
+          value={ch.overallCvRate !== null ? `${ch.overallCvRate}%` : "—"}
           color="text-amber-600"
+          sub="スキャン→CTA"
         />
-        <CardMetric
+        <DetailMetric
           label="1CVコスト"
-          value={ch.costPerCta !== null ? `¥${ch.costPerCta.toLocaleString()}` : "-"}
+          value={ch.costPerCta !== null ? `¥${ch.costPerCta.toLocaleString()}` : "—"}
+          sub="予算÷CTA"
         />
       </div>
     </div>
   );
 }
 
-function CardMetric({
+// 表/裏の画像サムネイル（クリックで拡大プレビュー）
+function ThumbnailImage({
+  url,
+  alt,
+  onClick,
+}: {
+  url: string | null;
+  alt: string;
+  onClick: (url: string) => void;
+}) {
+  if (url) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={url}
+        alt={alt}
+        title={alt === "表" ? "表面" : "裏面"}
+        className="w-14 h-14 object-cover rounded cursor-pointer hover:opacity-80"
+        onClick={() => onClick(url)}
+      />
+    );
+  }
+  return (
+    <div
+      className="w-14 h-14 bg-gray-100 rounded flex items-center justify-center"
+      title={alt === "表" ? "表面（未登録）" : "裏面（未登録）"}
+    >
+      <ImageIcon className="w-5 h-5 text-gray-300" />
+    </div>
+  );
+}
+
+// 各タイル（ラベル+大きい数値+補足）。QR別詳細の2段目・3段目で共通利用
+function DetailMetric({
   label,
   value,
   color,
   warn,
+  sub,
 }: {
   label: string;
   value: string;
   color?: string;
   warn?: boolean;
+  sub?: string;
 }) {
   return (
-    <div className="bg-gray-50 rounded px-2 py-1.5">
-      <div className="text-[10px] text-gray-500 whitespace-nowrap">{label}</div>
-      <div className={`text-sm font-semibold whitespace-nowrap ${color || "text-gray-800"}`}>
+    <div className="bg-gray-50 rounded px-3 py-2">
+      <div className="text-[11px] text-gray-500 whitespace-nowrap">{label}</div>
+      <div className={`text-base font-bold tabular-nums whitespace-nowrap ${color || "text-gray-800"}`}>
         {value}
         {warn && (
           <span
@@ -778,6 +662,7 @@ function CardMetric({
           </span>
         )}
       </div>
+      {sub && <div className="text-[10px] text-gray-400 whitespace-nowrap">{sub}</div>}
     </div>
   );
 }
