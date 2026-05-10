@@ -11,6 +11,9 @@ import {
   Megaphone,
   Eye,
   Link2,
+  Pencil,
+  ExternalLink,
+  Loader2,
 } from "lucide-react";
 import {
   BarChart,
@@ -35,6 +38,7 @@ type ConfidenceTier = "high" | "medium" | "low" | "insufficient";
 
 interface ChannelAnalysis {
   id: string;
+  clinicId: string;
   clinicName: string;
   clinicSlug: string;
   name: string;
@@ -163,6 +167,30 @@ export default function FlyerAnalysisPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // 各QRの編集ページを開く（管理者→医院になりすまし→新タブで遷移）
+  // 1. POST /api/admin/clinics/[clinicId]/impersonate でその医院の auth_token を発行
+  // 2. 別タブで /dashboard/channels/[channelId] を開く（auth_token cookieが効く）
+  // → 操作は監査ログに記録される（impersonate API側で実装済み）
+  const [openingChannelId, setOpeningChannelId] = useState<string | null>(null);
+  const handleOpenChannelEditor = async (clinicId: string, channelId: string) => {
+    setOpeningChannelId(channelId);
+    try {
+      const response = await fetch(`/api/admin/clinics/${clinicId}/impersonate`, {
+        method: "POST",
+      });
+      if (response.ok) {
+        window.open(`/dashboard/channels/${channelId}`, "_blank");
+      } else {
+        const data = await response.json();
+        alert(data.error || "編集ページを開けませんでした");
+      }
+    } catch {
+      alert("通信エラーが発生しました");
+    } finally {
+      setOpeningChannelId(null);
+    }
+  };
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -449,12 +477,13 @@ export default function FlyerAnalysisPage() {
                   <SortHeader label="完了率" sortKey="completionRate" currentKey={sortKey} asc={sortAsc} onClick={handleSort} />
                   <SortHeader label="全体CV率" sortKey="overallCvRate" currentKey={sortKey} asc={sortAsc} onClick={handleSort} />
                   <SortHeader label="1CVコスト" sortKey="costPerCta" currentKey={sortKey} asc={sortAsc} onClick={handleSort} />
+                  <th className="text-center py-3 px-3 font-medium whitespace-nowrap">編集</th>
                 </tr>
               </thead>
               <tbody>
                 {sortedChannels.length === 0 ? (
                   <tr>
-                    <td colSpan={15} className="py-12 text-center text-gray-500">
+                    <td colSpan={16} className="py-12 text-center text-gray-500">
                       データがありません
                     </td>
                   </tr>
@@ -531,6 +560,28 @@ export default function FlyerAnalysisPage() {
                       <td className="py-2 px-3 text-right tabular-nums whitespace-nowrap">
                         {ch.costPerCta !== null ? `¥${ch.costPerCta.toLocaleString()}` : "-"}
                       </td>
+                      <td className="py-2 px-3 text-center whitespace-nowrap">
+                        <Button
+                          size="sm"
+                          disabled={openingChannelId === ch.id}
+                          onClick={() => handleOpenChannelEditor(ch.clinicId, ch.id)}
+                          title="医院になりすましてQR編集ページを別タブで開く"
+                          className="h-8 bg-blue-600 hover:bg-blue-700 text-white gap-1"
+                        >
+                          {openingChannelId === ch.id ? (
+                            <>
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              開いています…
+                            </>
+                          ) : (
+                            <>
+                              <Pencil className="w-3.5 h-3.5" />
+                              QRを編集
+                              <ExternalLink className="w-3 h-3 opacity-70" />
+                            </>
+                          )}
+                        </Button>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -544,7 +595,13 @@ export default function FlyerAnalysisPage() {
               <div className="py-12 text-center text-gray-500">データがありません</div>
             ) : (
               sortedChannels.map((ch) => (
-                <ChannelCard key={ch.id} ch={ch} onPreviewImage={setPreviewImage} />
+                <ChannelCard
+                  key={ch.id}
+                  ch={ch}
+                  onPreviewImage={setPreviewImage}
+                  onEdit={handleOpenChannelEditor}
+                  isOpening={openingChannelId === ch.id}
+                />
               ))
             )}
           </div>
@@ -650,15 +707,39 @@ function EffectivenessBadge({ ch }: { ch: ChannelAnalysis }) {
 function ChannelCard({
   ch,
   onPreviewImage,
+  onEdit,
+  isOpening,
 }: {
   ch: ChannelAnalysis;
   onPreviewImage: (url: string) => void;
+  onEdit: (clinicId: string, channelId: string) => void;
+  isOpening: boolean;
 }) {
   return (
     <div className="p-4 hover:bg-gray-50">
-      {/* 効果判定バッジ（最上部に大きく表示） */}
-      <div className="mb-2">
+      {/* 上段: 効果判定バッジ + 編集ボタン */}
+      <div className="flex items-start justify-between gap-2 mb-2">
         <EffectivenessBadge ch={ch} />
+        <Button
+          size="sm"
+          disabled={isOpening}
+          onClick={() => onEdit(ch.clinicId, ch.id)}
+          title="医院になりすましてQR編集ページを別タブで開く"
+          className="h-8 bg-blue-600 hover:bg-blue-700 text-white gap-1 shrink-0"
+        >
+          {isOpening ? (
+            <>
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              開いています…
+            </>
+          ) : (
+            <>
+              <Pencil className="w-3.5 h-3.5" />
+              QRを編集
+              <ExternalLink className="w-3 h-3 opacity-70" />
+            </>
+          )}
+        </Button>
       </div>
       {/* 上段: 画像 + 医院名 + QRコード名 */}
       <div className="flex items-start gap-3 mb-3">

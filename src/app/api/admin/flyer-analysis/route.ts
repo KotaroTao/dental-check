@@ -12,7 +12,7 @@ interface ChannelWithClinic {
   distributionQuantity: number | null;
   budget: number | null;
   createdAt: Date;
-  clinic: { name: string; slug: string };
+  clinic: { id: string; name: string; slug: string };
 }
 
 export async function GET(request: Request) {
@@ -45,7 +45,7 @@ export async function GET(request: Request) {
       },
       include: {
         clinic: {
-          select: { name: true, slug: true },
+          select: { id: true, name: true, slug: true },
         },
       },
       orderBy: { createdAt: "desc" },
@@ -144,6 +144,7 @@ export async function GET(request: Request) {
 
       return {
         id: ch.id,
+        clinicId: ch.clinic.id,
         clinicName: ch.clinic.name,
         clinicSlug: ch.clinic.slug,
         name: ch.name,
