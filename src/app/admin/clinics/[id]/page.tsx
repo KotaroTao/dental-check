@@ -502,8 +502,8 @@ export default function AdminClinicDetailPage({
                   <h3 className="font-bold mb-4">分析設定</h3>
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="font-medium">チラシ分析から除外</div>
-                      <div className="text-sm text-gray-500">ONにするとチラシ分析ページにこの医院のデータが表示されません</div>
+                      <div className="font-medium">QR効果分析から除外</div>
+                      <div className="text-sm text-gray-500">ONにするとQR効果分析ページにこの医院のデータが表示されません</div>
                     </div>
                     <button
                       onClick={async () => {

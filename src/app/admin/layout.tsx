@@ -105,7 +105,7 @@ export default function AdminLayout({
                 }`}
               >
                 <Megaphone className="w-4 h-4" />
-                チラシ分析
+                QR効果分析
               </Link>
             </nav>
           </div>
@@ -158,7 +158,7 @@ export default function AdminLayout({
                 onClick={() => setIsMenuOpen(false)}
               >
                 <Megaphone className="w-4 h-4" />
-                チラシ分析
+                QR効果分析
               </Link>
               <div className="border-t border-gray-700 pt-4 mt-2">
                 <span className="text-sm text-gray-400 block mb-2">
