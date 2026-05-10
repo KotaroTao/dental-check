@@ -318,7 +318,7 @@ export default function FlyerAnalysisPage() {
         </Card>
       )}
 
-      {/* チャネル一覧テーブル */}
+      {/* チャネル一覧（lg以上はテーブル、それ以下はカード表示でスマホでも読みやすく） */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -327,16 +327,18 @@ export default function FlyerAnalysisPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          {/* 大きい画面（lg=1024px以上）: テーブル表示 */}
+          {/* min-w-[1100px] で各カラムに十分な幅を確保し、画面が狭ければ横スクロール */}
+          <div className="hidden lg:block overflow-x-auto">
+            <table className="w-full min-w-[1100px] text-sm">
               <thead>
                 <tr className="border-b bg-gray-50">
-                  <th className="text-left py-3 px-4 font-medium">写真</th>
-                  <th className="text-left py-3 px-4 font-medium">クリニック</th>
-                  <th className="text-left py-3 px-4 font-medium">QRコード名</th>
-                  <th className="text-left py-3 px-4 font-medium">配布方法</th>
-                  <th className="text-right py-3 px-4 font-medium">配布枚数</th>
-                  <th className="text-right py-3 px-4 font-medium">予算</th>
+                  <th className="text-left py-3 px-3 font-medium whitespace-nowrap">写真</th>
+                  <th className="text-left py-3 px-3 font-medium whitespace-nowrap">クリニック</th>
+                  <th className="text-left py-3 px-3 font-medium whitespace-nowrap">QRコード名</th>
+                  <th className="text-left py-3 px-3 font-medium whitespace-nowrap">配布方法</th>
+                  <th className="text-right py-3 px-3 font-medium whitespace-nowrap">配布枚数</th>
+                  <th className="text-right py-3 px-3 font-medium whitespace-nowrap">予算</th>
                   <SortHeader label="スキャン" sortKey="scans" currentKey={sortKey} asc={sortAsc} onClick={handleSort} />
                   <SortHeader label="診断到達" sortKey="diagnosisStarts" currentKey={sortKey} asc={sortAsc} onClick={handleSort} />
                   <SortHeader label="完了" sortKey="completions" currentKey={sortKey} asc={sortAsc} onClick={handleSort} />
@@ -357,7 +359,7 @@ export default function FlyerAnalysisPage() {
                 ) : (
                   sortedChannels.map((ch) => (
                     <tr key={ch.id} className="border-b hover:bg-gray-50">
-                      <td className="py-2 px-4">
+                      <td className="py-2 px-3">
                         {ch.imageUrl ? (
                           <img
                             src={ch.imageUrl}
@@ -371,24 +373,24 @@ export default function FlyerAnalysisPage() {
                           </div>
                         )}
                       </td>
-                      <td className="py-2 px-4 text-gray-600 whitespace-nowrap">{ch.clinicName}</td>
-                      <td className="py-2 px-4 font-medium whitespace-nowrap">{ch.name}</td>
-                      <td className="py-2 px-4">
+                      <td className="py-2 px-3 text-gray-600 whitespace-nowrap">{ch.clinicName}</td>
+                      <td className="py-2 px-3 font-medium whitespace-nowrap">{ch.name}</td>
+                      <td className="py-2 px-3 whitespace-nowrap">
                         {ch.distributionMethod ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-700">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-700 whitespace-nowrap">
                             {ch.distributionMethod}
                           </span>
                         ) : (
                           <span className="text-gray-400">-</span>
                         )}
                       </td>
-                      <td className="py-2 px-4 text-right tabular-nums">
+                      <td className="py-2 px-3 text-right tabular-nums whitespace-nowrap">
                         {ch.distributionQuantity !== null ? ch.distributionQuantity.toLocaleString() : "-"}
                       </td>
-                      <td className="py-2 px-4 text-right tabular-nums">
+                      <td className="py-2 px-3 text-right tabular-nums whitespace-nowrap">
                         {ch.budget !== null ? `¥${ch.budget.toLocaleString()}` : "-"}
                       </td>
-                      <td className="py-2 px-4 text-right tabular-nums font-medium">
+                      <td className="py-2 px-3 text-right tabular-nums font-medium whitespace-nowrap">
                         {ch.scans.toLocaleString()}
                         {ch.qrScans === 0 && ch.diagnosisStarts > 0 && (
                           <span
@@ -399,25 +401,25 @@ export default function FlyerAnalysisPage() {
                           </span>
                         )}
                       </td>
-                      <td className="py-2 px-4 text-right tabular-nums">
+                      <td className="py-2 px-3 text-right tabular-nums whitespace-nowrap">
                         {ch.diagnosisStarts.toLocaleString()}
                       </td>
-                      <td className="py-2 px-4 text-right tabular-nums">
+                      <td className="py-2 px-3 text-right tabular-nums whitespace-nowrap">
                         {ch.completions.toLocaleString()}
                       </td>
-                      <td className="py-2 px-4 text-right tabular-nums">
+                      <td className="py-2 px-3 text-right tabular-nums whitespace-nowrap">
                         {ch.ctaClicks.toLocaleString()}
                       </td>
-                      <td className="py-2 px-4 text-right tabular-nums">
+                      <td className="py-2 px-3 text-right tabular-nums whitespace-nowrap">
                         <RateCell value={ch.responseRate} suffix="%" />
                       </td>
-                      <td className="py-2 px-4 text-right tabular-nums">
+                      <td className="py-2 px-3 text-right tabular-nums whitespace-nowrap">
                         <RateCell value={ch.completionRate} suffix="%" />
                       </td>
-                      <td className="py-2 px-4 text-right tabular-nums">
+                      <td className="py-2 px-3 text-right tabular-nums whitespace-nowrap">
                         <RateCell value={ch.overallCvRate} suffix="%" />
                       </td>
-                      <td className="py-2 px-4 text-right tabular-nums">
+                      <td className="py-2 px-3 text-right tabular-nums whitespace-nowrap">
                         {ch.costPerCta !== null ? `¥${ch.costPerCta.toLocaleString()}` : "-"}
                       </td>
                     </tr>
@@ -425,6 +427,17 @@ export default function FlyerAnalysisPage() {
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* 小さい画面（lg未満=タブレット/スマホ）: カード表示 */}
+          <div className="lg:hidden divide-y">
+            {sortedChannels.length === 0 ? (
+              <div className="py-12 text-center text-gray-500">データがありません</div>
+            ) : (
+              sortedChannels.map((ch) => (
+                <ChannelCard key={ch.id} ch={ch} onPreviewImage={setPreviewImage} />
+              ))
+            )}
           </div>
         </CardContent>
       </Card>
@@ -464,7 +477,7 @@ function SortHeader({
   const isActive = currentKey === key;
   return (
     <th
-      className="text-right py-3 px-4 font-medium cursor-pointer hover:bg-gray-100 select-none whitespace-nowrap"
+      className="text-right py-3 px-3 font-medium cursor-pointer hover:bg-gray-100 select-none whitespace-nowrap"
       onClick={() => onClick(key)}
     >
       <span className="inline-flex items-center gap-1">
@@ -485,6 +498,121 @@ function RateCell({ value, suffix }: { value: number | null; suffix: string }) {
     <span className={value > 0 ? "text-gray-900" : "text-gray-400"}>
       {value}{suffix}
     </span>
+  );
+}
+
+// スマホ・タブレット向けのチャネルカード
+// → 横長テーブルが小画面で潰れて文字が縦書きになる問題を回避
+function ChannelCard({
+  ch,
+  onPreviewImage,
+}: {
+  ch: ChannelAnalysis;
+  onPreviewImage: (url: string) => void;
+}) {
+  return (
+    <div className="p-4 hover:bg-gray-50">
+      {/* 上段: 画像 + 医院名 + チラシ名 */}
+      <div className="flex items-start gap-3 mb-3">
+        {ch.imageUrl ? (
+          <img
+            src={ch.imageUrl}
+            alt=""
+            className="w-14 h-14 object-cover rounded cursor-pointer hover:opacity-80 shrink-0"
+            onClick={() => onPreviewImage(ch.imageUrl!)}
+          />
+        ) : (
+          <div className="w-14 h-14 bg-gray-100 rounded flex items-center justify-center shrink-0">
+            <ImageIcon className="w-5 h-5 text-gray-300" />
+          </div>
+        )}
+        <div className="flex-1 min-w-0">
+          <div className="text-xs text-gray-500 truncate">{ch.clinicName}</div>
+          <div className="text-sm font-medium truncate">{ch.name}</div>
+          <div className="mt-1 flex flex-wrap gap-1">
+            {ch.distributionMethod && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] bg-blue-50 text-blue-700 whitespace-nowrap">
+                {ch.distributionMethod}
+              </span>
+            )}
+            {ch.distributionQuantity !== null && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] bg-gray-100 text-gray-700 whitespace-nowrap">
+                配布 {ch.distributionQuantity.toLocaleString()}枚
+              </span>
+            )}
+            {ch.budget !== null && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] bg-gray-100 text-gray-700 whitespace-nowrap">
+                ¥{ch.budget.toLocaleString()}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* 中段: ファネル4段階 */}
+      <div className="grid grid-cols-4 gap-2 text-center mb-3">
+        <CardMetric
+          label="スキャン"
+          value={ch.scans.toLocaleString()}
+          warn={ch.qrScans === 0 && ch.diagnosisStarts > 0}
+        />
+        <CardMetric label="診断到達" value={ch.diagnosisStarts.toLocaleString()} />
+        <CardMetric label="完了" value={ch.completions.toLocaleString()} />
+        <CardMetric label="CTA" value={ch.ctaClicks.toLocaleString()} />
+      </div>
+
+      {/* 下段: 主要指標 */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+        <CardMetric
+          label="配布反応率"
+          value={ch.responseRate !== null ? `${ch.responseRate}%` : "-"}
+          color="text-blue-600"
+        />
+        <CardMetric
+          label="完了率"
+          value={ch.completionRate !== null ? `${ch.completionRate}%` : "-"}
+          color="text-emerald-600"
+        />
+        <CardMetric
+          label="全体CV率"
+          value={ch.overallCvRate !== null ? `${ch.overallCvRate}%` : "-"}
+          color="text-amber-600"
+        />
+        <CardMetric
+          label="1CVコスト"
+          value={ch.costPerCta !== null ? `¥${ch.costPerCta.toLocaleString()}` : "-"}
+        />
+      </div>
+    </div>
+  );
+}
+
+function CardMetric({
+  label,
+  value,
+  color,
+  warn,
+}: {
+  label: string;
+  value: string;
+  color?: string;
+  warn?: boolean;
+}) {
+  return (
+    <div className="bg-gray-50 rounded px-2 py-1.5">
+      <div className="text-[10px] text-gray-500 whitespace-nowrap">{label}</div>
+      <div className={`text-sm font-semibold whitespace-nowrap ${color || "text-gray-800"}`}>
+        {value}
+        {warn && (
+          <span
+            className="ml-0.5 text-[10px] text-amber-600"
+            title="QRスキャン直接計測前のデータ"
+          >
+            *
+          </span>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -522,28 +650,32 @@ function FunnelCard({
                 ? Math.round((1 - s.count / stages[i - 1].count) * 1000) / 10
                 : null;
             return (
-              <div key={s.label} className="flex items-center gap-3">
-                <div className="w-32 text-sm text-gray-700 shrink-0">{s.label}</div>
-                <div className="flex-1 relative h-8 bg-gray-100 rounded overflow-hidden">
+              <div key={s.label} className="flex items-center gap-2 sm:gap-3">
+                <div className="w-20 sm:w-32 text-xs sm:text-sm text-gray-700 shrink-0 whitespace-nowrap">
+                  {s.label}
+                </div>
+                <div className="flex-1 relative h-8 bg-gray-100 rounded overflow-hidden min-w-0">
                   <div
                     className={`h-full ${STAGE_COLORS[i] || "bg-gray-400"} transition-all`}
                     style={{ width: `${Math.max(ratio, 1)}%` }}
                   />
-                  <div className="absolute inset-0 flex items-center px-3 text-sm font-medium">
-                    {s.count.toLocaleString()}
+                  <div className="absolute inset-0 flex items-center px-2 sm:px-3 text-xs sm:text-sm font-medium overflow-hidden">
+                    <span className="whitespace-nowrap">{s.count.toLocaleString()}</span>
                     {top > 0 && (
-                      <span className="ml-2 text-xs text-gray-600">
+                      <span className="ml-1 sm:ml-2 text-[10px] sm:text-xs text-gray-600 whitespace-nowrap">
                         ({((s.count / top) * 100).toFixed(1)}%)
                       </span>
                     )}
                     {s.sub && (
-                      <span className="ml-2 text-xs text-gray-500">{s.sub}</span>
+                      <span className="ml-2 text-[10px] sm:text-xs text-gray-500 truncate hidden sm:inline">
+                        {s.sub}
+                      </span>
                     )}
                   </div>
                 </div>
-                <div className="w-24 text-xs text-gray-500 text-right shrink-0">
+                <div className="w-16 sm:w-24 text-[10px] sm:text-xs text-gray-500 text-right shrink-0 whitespace-nowrap">
                   {dropFromPrev !== null && dropFromPrev > 0 ? (
-                    <span className="text-rose-600">▼ {dropFromPrev}% 離脱</span>
+                    <span className="text-rose-600">▼ {dropFromPrev}%</span>
                   ) : (
                     "—"
                   )}
