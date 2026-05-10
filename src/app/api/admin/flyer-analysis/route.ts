@@ -10,6 +10,7 @@ interface ChannelWithClinic {
   imageUrl2: string | null;
   distributionMethod: string | null;
   distributionQuantity: number | null;
+  distributionPeriod: string | null;
   budget: number | null;
   createdAt: Date;
   clinic: { id: string; name: string; slug: string };
@@ -153,6 +154,7 @@ export async function GET(request: Request) {
         imageUrl2: ch.imageUrl2,
         distributionMethod: ch.distributionMethod,
         distributionQuantity: quantity,
+        distributionPeriod: ch.distributionPeriod,
         budget: budget,
 
         // 生のカウント
