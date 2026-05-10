@@ -125,10 +125,14 @@ export async function GET(request: Request) {
       const completions = sessionCountMap[ch.id] || 0;
       const ctaClicks = ctaCountMap[ch.id] || 0;
 
-      // 後方互換: qr_scan が記録されていない期間/チャネルは診断ページ到達数を
-      // 「実効スキャン数」として扱う（過去データを 0 にしないため）
+      // 後方互換: qr_scan が記録されていない期間/チャネルのフォールバック
+      // - 診断付きQR: 診断ページ到達数（page_view）を実効スキャンとして扱う
+      // - リンク型QR : リンクページにはpage_view計測がないため ctaClicks を実効スキャンとして扱う
+      //   （link-completeで1スキャン=1CTAが必ず作成されるため、CTA数=有効スキャン数）
       // 計測修正のリリース後、新しいスキャンはすべて qr_scan で記録される
-      const effectiveScans = qrScans > 0 ? qrScans : diagnosisStarts;
+      const fallbackScans =
+        ch.channelType === "link" ? ctaClicks : diagnosisStarts;
+      const effectiveScans = qrScans > 0 ? qrScans : fallbackScans;
 
       const quantity = ch.distributionQuantity;
       const budget = ch.budget;
