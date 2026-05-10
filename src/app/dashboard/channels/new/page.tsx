@@ -189,6 +189,11 @@ export default function NewChannelPage() {
       return;
     }
 
+    if (!formData.distributionMethod) {
+      setError("QR掲載方法を選択してください");
+      return;
+    }
+
     // URL形式チェック
     if (channelType === "link") {
       try {
@@ -500,11 +505,12 @@ export default function NewChannelPage() {
             </p>
           </div>
 
-          {/* 配布方法 */}
+          {/* QR掲載方法 */}
           <div className="space-y-2">
             <Label htmlFor="distributionMethod" className="flex items-center gap-2">
               <Megaphone className="w-4 h-4 text-gray-500" />
-              配布方法（任意）
+              QR掲載方法
+              <span className="text-rose-600 text-xs font-medium">必須</span>
             </Label>
             <select
               id="distributionMethod"
@@ -512,6 +518,7 @@ export default function NewChannelPage() {
               value={formData.distributionMethod}
               onChange={handleChange}
               disabled={isLoading}
+              required
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <option value="">選択してください</option>
@@ -523,7 +530,7 @@ export default function NewChannelPage() {
               <option value="その他">その他</option>
             </select>
             <p className="text-xs text-gray-500">
-              チラシの配布方法を選択すると、方法別の効果比較ができます。
+              QRコードを掲載した媒体（チラシ・LP・メールなど）の種別を選択すると、媒体別の効果比較ができます。
             </p>
           </div>
 

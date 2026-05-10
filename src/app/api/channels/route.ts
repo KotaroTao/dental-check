@@ -172,6 +172,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // QR掲載方法は必須（効果分析の母集団作成に必要）
+    if (!distributionMethod || String(distributionMethod).trim() === "") {
+      return NextResponse.json(
+        { error: "QR掲載方法を選択してください" },
+        { status: 400 }
+      );
+    }
+
     // URL形式チェック
     if (type === "link") {
       try {

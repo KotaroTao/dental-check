@@ -244,24 +244,31 @@ export default function ChannelDetailPage() {
     setSaveSuccess(false);
 
     try {
+      // QR掲載方法は必須項目だが、未設定（空文字）の場合はフィールド自体を
+      // 送らないことで、既存データの上書きと自動保存エラーを回避する
+      // （ユーザーがプルダウンで選んだ時のみ更新される。UI側でも警告表示済み）
+      const patchBody: Record<string, unknown> = {
+        name: dataToSave.name,
+        displayName: dataToSave.displayName || null,
+        description: dataToSave.description,
+        isActive: dataToSave.isActive,
+        imageUrl: dataToSave.imageUrl,
+        imageUrl2: dataToSave.imageUrl2,
+        expiresAt: dataToSave.expiresAt || null,
+        redirectUrl: channel.channelType === "link" ? dataToSave.redirectUrl : null,
+        budget: dataToSave.budget || null,
+        distributionQuantity: dataToSave.distributionQuantity || null,
+        distributionPeriod: dataToSave.distributionPeriod || null,
+        documents: dataToSave.documents,
+      };
+      if (dataToSave.distributionMethod) {
+        patchBody.distributionMethod = dataToSave.distributionMethod;
+      }
+
       const response = await fetch(`/api/channels/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: dataToSave.name,
-          displayName: dataToSave.displayName || null,
-          description: dataToSave.description,
-          isActive: dataToSave.isActive,
-          imageUrl: dataToSave.imageUrl,
-          imageUrl2: dataToSave.imageUrl2,
-          expiresAt: dataToSave.expiresAt || null,
-          redirectUrl: channel.channelType === "link" ? dataToSave.redirectUrl : null,
-          budget: dataToSave.budget || null,
-          distributionMethod: dataToSave.distributionMethod || null,
-          distributionQuantity: dataToSave.distributionQuantity || null,
-          distributionPeriod: dataToSave.distributionPeriod || null,
-          documents: dataToSave.documents,
-        }),
+        body: JSON.stringify(patchBody),
       });
 
       const data = await response.json();
@@ -726,11 +733,12 @@ export default function ChannelDetailPage() {
             </div>
           )}
 
-          {/* 4. 配布方法（任意） */}
+          {/* 4. QR掲載方法（必須） */}
           <div className="space-y-2">
             <Label htmlFor="distributionMethod" className="flex items-center gap-2">
               <Megaphone className="w-4 h-4 text-gray-500" />
-              配布方法（任意）
+              QR掲載方法
+              <span className="text-rose-600 text-xs font-medium">必須</span>
             </Label>
             <select
               id="distributionMethod"
@@ -738,6 +746,7 @@ export default function ChannelDetailPage() {
               value={formData.distributionMethod}
               onChange={handleChange}
               disabled={isSaving || !!isDemo}
+              required
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <option value="">選択してください</option>
@@ -748,8 +757,13 @@ export default function ChannelDetailPage() {
               <option value="DM">DM</option>
               <option value="その他">その他</option>
             </select>
+            {!formData.distributionMethod && !isDemo && (
+              <p className="text-xs text-rose-600">
+                ⚠️ QR掲載方法が未設定です。効果分析を正しく行うため、必ず選択してください。
+              </p>
+            )}
             <p className="text-xs text-gray-500">
-              チラシの配布方法を選択すると、方法別の効果比較ができます。
+              QRコードを掲載した媒体（チラシ・LP・メールなど）の種別を選択すると、媒体別の効果比較ができます。
             </p>
           </div>
 

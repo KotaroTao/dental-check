@@ -129,6 +129,18 @@ export async function PATCH(
       }
     }
 
+    // QR掲載方法を「明示的にクリア」する更新は拒否（必須項目のため）
+    // 既存値を保持したい場合はクライアント側でフィールドを送らない設計
+    if (
+      distributionMethod !== undefined &&
+      (typeof distributionMethod !== "string" || distributionMethod.trim() === "")
+    ) {
+      return NextResponse.json(
+        { error: "QR掲載方法を選択してください" },
+        { status: 400 }
+      );
+    }
+
     const channel = (await prisma.channel.update({
       where: { id },
       data: {
@@ -141,7 +153,7 @@ export async function PATCH(
         ...(expiresAt !== undefined && { expiresAt: expiresAt ? new Date(expiresAt) : null }),
         ...(redirectUrl !== undefined && existingChannel.channelType === "link" && { redirectUrl: redirectUrl.trim() }),
         ...(budget !== undefined && { budget: budget !== null && budget !== "" ? parseInt(budget, 10) : null }),
-        ...(distributionMethod !== undefined && { distributionMethod: distributionMethod || null }),
+        ...(distributionMethod !== undefined && { distributionMethod: distributionMethod }),
         ...(distributionQuantity !== undefined && { distributionQuantity: distributionQuantity !== null && distributionQuantity !== "" ? parseInt(distributionQuantity, 10) : null }),
         ...(distributionPeriod !== undefined && { distributionPeriod: distributionPeriod?.trim() || null }),
         ...(documents !== undefined && { documents: documents || [] }),
