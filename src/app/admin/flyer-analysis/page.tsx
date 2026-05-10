@@ -109,35 +109,14 @@ type SortKey =
   | "scans"
   | "diagnosisStarts"
   | "completions"
-  | "ctaClicks"
-  | "benchmarkDeviation";
-
-// 効果ティアの表示設定（色・ラベル・並び順用の重み）
-const TIER_META: Record<
-  EffectivenessTier,
-  { label: string; color: string; weight: number }
-> = {
-  excellent:    { label: "優秀",     color: "bg-emerald-100 text-emerald-700 border-emerald-300", weight: 5 },
-  good:         { label: "良好",     color: "bg-green-50 text-green-700 border-green-200",       weight: 4 },
-  avg:          { label: "平均",     color: "bg-gray-100 text-gray-700 border-gray-300",         weight: 3 },
-  below:        { label: "やや不調", color: "bg-amber-50 text-amber-700 border-amber-200",       weight: 2 },
-  poor:         { label: "要改善",   color: "bg-rose-50 text-rose-700 border-rose-200",          weight: 1 },
-  insufficient: { label: "判定不能", color: "bg-gray-50 text-gray-500 border-gray-200",          weight: 0 },
-};
-
-// 信頼度ティアの表示設定
-const CONFIDENCE_META: Record<ConfidenceTier, { label: string; stars: string }> = {
-  high:         { label: "信頼度: 高（500件以上）",         stars: "★★★" },
-  medium:       { label: "信頼度: 中（100〜499件）",        stars: "★★☆" },
-  low:          { label: "信頼度: 低（30〜99件）",          stars: "★☆☆" },
-  insufficient: { label: "サンプル不足（30件未満）",        stars: "—" },
-};
+  | "ctaClicks";
 
 export default function FlyerAnalysisPage() {
   const [data, setData] = useState<AnalysisData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
-  const [period, setPeriod] = useState(90);
+  // 期間フィルタ: デフォルトは365日。0 は「全期間」を表す特殊値
+  const [period, setPeriod] = useState(365);
   const [methodFilter, setMethodFilter] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("scans");
   const [sortAsc, setSortAsc] = useState(false);
@@ -265,15 +244,22 @@ export default function FlyerAnalysisPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-2xl font-bold">QR効果分析</h1>
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex gap-1">
-            {[30, 90, 180, 365].map((days) => (
+          <div className="flex gap-1 flex-wrap">
+            {/* days=0 は API 側で「全期間」として扱われる */}
+            {[
+              { days: 30, label: "30日" },
+              { days: 90, label: "90日" },
+              { days: 180, label: "180日" },
+              { days: 365, label: "365日" },
+              { days: 0, label: "全期間" },
+            ].map(({ days, label }) => (
               <Button
                 key={days}
                 variant={period === days ? "default" : "outline"}
                 size="sm"
                 onClick={() => setPeriod(days)}
               >
-                {days}日
+                {label}
               </Button>
             ))}
           </div>
@@ -324,7 +310,6 @@ export default function FlyerAnalysisPage() {
           ctaClicks={totalCtaClicks}
           quantity={totalQuantity}
           budget={totalBudget}
-          globalAvg={data.globalAvg}
         />
       )}
 
@@ -391,7 +376,6 @@ export default function FlyerAnalysisPage() {
               }}
               className="h-9 rounded-md border border-input bg-background px-2 text-sm"
             >
-              <option value="benchmarkDeviation:desc">効果判定（高い順）</option>
               <option value="scans:desc">QRスキャン数（多い順）</option>
               <option value="completions:desc">診断完了数（多い順）</option>
               <option value="ctaClicks:desc">CTAクリック数（多い順）</option>
@@ -439,37 +423,6 @@ export default function FlyerAnalysisPage() {
   );
 }
 
-
-// 効果バッジ: 「優秀/良好/平均/やや不調/要改善/判定不能」を色付きで表示
-// 信頼度（★）と平均比（+25%など）も併記し、医院ごとの判断材料を1セルに集約
-function EffectivenessBadge({ ch }: { ch: ChannelAnalysis }) {
-  const meta = TIER_META[ch.effectivenessTier];
-  const conf = CONFIDENCE_META[ch.confidence];
-  const tooltip =
-    ch.effectivenessTier === "insufficient"
-      ? `データが少ないため判定できません（${conf.label}）`
-      : `${ch.benchmarkPeerLabel}比 ${ch.benchmarkDeviation! >= 0 ? "+" : ""}${ch.benchmarkDeviation}% / ${conf.label}\n` +
-        `比較対象の全体CV率: ${ch.benchmarkPeerCvRate ?? "-"}%`;
-
-  return (
-    <div className="flex flex-col gap-0.5" title={tooltip}>
-      <span
-        className={`inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-medium border ${meta.color} whitespace-nowrap w-fit`}
-      >
-        {meta.label}
-        {ch.benchmarkDeviation !== null && ch.effectivenessTier !== "insufficient" && (
-          <span className="ml-1 tabular-nums">
-            {ch.benchmarkDeviation >= 0 ? "+" : ""}
-            {ch.benchmarkDeviation}%
-          </span>
-        )}
-      </span>
-      <span className="text-[10px] text-gray-500 whitespace-nowrap pl-1">
-        {conf.stars} {ch.scans}件
-      </span>
-    </div>
-  );
-}
 
 // QR別詳細の1行（PC・モバイル共通）
 // 構成は3つの横ブロックに分かれる:
@@ -525,9 +478,8 @@ function QrDetailRow({
           </div>
         </div>
 
-        {/* 効果判定 + 編集ボタン */}
+        {/* 編集ボタン（効果判定バッジは表示しない） */}
         <div className="flex flex-col items-end gap-2 shrink-0">
-          <EffectivenessBadge ch={ch} />
           <Button
             size="sm"
             disabled={isOpening}
@@ -684,7 +636,6 @@ function QrSummaryCard({
   ctaClicks,
   quantity,
   budget,
-  globalAvg,
 }: {
   variant: "diagnosis" | "link";
   channelCount: number;
@@ -695,7 +646,6 @@ function QrSummaryCard({
   ctaClicks: number;
   quantity: number;
   budget: number;
-  globalAvg?: { overallCvRate: number | null; responseRate: number | null; sampleScans: number };
 }) {
   const isLink = variant === "link";
 
@@ -788,13 +738,6 @@ function QrSummaryCard({
           />
         </div>
 
-        {!isLink && globalAvg && globalAvg.overallCvRate !== null && (
-          <div className="mt-3 text-[11px] text-gray-500">
-            ベンチマーク基準: 全社平均CV率 <span className="font-semibold text-gray-700">{globalAvg.overallCvRate}%</span>
-            （サンプル {globalAvg.sampleScans.toLocaleString()}件）
-            ・各QRの「効果判定」はこの平均または同掲載方法平均との比較で算出されています
-          </div>
-        )}
       </CardContent>
     </Card>
   );

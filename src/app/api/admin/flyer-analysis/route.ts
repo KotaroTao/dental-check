@@ -24,13 +24,24 @@ export async function GET(request: Request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const rawDays = parseInt(searchParams.get("days") || "90");
-    const days = Math.max(1, Math.min(365, isNaN(rawDays) ? 90 : rawDays));
+    const rawDays = parseInt(searchParams.get("days") || "365");
+    // days=0 は「全期間」を意味する特殊値（過去すべての期間を集計）
+    // それ以外は 1〜365 の範囲にクランプ
+    const days = isNaN(rawDays) || rawDays < 0
+      ? 365
+      : rawDays === 0
+      ? 0
+      : Math.min(365, Math.max(1, rawDays));
     const methodFilter = searchParams.get("method") || "";
 
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
-    startDate.setHours(0, 0, 0, 0);
+    // days=0 のときは startDate=null として全期間を対象にする
+    const startDate = days === 0 ? null : new Date();
+    if (startDate) {
+      startDate.setDate(startDate.getDate() - days);
+      startDate.setHours(0, 0, 0, 0);
+    }
+    // 期間フィルタを Prisma where 句で再利用するためのヘルパー
+    const dateFilter = startDate ? { gte: startDate } : undefined;
 
     // 全チャネルを取得（クリニック情報付き、デモ・除外クリニックを除く）
     const channels = await prisma.channel.findMany({
@@ -65,7 +76,7 @@ export async function GET(request: Request) {
               isDeleted: false,
               isDemo: false,
               completedAt: { not: null },
-              createdAt: { gte: startDate },
+              ...(dateFilter ? { createdAt: dateFilter } : {}),
             },
             _count: { id: true },
           })
@@ -76,7 +87,7 @@ export async function GET(request: Request) {
             where: {
               channelId: { in: channelIds },
               isDeleted: false,
-              createdAt: { gte: startDate },
+              ...(dateFilter ? { createdAt: dateFilter } : {}),
             },
             _count: { id: true },
           })
@@ -94,7 +105,7 @@ export async function GET(request: Request) {
             channelId: { in: channelIds },
             isDeleted: false,
             eventType: { in: ["qr_scan", "page_view"] },
-            createdAt: { gte: startDate },
+            ...(dateFilter ? { createdAt: dateFilter } : {}),
           },
           _count: { id: true },
         })
