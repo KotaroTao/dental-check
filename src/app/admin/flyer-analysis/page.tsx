@@ -151,8 +151,15 @@ export default function FlyerAnalysisPage() {
 
   const sortedChannels = data?.channels
     ? [...data.channels].sort((a, b) => {
-        const aVal = a[sortKey] ?? -Infinity;
-        const bVal = b[sortKey] ?? -Infinity;
+        const aVal = a[sortKey];
+        const bVal = b[sortKey];
+        // データなし（null/undefined）は昇順・降順に関わらず常に末尾へ
+        // 例: 「1CVコスト（安い順）」で予算未設定のQRを上位に出さない
+        const aIsNull = aVal === null || aVal === undefined;
+        const bIsNull = bVal === null || bVal === undefined;
+        if (aIsNull && bIsNull) return 0;
+        if (aIsNull) return 1;
+        if (bIsNull) return -1;
         return sortAsc ? (aVal > bVal ? 1 : -1) : (aVal < bVal ? 1 : -1);
       })
     : [];
