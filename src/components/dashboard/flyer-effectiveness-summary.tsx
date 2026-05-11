@@ -9,8 +9,12 @@ import { Loader2, Layers } from "lucide-react";
 //   QRスキャン = Σ Σ channel.scans
 //   QRスキャン率 = QRスキャン ÷ 配布枚数（% 表示）
 //   QRスキャン単価 = 予算合計 ÷ QRスキャン（¥ 表示）
-// 期間フィルタは親から period / customStart/End を受け取り、 /api/flyers にクエリで渡す
-// レスポンスの channels[].scans は既に期間で絞り込まれている
+//
+// 設計判断: 期間フィルタは持たない。
+// 「配布枚数 / 予算」はチラシ全期間で固定値、「スキャン」は配布後に累積していくため、
+// 短期間で絞ると「率」「単価」が誤解を招く（分母は全期間固定なのに分子だけ短期、になる）。
+// よって効果測定は常に「チラシ累計」で評価する。
+// チラシ自体の配布期間（テキスト）は各チラシ編集ページで参照できる。
 
 interface FlyerData {
   id: string;
@@ -20,17 +24,7 @@ interface FlyerData {
   channels: Array<{ id: string; name: string; scans: number }>;
 }
 
-interface FlyerEffectivenessSummaryProps {
-  period: string; // "today" | "week" | "month" | "all" | "custom"
-  customStartDate?: string;
-  customEndDate?: string;
-}
-
-export function FlyerEffectivenessSummary({
-  period,
-  customStartDate,
-  customEndDate,
-}: FlyerEffectivenessSummaryProps) {
+export function FlyerEffectivenessSummary() {
   const [flyers, setFlyers] = useState<FlyerData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -38,15 +32,9 @@ export function FlyerEffectivenessSummary({
   useEffect(() => {
     let mounted = true;
     (async () => {
-      setIsLoading(true);
       try {
-        const params = new URLSearchParams();
-        params.set("period", period);
-        if (period === "custom" && customStartDate && customEndDate) {
-          params.set("startDate", customStartDate);
-          params.set("endDate", customEndDate);
-        }
-        const response = await fetch(`/api/flyers?${params}`);
+        // 期間指定なし = 全期間でスキャンを集計
+        const response = await fetch("/api/flyers");
         if (!response.ok) {
           if (mounted) setError("データの取得に失敗しました");
           return;
@@ -65,7 +53,7 @@ export function FlyerEffectivenessSummary({
     return () => {
       mounted = false;
     };
-  }, [period, customStartDate, customEndDate]);
+  }, []);
 
   // 合算値
   const totalQuantity = flyers.reduce(
@@ -90,7 +78,7 @@ export function FlyerEffectivenessSummary({
           </div>
           <div>
             <h2 className="text-lg font-bold text-gray-900">効果測定サマリー</h2>
-            <p className="text-xs text-gray-500">全チラシの集計データ（{flyers.length}件のチラシ）</p>
+            <p className="text-xs text-gray-500">全チラシの累計データ（{flyers.length}件のチラシ）</p>
           </div>
         </div>
       </div>
