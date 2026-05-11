@@ -127,13 +127,22 @@ export async function GET(request: NextRequest) {
     const sessionCountMap: Record<string, number> = {};
     for (const r of sessionCounts) if (r.channelId) sessionCountMap[r.channelId] = r._count.id;
 
-    // 各 Channel ごとの実効スキャン数を計算（qr_scan があればそれ、なければセッション数）
+    // 各 Channel ごとの実効スキャン数を計算
+    // qr_scan は 2026/5/10 から計測開始。それ以前のデータは qr_scan = 0 で
+    // フォールバック（DiagnosisSession 件数）で全件を補える。
+    // 計測開始後は qr_scan = sessions（1スキャン=1セッション）の関係になる想定だが、
+    // 「スキャンしたがプロフィール入力で離脱（バウンス）」したケースは
+    // qr_scan > sessions になる。両者の max を取ることで:
+    //   - 古いデータのみの期間: sessions で全件カバー
+    //   - 新データのみの期間: qr_scan が sessions と同数 or バウンス込みでより多い
+    //   - 古い+新しい混在: 通常 sessions が全期間カバーするので大きい方を採用
+    // この方が「セッション数37件あるのにスキャン1件しか見えない」状態を防げる。
     const channelScansMap: Record<string, number> = {};
     for (const f of flyers) {
       for (const c of f.channels) {
         const qrScans = qrScanMap[c.id] || 0;
-        const fallback = sessionCountMap[c.id] || 0;
-        channelScansMap[c.id] = qrScans > 0 ? qrScans : fallback;
+        const sessions = sessionCountMap[c.id] || 0;
+        channelScansMap[c.id] = Math.max(qrScans, sessions);
       }
     }
 

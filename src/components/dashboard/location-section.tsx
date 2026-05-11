@@ -252,9 +252,11 @@ export function LocationSection({
     fetchLocations();
   }, [period, selectedChannelIds, customStartDate, customEndDate]);
 
-  // 都道府県情報があるデータのみ抽出
+  // 位置情報があるデータのみ抽出。
+  // 都道府県(region)が空でも市区町村(city)が取れている場合は有効として扱う
+  // （例: 「港区」だけ取れているデータも地図に出したい）。
   const validLocations = locations.filter(
-    (loc) => loc.region
+    (loc) => loc.region || loc.city
   );
 
   // チャンネル選択UI
