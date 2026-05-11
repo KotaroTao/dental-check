@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   ArrowLeft,
   Loader2,
@@ -16,6 +17,7 @@ import {
   ExternalLink,
   Check,
   AlertCircle,
+  Plus,
 } from "lucide-react";
 
 const METHOD_OPTIONS = [
@@ -38,6 +40,7 @@ interface LinkedChannel {
 interface FlyerData {
   id: string;
   name: string;
+  description: string | null;
   distributionMethod: string | null;
   distributionQuantity: number | null;
   distributionPeriod: string | null;
@@ -61,11 +64,12 @@ export default function EditFlyerPage() {
   const [uploadingFront, setUploadingFront] = useState(false);
   const [uploadingBack, setUploadingBack] = useState(false);
 
-  // フォーム値（チラシ名 / 配布情報）
+  // フォーム値（チラシ名 / 配布情報 / 備考）
   // 数値もテキストとして保持し、保存時に親APIで parseInt する。
   // disabled={isSaving} は付けない（自動保存中も入力可能にして、過去の入力途切れ不具合を避ける）
   const [formData, setFormData] = useState({
     name: "",
+    description: "",
     distributionMethod: "",
     distributionQuantity: "",
     distributionPeriod: "",
@@ -91,6 +95,7 @@ export default function EditFlyerPage() {
         setFlyer(data.flyer);
         setFormData({
           name: data.flyer.name,
+          description: data.flyer.description || "",
           distributionMethod: data.flyer.distributionMethod || "",
           distributionQuantity:
             data.flyer.distributionQuantity !== null
@@ -117,18 +122,23 @@ export default function EditFlyerPage() {
   const saveData = useCallback(
     async (data: typeof formData) => {
       if (!flyer) return;
-      if (!data.name.trim()) return; // チラシ名は必須
+      // 必須項目が空のまま自動保存しようとすると 400 になるので、UIで明示的にスキップ
+      if (!data.name.trim()) return;
+      if (!data.distributionMethod) return;
 
       setIsSaving(true);
       setError("");
       setSaveSuccess(false);
       try {
+        // distributionMethod は必須なので、空文字をAPIに送ると 400 で弾かれる。
+        // チラシ画像（imageUrl）も同様だが、こちらは画像専用ハンドラ側で管理。
         const response = await fetch(`/api/flyers/${id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             name: data.name,
-            distributionMethod: data.distributionMethod || null,
+            description: data.description || null,
+            distributionMethod: data.distributionMethod,
             distributionQuantity: data.distributionQuantity || null,
             distributionPeriod: data.distributionPeriod || null,
             budget: data.budget || null,
@@ -164,7 +174,7 @@ export default function EditFlyerPage() {
   }, [formData, saveData]);
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -210,11 +220,18 @@ export default function EditFlyerPage() {
 
   const handleImageRemove = async (side: "front" | "back") => {
     const isFront = side === "front";
+    // 表面画像は必須なので「削除」は不可（差し替えのみ可）。ガード。
+    if (isFront) {
+      setError(
+        "チラシ表面の画像は必須のため削除できません。差し替えるには、もう一度アップロードしてください。"
+      );
+      return;
+    }
     try {
       const res = await fetch(`/api/flyers/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(isFront ? { imageUrl: null } : { imageUrl2: null }),
+        body: JSON.stringify({ imageUrl2: null }),
       });
       if (!res.ok) throw new Error("remove failed");
       const data = await res.json();
@@ -227,10 +244,14 @@ export default function EditFlyerPage() {
   const handleDelete = async () => {
     if (!flyer) return;
     const channelCount = flyer.channels.length;
-    const confirmMsg = channelCount > 0
-      ? `「${flyer.name}」を削除しますか？\n紐付いている${channelCount}件のQRはチラシなし（単独QR）として残ります。`
-      : `「${flyer.name}」を削除しますか？`;
-    if (!confirm(confirmMsg)) return;
+    // 配下QRが残っていれば削除不可（先にQRを別チラシへ移動 or 非表示にしてもらう）
+    if (channelCount > 0) {
+      setError(
+        `このチラシには${channelCount}件のQRが紐付いています。先にQRを別のチラシへ移動するか、非表示にしてからチラシを削除してください。`
+      );
+      return;
+    }
+    if (!confirm(`「${flyer.name}」を削除しますか？`)) return;
     setIsDeleting(true);
     try {
       const res = await fetch(`/api/flyers/${id}`, { method: "DELETE" });
@@ -305,7 +326,9 @@ export default function EditFlyerPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">チラシ名（必須）</Label>
+            <Label htmlFor="name">
+              チラシ名 <span className="text-rose-600 text-xs">必須</span>
+            </Label>
             <Input
               id="name"
               name="name"
@@ -317,24 +340,32 @@ export default function EditFlyerPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="distributionMethod">配布方法</Label>
+              <Label htmlFor="distributionMethod">
+                配布方法 <span className="text-rose-600 text-xs">必須</span>
+              </Label>
               <select
                 id="distributionMethod"
                 name="distributionMethod"
                 value={formData.distributionMethod}
                 onChange={handleChange}
+                required
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               >
-                <option value="">未設定</option>
+                <option value="">選択してください</option>
                 {METHOD_OPTIONS.map((m) => (
                   <option key={m} value={m}>
                     {m}
                   </option>
                 ))}
               </select>
+              {!formData.distributionMethod && (
+                <p className="text-xs text-rose-600">
+                  ⚠️ 配布方法が未設定です。効果分析のため必ず選択してください。
+                </p>
+              )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="distributionPeriod">配布期間</Label>
+              <Label htmlFor="distributionPeriod">配布期間（任意）</Label>
               <Input
                 id="distributionPeriod"
                 name="distributionPeriod"
@@ -347,7 +378,7 @@ export default function EditFlyerPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="distributionQuantity">配布枚数</Label>
+              <Label htmlFor="distributionQuantity">配布枚数（任意）</Label>
               <div className="relative">
                 <Input
                   id="distributionQuantity"
@@ -364,7 +395,7 @@ export default function EditFlyerPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="budget">予算</Label>
+              <Label htmlFor="budget">予算（任意）</Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
                   ¥
@@ -382,6 +413,19 @@ export default function EditFlyerPage() {
               </div>
             </div>
           </div>
+
+          {/* 備考 */}
+          <div className="space-y-2">
+            <Label htmlFor="description">備考（任意）</Label>
+            <Textarea
+              id="description"
+              name="description"
+              placeholder="メモや備考を自由に記入できます"
+              value={formData.description}
+              onChange={handleChange}
+              rows={3}
+            />
+          </div>
         </CardContent>
       </Card>
 
@@ -392,14 +436,14 @@ export default function EditFlyerPage() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <ImageUploader
-              label="表面"
+              label="表面（必須）"
               url={flyer.imageUrl}
               isUploading={uploadingFront}
               onUpload={(e) => handleImageUpload(e, "front")}
               onRemove={() => handleImageRemove("front")}
             />
             <ImageUploader
-              label="裏面"
+              label="裏面（任意）"
               url={flyer.imageUrl2}
               isUploading={uploadingBack}
               onUpload={(e) => handleImageUpload(e, "back")}
@@ -410,21 +454,20 @@ export default function EditFlyerPage() {
       </Card>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
           <CardTitle>このチラシに紐付いているQR（{flyer.channels.length}件）</CardTitle>
+          {/* このチラシ配下にQRを追加するボタン（Phase 2 でのQR新規作成の主導線） */}
+          <Link href={`/dashboard/flyers/${id}/channels/new`}>
+            <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+              <Plus className="w-4 h-4 mr-1" />
+              このチラシにQRを追加
+            </Button>
+          </Link>
         </CardHeader>
         <CardContent>
           {flyer.channels.length === 0 ? (
             <p className="text-sm text-gray-500">
-              まだQRが紐付いていません。
-              <br />
-              <Link
-                href="/dashboard/channels/new"
-                className="text-blue-600 hover:underline"
-              >
-                新規QRコード作成
-              </Link>
-              { " "}画面、または既存QRの編集画面でこのチラシを選択してください。
+              まだQRが紐付いていません。「このチラシにQRを追加」ボタンから作成してください。
             </p>
           ) : (
             <div className="divide-y">
@@ -460,7 +503,7 @@ export default function EditFlyerPage() {
           <div className="text-sm">
             <div className="font-medium text-red-600">チラシを削除する</div>
             <div className="text-xs text-gray-500 mt-1">
-              削除しても紐付いているQR自体は残り、「単独QR」として扱われます。
+              紐付いているQRが残っている場合は削除できません。先にQRを別のチラシへ移動するか非表示にしてください。
             </div>
           </div>
           <Button

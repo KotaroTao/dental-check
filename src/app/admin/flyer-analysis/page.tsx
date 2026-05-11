@@ -276,9 +276,9 @@ export default function FlyerAnalysisPage() {
         </div>
       </div>
 
-      {/* QR掲載方法フィルタ */}
+      {/* 配布方法フィルタ */}
       <div className="bg-white rounded-lg border p-3 flex items-center gap-2 overflow-x-auto">
-        <span className="text-xs text-gray-500 shrink-0 mr-1">掲載方法:</span>
+        <span className="text-xs text-gray-500 shrink-0 mr-1">配布方法:</span>
         <button
           onClick={() => setMethodFilter("")}
           className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
@@ -320,7 +320,7 @@ export default function FlyerAnalysisPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="w-5 h-5" />
-              QR掲載方法別の効果比較
+              配布方法別の効果比較
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -404,23 +404,21 @@ export default function FlyerAnalysisPage() {
         </CardContent>
       </Card>
 
-      {/* 単独QR詳細 */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <QrCode className="w-5 h-5" />
-            単独QR詳細（{sortedStandalone.length}件）
-            <span className="ml-2 text-xs font-normal text-gray-500">
-              チラシに紐付かないQR
-            </span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {sortedStandalone.length === 0 ? (
-            <div className="py-12 text-center text-gray-500 text-sm">
-              該当する単独QRがありません
-            </div>
-          ) : (
+      {/* 未分類QR（チラシ未紐付け）の救済表示
+          Phase 2 ではすべてのQRがチラシに属するように移行されているはずだが、
+          万一 flyerId=null のQRが残っている場合は警告と一緒に表示する */}
+      {sortedStandalone.length > 0 && (
+        <Card className="border-amber-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <QrCode className="w-5 h-5 text-amber-600" />
+              未分類QR（{sortedStandalone.length}件）
+              <span className="ml-2 text-xs font-normal text-amber-700">
+                チラシに紐付いていないQR — 該当医院の対応が必要
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
             <div className="divide-y">
               {sortedStandalone.map((ch) => (
                 <StandaloneChannelRow
@@ -432,9 +430,9 @@ export default function FlyerAnalysisPage() {
                 />
               ))}
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* 画像プレビューモーダル */}
       {previewImage && (
@@ -585,7 +583,7 @@ function FlyerRow({
               </span>
             ) : (
               <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-gray-100 text-gray-400 whitespace-nowrap">
-                掲載方法未設定
+                配布方法未設定
               </span>
             )}
             <span className="text-gray-500 whitespace-nowrap">
@@ -712,7 +710,7 @@ function StandaloneChannelRow({
               </span>
             ) : (
               <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-gray-100 text-gray-400 whitespace-nowrap">
-                掲載方法未設定
+                配布方法未設定
               </span>
             )}
             <span className="text-gray-500 whitespace-nowrap">

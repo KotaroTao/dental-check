@@ -57,6 +57,7 @@ model Flyer {
   id                   String   @id @default(uuid())
   clinicId             String   @map("clinic_id")
   name                 String // 例: "2024年春チラシ", "駅前ポスティング第1弾"
+  description          String? // 備考（自由メモ）
   distributionMethod   String?  @map("distribution_method") // 配布方法（ポスティング/手配り/店頭設置/新聞折込/その他）
   distributionQuantity Int?     @map("distribution_quantity") // 配布枚数
   distributionPeriod   String?  @map("distribution_period") // 配布期間（例: "2024年1月〜3月"）

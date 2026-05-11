@@ -64,15 +64,15 @@ export function CTAAlert() {
             <QrCode className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
               <p className="text-sm text-blue-700">
-                QRコードがまだ作成されていません。
+                QRコードがまだ作成されていません。チラシを作成してQRを追加してください。
               </p>
             </div>
             <Link
-              href="/dashboard/channels/new"
+              href="/dashboard/flyers"
               className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap"
             >
               <QrCode className="w-4 h-4" />
-              QRコード作成
+              チラシ管理へ
             </Link>
           </div>
         </div>

@@ -82,6 +82,7 @@ export async function PATCH(
     const body = await request.json();
     const {
       name,
+      description,
       distributionMethod,
       distributionQuantity,
       distributionPeriod,
@@ -90,10 +91,35 @@ export async function PATCH(
       imageUrl2,
     } = body;
 
+    // 必須項目を明示的にクリアする更新は拒否
+    // ─ name: 空文字・null は拒否
+    // ─ distributionMethod: 空文字・null は拒否
+    // ─ imageUrl: 空文字・null は拒否（表面は必須）
+    // ─ undefined（送信されない）はそのまま既存値を保持
     if (name !== undefined) {
       if (!name || typeof name !== "string" || name.trim() === "") {
         return NextResponse.json(
           { error: "チラシ名を入力してください" },
+          { status: 400 }
+        );
+      }
+    }
+    if (distributionMethod !== undefined) {
+      if (
+        distributionMethod === null ||
+        typeof distributionMethod !== "string" ||
+        distributionMethod.trim() === ""
+      ) {
+        return NextResponse.json(
+          { error: "配布方法を選択してください" },
+          { status: 400 }
+        );
+      }
+    }
+    if (imageUrl !== undefined) {
+      if (imageUrl === null || typeof imageUrl !== "string" || imageUrl.trim() === "") {
+        return NextResponse.json(
+          { error: "チラシ表面の画像をアップロードしてください" },
           { status: 400 }
         );
       }
@@ -103,8 +129,9 @@ export async function PATCH(
       where: { id },
       data: {
         ...(name !== undefined && { name: name.trim() }),
+        ...(description !== undefined && { description: description?.trim() || null }),
         ...(distributionMethod !== undefined && {
-          distributionMethod: distributionMethod?.trim() || null,
+          distributionMethod: distributionMethod.trim(),
         }),
         ...(distributionQuantity !== undefined && {
           distributionQuantity:
@@ -121,7 +148,8 @@ export async function PATCH(
               ? parseInt(String(budget), 10)
               : null,
         }),
-        ...(imageUrl !== undefined && { imageUrl: imageUrl || null }),
+        ...(imageUrl !== undefined && { imageUrl: imageUrl }),
+        // 裏面画像は任意（null クリアも許可）
         ...(imageUrl2 !== undefined && { imageUrl2: imageUrl2 || null }),
       },
     });
@@ -136,7 +164,8 @@ export async function PATCH(
   }
 }
 
-// チラシを削除（紐付くQRは flyerId=null になり、単独QR扱いとして残る）
+// チラシを削除
+// 注意: 紐付くQRが残っているチラシは削除不可（先にQRを別チラシへ移動 or 非表示にする必要がある）
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -150,6 +179,7 @@ export async function DELETE(
     const { id } = await params;
     const existing = await prisma.flyer.findFirst({
       where: { id, clinicId: session.clinicId },
+      include: { _count: { select: { channels: true } } },
     });
     if (!existing) {
       return NextResponse.json(
@@ -166,7 +196,17 @@ export async function DELETE(
       );
     }
 
-    // onDelete: SetNull により Channel.flyer_id は自動的に null に戻る
+    // 紐付くQRが残っている場合は削除拒否（先にQRを別チラシに移動するか非表示にしてもらう）
+    const channelCount = (existing as unknown as { _count: { channels: number } })._count.channels;
+    if (channelCount > 0) {
+      return NextResponse.json(
+        {
+          error: `このチラシには${channelCount}件のQRが紐付いています。先にQRを別のチラシへ移動するか、非表示にしてからチラシを削除してください。`,
+        },
+        { status: 400 }
+      );
+    }
+
     await prisma.flyer.delete({ where: { id } });
 
     return NextResponse.json({ message: "チラシを削除しました" });

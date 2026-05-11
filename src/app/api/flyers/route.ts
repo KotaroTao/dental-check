@@ -15,6 +15,7 @@ export async function GET() {
     type FlyerWithCount = {
       id: string;
       name: string;
+      description: string | null;
       distributionMethod: string | null;
       distributionQuantity: number | null;
       distributionPeriod: string | null;
@@ -37,6 +38,7 @@ export async function GET() {
       flyers: flyers.map((f) => ({
         id: f.id,
         name: f.name,
+        description: f.description,
         distributionMethod: f.distributionMethod,
         distributionQuantity: f.distributionQuantity,
         distributionPeriod: f.distributionPeriod,
@@ -58,6 +60,8 @@ export async function GET() {
 }
 
 // チラシを新規作成
+// 必須項目: name / distributionMethod / imageUrl（表面画像）
+// 任意項目: imageUrl2（裏面画像） / distributionQuantity / distributionPeriod / budget / description
 export async function POST(request: NextRequest) {
   try {
     const session = await getSession();
@@ -76,6 +80,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       name,
+      description,
       distributionMethod,
       distributionQuantity,
       distributionPeriod,
@@ -84,9 +89,26 @@ export async function POST(request: NextRequest) {
       imageUrl2,
     } = body;
 
+    // 必須: チラシ名
     if (!name || typeof name !== "string" || name.trim() === "") {
       return NextResponse.json(
         { error: "チラシ名を入力してください" },
+        { status: 400 }
+      );
+    }
+
+    // 必須: 配布方法
+    if (!distributionMethod || typeof distributionMethod !== "string" || distributionMethod.trim() === "") {
+      return NextResponse.json(
+        { error: "配布方法を選択してください" },
+        { status: 400 }
+      );
+    }
+
+    // 必須: チラシ表面画像（裏面は任意）
+    if (!imageUrl || typeof imageUrl !== "string" || imageUrl.trim() === "") {
+      return NextResponse.json(
+        { error: "チラシ表面の画像をアップロードしてください" },
         { status: 400 }
       );
     }
@@ -95,7 +117,8 @@ export async function POST(request: NextRequest) {
       data: {
         clinicId: session.clinicId,
         name: name.trim(),
-        distributionMethod: distributionMethod?.trim() || null,
+        description: description?.trim() || null,
+        distributionMethod: distributionMethod.trim(),
         distributionQuantity:
           distributionQuantity !== null && distributionQuantity !== "" && distributionQuantity !== undefined
             ? parseInt(String(distributionQuantity), 10)
@@ -105,7 +128,7 @@ export async function POST(request: NextRequest) {
           budget !== null && budget !== "" && budget !== undefined
             ? parseInt(String(budget), 10)
             : null,
-        imageUrl: imageUrl || null,
+        imageUrl: imageUrl,
         imageUrl2: imageUrl2 || null,
       },
     });

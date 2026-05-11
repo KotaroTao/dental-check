@@ -9,8 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   ArrowLeft, Download, Copy, ExternalLink, Image as ImageIcon, X,
-  Calendar, Link2, Wallet, Upload, Loader2, Check, Megaphone, Hash,
-  FileText, Trash2, CalendarRange, Paperclip, QrCode, BarChart3,
+  Calendar, Link2, Upload, Loader2, Check,
+  FileText, Trash2, Paperclip, QrCode, BarChart3,
 } from "lucide-react";
 
 // フォーム内のセクション見出し（基本情報/効果分析設定/補足設定）
@@ -96,7 +96,7 @@ export default function ChannelDetailPage() {
   const [channel, setChannel] = useState<Channel | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [copied, setCopied] = useState(false);
-  const [showImageModal, setShowImageModal] = useState(false);
+  // showImageModal は Phase 2 で QR個別の画像プレビュー廃止に伴い削除
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
   // 「このQRを掲載するチラシ」セレクトのための選択肢
   const [flyerOptions, setFlyerOptions] = useState<FlyerOption[]>([]);
@@ -123,8 +123,6 @@ export default function ChannelDetailPage() {
   const [isUploadingDoc, setIsUploadingDoc] = useState(false);
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [isDragOver, setIsDragOver] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   // 自動保存用: 初回データ読み込みフラグとデバウンスタイマー
@@ -377,85 +375,7 @@ export default function ChannelDetailPage() {
     }
   };
 
-  const compressImage = (file: File, maxWidth = 800, quality = 0.8): Promise<File> => {
-    return new Promise((resolve) => {
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
-      const img = new Image();
-      img.onload = () => {
-        let { width, height } = img;
-        if (width > maxWidth) {
-          height = (height * maxWidth) / width;
-          width = maxWidth;
-        }
-        canvas.width = width;
-        canvas.height = height;
-        ctx?.drawImage(img, 0, 0, width, height);
-        canvas.toBlob(
-          (blob) => {
-            if (blob) {
-              resolve(new File([blob], file.name, { type: "image/jpeg" }));
-            } else {
-              resolve(file);
-            }
-          },
-          "image/jpeg",
-          quality
-        );
-      };
-      img.src = URL.createObjectURL(file);
-    });
-  };
-
-  const [uploadTarget, setUploadTarget] = useState<"imageUrl" | "imageUrl2">("imageUrl");
-
-  const handleImageUpload = useCallback(async (file: File, target: "imageUrl" | "imageUrl2" = "imageUrl") => {
-    if (!file.type.startsWith("image/")) {
-      setError("画像ファイルを選択してください");
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setError("ファイルサイズは5MB以下にしてください");
-      return;
-    }
-    setIsUploading(true);
-    setError("");
-    try {
-      const compressedFile = await compressImage(file);
-      const uploadFormData = new FormData();
-      uploadFormData.append("file", compressedFile);
-      uploadFormData.append("folder", "channels");
-      const response = await fetch("/api/upload", {
-        method: "POST",
-        body: uploadFormData,
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "アップロードに失敗しました");
-      }
-      const { url } = await response.json();
-      setFormData((prev) => ({ ...prev, [target]: url }));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "アップロードに失敗しました");
-    } finally {
-      setIsUploading(false);
-    }
-  }, []);
-
-  const handleDragLeave = (e: React.DragEvent) => { e.preventDefault(); setIsDragOver(false); };
-  const handleDrop = (e: React.DragEvent, target: "imageUrl" | "imageUrl2" = "imageUrl") => {
-    e.preventDefault();
-    setIsDragOver(false);
-    const file = e.dataTransfer.files[0];
-    if (file) handleImageUpload(file, target);
-  };
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) handleImageUpload(file, uploadTarget);
-  };
-  const handleRemoveImage = (target: "imageUrl" | "imageUrl2" = "imageUrl") => {
-    setFormData((prev) => ({ ...prev, [target]: null }));
-  };
+  // Phase 2 で QR個別の画像アップロード機能は廃止。チラシ画像はチラシ側で管理する。
 
   if (isLoading) {
     return <div className="text-gray-500">読み込み中...</div>;
@@ -559,162 +479,7 @@ export default function ChannelDetailPage() {
             title="基本情報"
             hint="QRコードの名前と種類"
           >
-          {/* 1. サムネイル画像（最大2枚） */}
-          <div id="images" className="space-y-2">
-            <Label>サムネイル画像（最大2枚）</Label>
-            <div className="grid grid-cols-2 gap-3">
-              {/* 画像1 */}
-              <div
-                className={`relative border-2 border-dashed rounded-lg transition-colors ${
-                  isDragOver && uploadTarget === "imageUrl" ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300"
-                }`}
-                onDragOver={(e) => { e.preventDefault(); setUploadTarget("imageUrl"); setIsDragOver(true); }}
-                onDragLeave={handleDragLeave}
-                onDrop={(e) => handleDrop(e, "imageUrl")}
-              >
-                {formData.imageUrl ? (
-                  <div className="relative aspect-video">
-                    <img
-                      src={formData.imageUrl}
-                      alt="画像1"
-                      className="w-full h-full object-contain rounded-lg cursor-pointer"
-                      onClick={() => setShowImageModal(true)}
-                    />
-                    {isUploading && uploadTarget === "imageUrl" && (
-                      <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
-                        <Loader2 className="w-6 h-6 text-white animate-spin" />
-                      </div>
-                    )}
-                    {!isDemo && (
-                      <div className="absolute top-1 right-1 flex gap-1">
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => { setUploadTarget("imageUrl"); document.getElementById("image-input")?.click(); }}
-                          disabled={isUploading}
-                          className="bg-white/90 hover:bg-white h-7 px-2 text-xs"
-                        >
-                          変更
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => handleRemoveImage("imageUrl")}
-                          disabled={isUploading}
-                          className="bg-white/90 hover:bg-white text-red-600 hover:text-red-700 h-7 w-7 p-0"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="p-4 text-center aspect-video flex flex-col items-center justify-center">
-                    {isUploading && uploadTarget === "imageUrl" ? (
-                      <Loader2 className="w-8 h-8 text-gray-400 animate-spin mb-1" />
-                    ) : (
-                      <ImageIcon className="w-8 h-8 text-gray-300 mb-1" />
-                    )}
-                    <p className="text-xs text-gray-500 mb-1">画像 1</p>
-                    {!isUploading && !isDemo && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => { setUploadTarget("imageUrl"); document.getElementById("image-input")?.click(); }}
-                        className="h-7 text-xs"
-                      >
-                        <Upload className="w-3 h-3 mr-1" />
-                        選択
-                      </Button>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* 画像2 */}
-              <div
-                className={`relative border-2 border-dashed rounded-lg transition-colors ${
-                  isDragOver && uploadTarget === "imageUrl2" ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300"
-                }`}
-                onDragOver={(e) => { e.preventDefault(); setUploadTarget("imageUrl2"); setIsDragOver(true); }}
-                onDragLeave={handleDragLeave}
-                onDrop={(e) => handleDrop(e, "imageUrl2")}
-              >
-                {formData.imageUrl2 ? (
-                  <div className="relative aspect-video">
-                    <img
-                      src={formData.imageUrl2}
-                      alt="画像2"
-                      className="w-full h-full object-contain rounded-lg cursor-pointer"
-                      onClick={() => setShowImageModal(true)}
-                    />
-                    {isUploading && uploadTarget === "imageUrl2" && (
-                      <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
-                        <Loader2 className="w-6 h-6 text-white animate-spin" />
-                      </div>
-                    )}
-                    {!isDemo && (
-                      <div className="absolute top-1 right-1 flex gap-1">
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => { setUploadTarget("imageUrl2"); document.getElementById("image-input")?.click(); }}
-                          disabled={isUploading}
-                          className="bg-white/90 hover:bg-white h-7 px-2 text-xs"
-                        >
-                          変更
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => handleRemoveImage("imageUrl2")}
-                          disabled={isUploading}
-                          className="bg-white/90 hover:bg-white text-red-600 hover:text-red-700 h-7 w-7 p-0"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="p-4 text-center aspect-video flex flex-col items-center justify-center">
-                    {isUploading && uploadTarget === "imageUrl2" ? (
-                      <Loader2 className="w-8 h-8 text-gray-400 animate-spin mb-1" />
-                    ) : (
-                      <ImageIcon className="w-8 h-8 text-gray-300 mb-1" />
-                    )}
-                    <p className="text-xs text-gray-500 mb-1">画像 2</p>
-                    {!isUploading && !isDemo && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => { setUploadTarget("imageUrl2"); document.getElementById("image-input")?.click(); }}
-                        className="h-7 text-xs"
-                      >
-                        <Upload className="w-3 h-3 mr-1" />
-                        選択
-                      </Button>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-            <input
-              id="image-input"
-              type="file"
-              accept="image/jpeg,image/png,image/gif,image/webp"
-              onChange={handleFileSelect}
-              className="hidden"
-              disabled={isUploading || !!isDemo}
-            />
-            <p className="text-xs text-gray-400">JPG, PNG, GIF / 最大5MB</p>
-          </div>
+          {/* Phase 2: チラシ画像はチラシ側で管理するため、QR個別の画像アップロード欄は廃止 */}
 
           {/* 2-3. QRコード名 (PCで2カラム) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -785,19 +550,19 @@ export default function ChannelDetailPage() {
 
           </FormSection>
 
-          {/* セクション2: 効果分析設定 */}
+          {/* セクション2: チラシ紐付け
+              Phase 2 で配布情報（配布方法・配布枚数・予算・配布期間・チラシ画像）は
+              すべてチラシ側に移管。このセクションでは紐付くチラシの選択と有効期限のみ管理する。 */}
           <FormSection
             icon={<BarChart3 className="w-4 h-4" />}
-            title="効果分析設定"
-            hint="QR掲載方法は必須・他は任意"
+            title="チラシ紐付け / 有効期限"
+            hint="配布方法・配布枚数・予算はチラシ側で設定します"
           >
-          {/* 掲載するチラシ（任意）
-              ─ 1枚のチラシに複数QRを掲載する場合、ここで紐付けると
-                チラシ側の配布枚数・予算が集計に使われる（重複加算を防ぐ） */}
           <div className="space-y-2">
             <Label htmlFor="flyerId" className="flex items-center gap-2">
               <ImageIcon className="w-4 h-4 text-gray-500" />
-              このQRを掲載するチラシ（任意）
+              このQRを掲載するチラシ
+              <span className="text-rose-600 text-xs font-medium">必須</span>
             </Label>
             <select
               id="flyerId"
@@ -805,9 +570,10 @@ export default function ChannelDetailPage() {
               value={formData.flyerId}
               onChange={handleChange}
               disabled={!!isDemo}
+              required
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <option value="">（チラシに紐付けない・単独QR）</option>
+              <option value="">選択してください</option>
               {flyerOptions.map((f) => (
                 <option key={f.id} value={f.id}>
                   {f.name}
@@ -816,11 +582,11 @@ export default function ChannelDetailPage() {
             </select>
             {formData.flyerId ? (
               <div className="text-xs bg-blue-50 border border-blue-100 rounded px-3 py-2 text-blue-700">
-                ℹ️ 効果分析では、配布枚数・予算・配布方法・配布期間・チラシ画像は
+                ℹ️ 配布枚数・予算・配布方法・配布期間・チラシ画像は
                 <span className="font-medium">
                   「{flyerOptions.find((f) => f.id === formData.flyerId)?.name || "選択中のチラシ"}」
                 </span>
-                の設定が使われます。下記の各項目はこのQR個別のメモとして編集できますが、集計には反映されません。
+                の設定が使われます。
                 <br />
                 <Link
                   href={`/dashboard/flyers/${formData.flyerId}`}
@@ -830,148 +596,14 @@ export default function ChannelDetailPage() {
                 </Link>
               </div>
             ) : (
-              <p className="text-xs text-gray-500">
-                同じチラシに複数QRを載せる場合、
-                <Link href="/dashboard/flyers" className="text-blue-600 hover:underline">
+              <p className="text-xs text-rose-600">
+                ⚠️ チラシが選択されていません。
+                <Link href="/dashboard/flyers" className="ml-1 text-blue-600 hover:underline">
                   チラシ管理
                 </Link>
-                でチラシを作成してから選択してください。
+                でチラシを作成または選択してください。
               </p>
             )}
-          </div>
-
-          {/* QR掲載方法（必須） */}
-          <div className="space-y-2">
-            <Label htmlFor="distributionMethod" className="flex items-center gap-2">
-              <Megaphone className="w-4 h-4 text-gray-500" />
-              QR掲載方法
-              <span className="text-rose-600 text-xs font-medium">必須</span>
-            </Label>
-            <select
-              id="distributionMethod"
-              name="distributionMethod"
-              value={formData.distributionMethod}
-              onChange={handleChange}
-              disabled={!!isDemo}
-              required
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <option value="">選択してください</option>
-              <option value="ポスティング">ポスティング</option>
-              <option value="新聞折込">新聞折込</option>
-              <option value="DM">DM</option>
-              <option value="メール">メール</option>
-              <option value="LP (広告から誘導)">LP (広告から誘導)</option>
-              <option value="その他">その他</option>
-            </select>
-            {!formData.distributionMethod && !isDemo && (
-              <p className="text-xs text-rose-600">
-                ⚠️ QR掲載方法が未設定です。効果分析を正しく行うため、必ず選択してください。
-              </p>
-            )}
-            <p className="text-xs text-gray-500">
-              QRコードを掲載した媒体（チラシ・LP・メールなど）の種別を選択すると、媒体別の効果比較ができます。
-            </p>
-          </div>
-
-          {/* 配布枚数 + 予算 (PCで2カラム) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="distributionQuantity" className="flex items-center gap-2">
-              <Hash className="w-4 h-4 text-gray-500" />
-              配布枚数（任意）
-            </Label>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Input
-                  id="distributionQuantity"
-                  name="distributionQuantity"
-                  type="number"
-                  min="0"
-                  placeholder="例: 5000"
-                  value={formData.distributionQuantity}
-                  onChange={handleChange}
-                  disabled={!!isDemo}
-                />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">枚</span>
-              </div>
-              {formData.distributionQuantity && !isDemo && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setFormData((prev) => ({ ...prev, distributionQuantity: "" }))}
-                  disabled={isSaving}
-                  className="shrink-0"
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              )}
-            </div>
-            <p className="text-xs text-gray-500">
-              反応率（スキャン÷配布枚数）の算出に使われます
-            </p>
-          </div>
-
-          {/* 予算（配布枚数の隣に配置） */}
-          <div id="budget" className="space-y-2">
-            <Label htmlFor="budget" className="flex items-center gap-2">
-              <Wallet className="w-4 h-4 text-gray-500" />
-              予算（任意）
-            </Label>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">¥</span>
-                <Input
-                  id="budget"
-                  name="budget"
-                  type="number"
-                  min="0"
-                  placeholder="例: 50000"
-                  value={formData.budget}
-                  onChange={handleChange}
-                  disabled={!!isDemo}
-                  className="pl-7"
-                />
-              </div>
-              {formData.budget && !isDemo && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setFormData((prev) => ({ ...prev, budget: "" }))}
-                  disabled={isSaving}
-                  className="shrink-0"
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              )}
-            </div>
-            <p className="text-xs text-gray-500">
-              かけた広告費用。1スキャン単価・1CV単価の算出に使われます
-            </p>
-          </div>
-          </div>
-
-          {/* 配布期間 + 有効期限 (PCで2カラム) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="distributionPeriod" className="flex items-center gap-2">
-              <CalendarRange className="w-4 h-4 text-gray-500" />
-              配布期間（任意）
-            </Label>
-            <Input
-              id="distributionPeriod"
-              name="distributionPeriod"
-              type="text"
-              placeholder="例: 2024年1月〜3月"
-              value={formData.distributionPeriod}
-              onChange={handleChange}
-              disabled={!!isDemo}
-            />
-            <p className="text-xs text-gray-500">
-              配布した期間を記録できます
-            </p>
           </div>
 
           <div className="space-y-2">
@@ -1005,7 +637,6 @@ export default function ChannelDetailPage() {
             <p className="text-xs text-gray-500">
               期限を過ぎるとQRコードは無効。空欄なら無期限
             </p>
-          </div>
           </div>
           </FormSection>
 
@@ -1173,36 +804,7 @@ export default function ChannelDetailPage() {
         </div>
       </div>
 
-      {/* Image modal */}
-      {showImageModal && (formData.imageUrl || formData.imageUrl2) && (
-        <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-          onClick={() => setShowImageModal(false)}
-        >
-          <div className="relative max-w-4xl max-h-[90vh] flex gap-4" onClick={(e) => e.stopPropagation()}>
-            <button
-              onClick={() => setShowImageModal(false)}
-              className="absolute -top-3 -right-3 bg-white rounded-full p-2 shadow-lg hover:bg-gray-100 z-10"
-            >
-              <X className="w-5 h-5" />
-            </button>
-            {formData.imageUrl && (
-              <img
-                src={formData.imageUrl}
-                alt={channel.name}
-                className="max-w-full max-h-[90vh] rounded-lg"
-              />
-            )}
-            {formData.imageUrl2 && (
-              <img
-                src={formData.imageUrl2}
-                alt={channel.name}
-                className="max-w-full max-h-[90vh] rounded-lg"
-              />
-            )}
-          </div>
-        </div>
-      )}
+      {/* Phase 2 で QR個別の画像プレビューモーダルは廃止。チラシ画像はチラシ側で確認する。 */}
 
       {/* D5: デモアカウント制限モーダル（共通コンポーネント） */}
       <DemoModal />

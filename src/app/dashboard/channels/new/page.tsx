@@ -44,9 +44,15 @@ interface SubscriptionInfo {
   isDemo?: boolean;
 }
 
+// Phase 2: QR の新規作成はチラシ編集ページ経由（/dashboard/flyers/[id]/channels/new）に統一されました。
+// 直接 URL でこのページに来た場合はチラシ一覧へリダイレクトする。
 export default function NewChannelPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    router.replace("/dashboard/flyers");
+  }, [router]);
   const [channelType, setChannelType] = useState<"diagnosis" | "link">("diagnosis");
   const [formData, setFormData] = useState({
     name: "",
