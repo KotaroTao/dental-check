@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ImageZoomModal } from "@/components/dashboard/image-zoom-modal";
 import {
   ArrowLeft,
   Loader2,
@@ -32,6 +33,8 @@ export default function NewFlyerPage() {
   const [error, setError] = useState("");
   const [uploadingFront, setUploadingFront] = useState(false);
   const [uploadingBack, setUploadingBack] = useState(false);
+  // チラシ画像クリックで開く拡大プレビュー用の URL
+  const [zoomUrl, setZoomUrl] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     distributionMethod: "",
@@ -181,6 +184,7 @@ export default function NewFlyerPage() {
                   isUploading={uploadingFront}
                   onUpload={(e) => handleImageUpload(e, "front")}
                   onRemove={() => handleImageRemove("front")}
+                  onZoom={setZoomUrl}
                 />
                 <ImageUploaderField
                   label="裏面（任意）"
@@ -188,11 +192,12 @@ export default function NewFlyerPage() {
                   isUploading={uploadingBack}
                   onUpload={(e) => handleImageUpload(e, "back")}
                   onRemove={() => handleImageRemove("back")}
+                  onZoom={setZoomUrl}
                 />
               </div>
             </div>
 
-            {/* 配布方法（必須） + 配布期間 */}
+            {/* 配布方法（必須） + 配布開始日 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="distributionMethod">
@@ -215,11 +220,13 @@ export default function NewFlyerPage() {
                 </select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="distributionPeriod">配布期間（任意）</Label>
+                <Label htmlFor="distributionPeriod">配布開始日（任意）</Label>
+                {/* チラシ一覧の並び替え基準に使うため、自由記入ではなく日付ピッカーで入力する。
+                    DB上のカラム名は distributionPeriod のまま（YYYY-MM-DD 形式の文字列を保存）。 */}
                 <Input
                   id="distributionPeriod"
                   name="distributionPeriod"
-                  placeholder="例: 2024年1月〜3月"
+                  type="date"
                   value={formData.distributionPeriod}
                   onChange={handleChange}
                 />
@@ -308,6 +315,9 @@ export default function NewFlyerPage() {
           </form>
         </CardContent>
       </Card>
+
+      {/* チラシ画像の拡大プレビュー */}
+      <ImageZoomModal url={zoomUrl} alt={formData.name || "チラシ"} onClose={() => setZoomUrl(null)} />
     </div>
   );
 }
@@ -319,12 +329,14 @@ function ImageUploaderField({
   isUploading,
   onUpload,
   onRemove,
+  onZoom,
 }: {
   label: string;
   url: string | "";
   isUploading: boolean;
   onUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onRemove: () => void;
+  onZoom?: (url: string) => void;
 }) {
   return (
     <div className="space-y-2">
@@ -335,8 +347,10 @@ function ImageUploaderField({
           <img
             src={url}
             alt={label}
-            // チラシ全体が見えるよう object-contain にし、余白には背景色を敷く
-            className="w-full h-48 object-contain rounded border bg-gray-50"
+            // チラシ全体が見えるよう object-contain にし、余白には背景色を敷く。
+            // クリックで拡大プレビューを開く。
+            className="w-full h-48 object-contain rounded border bg-gray-50 cursor-zoom-in hover:opacity-90 transition-opacity"
+            onClick={() => onZoom?.(url)}
           />
           <Button
             type="button"

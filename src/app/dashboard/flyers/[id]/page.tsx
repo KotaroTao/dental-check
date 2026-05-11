@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ImageZoomModal } from "@/components/dashboard/image-zoom-modal";
 import {
   ArrowLeft,
   Loader2,
@@ -63,6 +64,8 @@ export default function EditFlyerPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [uploadingFront, setUploadingFront] = useState(false);
   const [uploadingBack, setUploadingBack] = useState(false);
+  // チラシ画像クリックで開く拡大プレビュー用の URL
+  const [zoomUrl, setZoomUrl] = useState<string | null>(null);
 
   // フォーム値（チラシ名 / 配布情報 / 備考）
   // 数値もテキストとして保持し、保存時に親APIで parseInt する。
@@ -365,11 +368,15 @@ export default function EditFlyerPage() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="distributionPeriod">配布期間（任意）</Label>
+              <Label htmlFor="distributionPeriod">配布開始日（任意）</Label>
+              {/* チラシ一覧の並び替え基準に使うため、自由記入ではなく日付ピッカーで入力。
+                  DB上のカラム名は distributionPeriod のまま（YYYY-MM-DD 形式の文字列を保存）。
+                  既存の自由記入データ（例: "2024年1月〜3月"）は日付ピッカーでは空欄表示になるが、
+                  保存しなければ DB の値は維持される。 */}
               <Input
                 id="distributionPeriod"
                 name="distributionPeriod"
-                placeholder="例: 2024年1月〜3月"
+                type="date"
                 value={formData.distributionPeriod}
                 onChange={handleChange}
               />
@@ -441,6 +448,7 @@ export default function EditFlyerPage() {
               isUploading={uploadingFront}
               onUpload={(e) => handleImageUpload(e, "front")}
               onRemove={() => handleImageRemove("front")}
+              onZoom={setZoomUrl}
             />
             <ImageUploader
               label="裏面（任意）"
@@ -448,6 +456,7 @@ export default function EditFlyerPage() {
               isUploading={uploadingBack}
               onUpload={(e) => handleImageUpload(e, "back")}
               onRemove={() => handleImageRemove("back")}
+              onZoom={setZoomUrl}
             />
           </div>
         </CardContent>
@@ -527,6 +536,9 @@ export default function EditFlyerPage() {
           </Button>
         </CardContent>
       </Card>
+
+      {/* チラシ画像の拡大プレビュー */}
+      <ImageZoomModal url={zoomUrl} alt={flyer.name} onClose={() => setZoomUrl(null)} />
     </div>
   );
 }
@@ -537,12 +549,14 @@ function ImageUploader({
   isUploading,
   onUpload,
   onRemove,
+  onZoom,
 }: {
   label: string;
   url: string | null;
   isUploading: boolean;
   onUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onRemove: () => void;
+  onZoom?: (url: string) => void;
 }) {
   return (
     <div className="space-y-2">
@@ -554,7 +568,9 @@ function ImageUploader({
             src={url}
             alt={label}
             // チラシ全体が見えるよう object-contain にし、余白には背景色を敷く
-            className="w-full h-48 object-contain rounded border bg-gray-50"
+            // クリックで拡大プレビューを開く
+            className="w-full h-48 object-contain rounded border bg-gray-50 cursor-zoom-in hover:opacity-90 transition-opacity"
+            onClick={() => onZoom?.(url)}
           />
           <Button
             type="button"

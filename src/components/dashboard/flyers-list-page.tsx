@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FlyerDetailStats } from "@/components/dashboard/flyer-detail-stats";
+import { ImageZoomModal } from "@/components/dashboard/image-zoom-modal";
 import { Button } from "@/components/ui/button";
 import {
   Image as ImageIcon,
@@ -107,7 +108,7 @@ export default function FlyersListPage() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {flyers.map((f) => (
+          {sortFlyersByStartDate(flyers).map((f) => (
             <FlyerCard key={f.id} flyer={f} />
           ))}
         </div>
@@ -118,6 +119,8 @@ export default function FlyersListPage() {
 
 // 1枚のチラシカード（チラシ情報 + 紐付くQR詳細表）
 function FlyerCard({ flyer: f }: { flyer: Flyer }) {
+  // チラシ画像クリックで開く拡大プレビュー用の URL（null なら閉じている）
+  const [zoomUrl, setZoomUrl] = useState<string | null>(null);
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
@@ -139,8 +142,8 @@ function FlyerCard({ flyer: f }: { flyer: Flyer }) {
       </CardHeader>
       <CardContent className="pt-0 space-y-3">
         <div className="flex gap-2">
-          <FlyerThumb url={f.imageUrl} alt="表" />
-          <FlyerThumb url={f.imageUrl2} alt="裏" />
+          <FlyerThumb url={f.imageUrl} alt="表" onClick={setZoomUrl} />
+          <FlyerThumb url={f.imageUrl2} alt="裏" onClick={setZoomUrl} />
         </div>
         <div className="grid grid-cols-2 gap-2 text-xs">
           <Stat
@@ -152,7 +155,7 @@ function FlyerCard({ flyer: f }: { flyer: Flyer }) {
             value={f.budget !== null ? `¥${f.budget.toLocaleString()}` : "—"}
           />
           <Stat label="配布方法" value={f.distributionMethod || "—"} />
-          <Stat label="配布期間" value={f.distributionPeriod || "—"} />
+          <Stat label="配布開始日" value={formatStartDate(f.distributionPeriod)} />
         </div>
 
         {/* 紐付くQR一覧（1QR1行・スマホでも崩れないようにヘッダ + tabular-nums で整列） */}
@@ -189,6 +192,8 @@ function FlyerCard({ flyer: f }: { flyer: Flyer }) {
           }))}
         />
       </CardContent>
+      {/* チラシ画像の拡大プレビュー（クリックで開く） */}
+      <ImageZoomModal url={zoomUrl} alt={f.name} onClose={() => setZoomUrl(null)} />
     </Card>
   );
 }
@@ -284,15 +289,25 @@ function LinkedChannelsTable({
   );
 }
 
-function FlyerThumb({ url, alt }: { url: string | null; alt: string }) {
+function FlyerThumb({
+  url,
+  alt,
+  onClick,
+}: {
+  url: string | null;
+  alt: string;
+  onClick?: (url: string) => void;
+}) {
   if (url) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
         src={url}
         alt={alt}
-        // 一覧サムネイルも全体が見えるよう object-contain。背景色で余白を埋める
-        className="w-20 h-20 object-contain rounded border bg-gray-50"
+        // 一覧サムネイルも全体が見えるよう object-contain。背景色で余白を埋める。
+        // クリックで拡大プレビューを開く
+        className="w-20 h-20 object-contain rounded border bg-gray-50 cursor-pointer hover:opacity-80 transition-opacity"
+        onClick={() => onClick?.(url)}
       />
     );
   }
@@ -322,4 +337,46 @@ function formatJaDate(isoString: string): string {
   } catch {
     return "—";
   }
+}
+
+// 配布開始日を一覧カードで表示するための整形。
+// 新仕様（type=date 入力）では "YYYY-MM-DD" が保存される。
+// 旧データ（自由記入の "2024年1月〜3月" 等）は Date としてパースできないので、
+// その場合は元の文字列をそのまま表示する。
+function formatStartDate(value: string | null): string {
+  if (!value) return "—";
+  // YYYY-MM-DD（または ISO 文字列）として Date が有効ならフォーマット
+  const d = new Date(value);
+  if (!isNaN(d.getTime()) && /^\d{4}-\d{2}-\d{2}/.test(value)) {
+    return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
+  }
+  return value; // 旧データは元の文字列で表示
+}
+
+// チラシ一覧の並び順を「配布開始日順」にするヘルパー。
+// ルール:
+//   1) 配布開始日が未入力（null/空文字/無効な値）のチラシは上に並べる
+//   2) その下に配布開始日が入力されているチラシ。新しい日付ほど上（降順）
+// 旧データ（"2024年1月〜3月" 等）は Date パース不可なので「未入力」と同じ扱いで上に並ぶ。
+function sortFlyersByStartDate(flyers: Flyer[]): Flyer[] {
+  const parseStart = (v: string | null): number | null => {
+    if (!v || !/^\d{4}-\d{2}-\d{2}/.test(v)) return null;
+    const d = new Date(v);
+    return isNaN(d.getTime()) ? null : d.getTime();
+  };
+
+  // 元の配列を変更しないようにスプレッドしてからソート
+  return [...flyers].sort((a, b) => {
+    const aTs = parseStart(a.distributionPeriod);
+    const bTs = parseStart(b.distributionPeriod);
+    // 1) 未入力（null）は上に
+    if (aTs === null && bTs === null) {
+      // 両方未入力なら作成日が新しい順
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    }
+    if (aTs === null) return -1;
+    if (bTs === null) return 1;
+    // 2) 配布開始日の新しい順（降順）
+    return bTs - aTs;
+  });
 }
