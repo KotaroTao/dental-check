@@ -166,7 +166,9 @@ export async function PATCH(
 }
 
 // チラシを削除
-// 注意: 紐付くQRが残っているチラシは削除不可（先にQRを別チラシへ移動 or 非表示にする必要がある）
+// 注意: 表示中のQRが紐付いているチラシは削除不可。
+// 全てのQRが非表示（isActive=false）または既に外されていれば削除できる。
+// 削除時、紐付くQRは schema の onDelete:SetNull により flyerId=null（単独QR）に戻る。
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -180,7 +182,6 @@ export async function DELETE(
     const { id } = await params;
     const existing = await prisma.flyer.findFirst({
       where: { id, clinicId: session.clinicId },
-      include: { _count: { select: { channels: true } } },
     });
     if (!existing) {
       return NextResponse.json(
@@ -197,12 +198,15 @@ export async function DELETE(
       );
     }
 
-    // 紐付くQRが残っている場合は削除拒否（先にQRを別チラシに移動するか非表示にしてもらう）
-    const channelCount = (existing as unknown as { _count: { channels: number } })._count.channels;
-    if (channelCount > 0) {
+    // 表示中（isActive=true）のQRが残っている場合のみ削除拒否。
+    // 全て非表示にしてあれば削除を許可する（hiddenなQRは flyerId=null の単独QRに戻る）。
+    const activeChannelCount = await prisma.channel.count({
+      where: { flyerId: id, isActive: true },
+    });
+    if (activeChannelCount > 0) {
       return NextResponse.json(
         {
-          error: `このチラシには${channelCount}件のQRが紐付いています。先にQRを別のチラシへ移動するか、非表示にしてからチラシを削除してください。`,
+          error: `このチラシには${activeChannelCount}件の表示中のQRが紐付いています。先にQRを別のチラシへ移動するか、非表示にしてからチラシを削除してください。`,
         },
         { status: 400 }
       );
