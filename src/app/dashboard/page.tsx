@@ -1,6 +1,6 @@
-// Phase 3: /dashboard をチラシ一覧（旧 /dashboard/flyers）に置き換え、
-// 旧ダッシュボード（QR一覧 + 効果測定サマリー + 履歴等）は /dashboard/analytics に移管。
-// この page は共通コンポーネント FlyersListPage をそのままレンダリングする。
+// /dashboard はチラシ管理を主軸とする。各チラシカード内に
+// 性別/年齢/QR読み込みエリア/QR読み込み履歴 を折りたたみで内包させ、
+// 旧 /dashboard/analytics の内容を統合済み。
 import FlyersListPage from "@/components/dashboard/flyers-list-page";
 
 export default function DashboardHomePage() {

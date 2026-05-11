@@ -98,16 +98,13 @@ export default function DashboardLayout({
     );
   }
 
-  // Phase 3 でダッシュボード構造を再編:
-  //   /dashboard          → チラシ一覧（旧 /dashboard/flyers の中身）
-  //   /dashboard/analytics → 効果測定（旧 /dashboard の中身を簡略化）
-  // /dashboard/flyers も後方互換のためチラシ一覧として残しているが、
-  // ナビからの主要導線は /dashboard に統一。
+  // Phase 4 でダッシュボード構造をさらに整理:
+  //   /dashboard          → チラシ管理（各チラシカードに性別/年齢/地図/履歴の折りたたみ詳細を統合）
+  //   /dashboard/analytics → 削除（チラシ管理に統合）
+  //   /dashboard/meetings  → 削除
   const navLinks = [
     { href: "/dashboard", label: "チラシ管理" },
-    { href: "/dashboard/analytics", label: "効果測定" },
     { href: "/dashboard/diagnoses", label: "診断管理" },
-    { href: "/dashboard/meetings", label: "議事録" },
     { href: "/dashboard/settings", label: "設定" },
     { href: "/dashboard/billing", label: "契約・お支払い" },
   ];

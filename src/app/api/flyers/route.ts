@@ -161,6 +161,9 @@ export async function GET(request: NextRequest) {
           id: c.id,
           name: c.name,
           channelType: c.channelType,
+          // isActive をレスポンスに含める。これが抜けていたためフロント側で
+          // ch.isActive=undefined となり、有効なQRも「非表示」と誤判定されていた。
+          isActive: c.isActive,
           scans: channelScansMap[c.id] || 0,
         })),
         createdAt: f.createdAt,

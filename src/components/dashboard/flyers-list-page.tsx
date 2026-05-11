@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FlyerDetailStats } from "@/components/dashboard/flyer-detail-stats";
 import { Button } from "@/components/ui/button";
 import {
   Image as ImageIcon,
@@ -176,6 +177,17 @@ function FlyerCard({ flyer: f }: { flyer: Flyer }) {
             このチラシにQRを追加
           </Link>
         </div>
+
+        {/* 詳細統計（折りたたみ）: 性別/年齢/エリア/履歴 */}
+        <FlyerDetailStats
+          flyerId={f.id}
+          channels={f.channels.map((c) => ({
+            id: c.id,
+            name: c.name,
+            channelType: c.channelType,
+            isActive: c.isActive,
+          }))}
+        />
       </CardContent>
     </Card>
   );
@@ -218,7 +230,9 @@ function LinkedChannelsTable({
               : null;
           // 非表示（isActive=false）の QR は行全体をグレーアウトし、
           // 名前の右に「非表示」バッジを出す。編集ボタンは生かして再有効化導線を残す。
-          const inactive = !ch.isActive;
+          // 注意: `!ch.isActive` だと API レスポンスから isActive が抜けたとき
+          // undefined → true 扱いになって誤判定する。明示的に === false で比較する。
+          const inactive = ch.isActive === false;
           return (
             <div
               key={ch.id}
