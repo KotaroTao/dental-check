@@ -174,9 +174,12 @@ export default function LocationMap({ locations, clinicCenter, hotspot, selected
     const result: MarkerData[] = [];
 
     for (const loc of locations) {
-      if (!loc.region || !loc.city) continue;
+      // 都道府県も市区町村も無いレコードは位置不明なのでスキップ。
+      // ただし city だけ取れているレコード（例: 港区のみ）は GPS が
+      // 取れていれば地図にプロットしたいので、ここでは弾かない。
+      if (!loc.region && !loc.city) continue;
 
-      const prefName = normalizePrefectureName(loc.region);
+      const prefName = loc.region ? normalizePrefectureName(loc.region) : "";
 
       // GPS座標があればそれを使用、なければ都道府県の中心座標にフォールバック
       let position: [number, number];
@@ -186,18 +189,20 @@ export default function LocationMap({ locations, clinicCenter, hotspot, selected
         position = [loc.latitude, loc.longitude];
         hasGPS = true;
       } else {
+        // region が無いと PREFECTURE_CENTERS で中心が引けない → スキップせざるを得ない
+        if (!prefName) continue;
         const fallbackPosition = PREFECTURE_CENTERS[prefName];
         if (!fallbackPosition) continue;
         position = fallbackPosition;
       }
 
-      const key = `${prefName}-${loc.city}-${loc.town || "notown"}-${result.length}`;
+      const key = `${prefName || "no-region"}-${loc.city || "no-city"}-${loc.town || "notown"}-${result.length}`;
 
       result.push({
         key,
         position,
         region: prefName,
-        city: loc.city,
+        city: loc.city || "",
         town: loc.town,
         count: loc.count,
         hasGPS,
