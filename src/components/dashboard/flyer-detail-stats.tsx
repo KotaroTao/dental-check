@@ -43,9 +43,11 @@ interface HistoryItem {
 interface FlyerDetailStatsProps {
   flyerId: string;
   channels: ChannelLite[];
+  // 管理者画面から呼ぶ場合は対象クリニックIDを渡す（dashboard APIで管理者経由として扱う）
+  clinicId?: string;
 }
 
-export function FlyerDetailStats({ channels }: FlyerDetailStatsProps) {
+export function FlyerDetailStats({ channels, clinicId }: FlyerDetailStatsProps) {
   const [open, setOpen] = useState(false);
   const [history, setHistory] = useState<HistoryItem[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -58,12 +60,18 @@ export function FlyerDetailStats({ channels }: FlyerDetailStatsProps) {
     if (!channelIds) return;
     setIsLoading(true);
     setError("");
-    fetch(`/api/dashboard/history?period=all&channelIds=${encodeURIComponent(channelIds)}&limit=500`)
+    const params = new URLSearchParams({
+      period: "all",
+      channelIds,
+      limit: "500",
+    });
+    if (clinicId) params.set("clinicId", clinicId);
+    fetch(`/api/dashboard/history?${params}`)
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then((data) => setHistory(data.history || []))
       .catch(() => setError("履歴の取得に失敗しました"))
       .finally(() => setIsLoading(false));
-  }, [open, channels, history]);
+  }, [open, channels, history, clinicId]);
 
   // 性別・年齢層の集計（履歴データから算出）
   const stats = aggregateGenderAge(history || []);
@@ -125,7 +133,11 @@ export function FlyerDetailStats({ channels }: FlyerDetailStatsProps) {
                     このチラシにはQRが紐付いていません
                   </div>
                 ) : (
-                  <LocationSection period="all" channels={channelsForLocation} />
+                  <LocationSection
+                    period="all"
+                    channels={channelsForLocation}
+                    clinicId={clinicId}
+                  />
                 )}
               </div>
 
