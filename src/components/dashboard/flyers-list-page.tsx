@@ -291,7 +291,8 @@ function FlyerThumb({ url, alt }: { url: string | null; alt: string }) {
       <img
         src={url}
         alt={alt}
-        className="w-20 h-20 object-cover rounded border"
+        // 一覧サムネイルも全体が見えるよう object-contain。背景色で余白を埋める
+        className="w-20 h-20 object-contain rounded border bg-gray-50"
       />
     );
   }

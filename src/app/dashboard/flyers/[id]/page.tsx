@@ -553,7 +553,8 @@ function ImageUploader({
           <img
             src={url}
             alt={label}
-            className="w-full h-40 object-cover rounded border"
+            // チラシ全体が見えるよう object-contain にし、余白には背景色を敷く
+            className="w-full h-48 object-contain rounded border bg-gray-50"
           />
           <Button
             type="button"
