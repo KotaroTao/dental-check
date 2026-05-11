@@ -156,6 +156,7 @@ export interface Channel {
   distributionQuantity: number | null;
   distributionPeriod: string | null;
   documents: { url: string; name: string; size: number; uploadedAt: string }[];
+  flyerId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -101,6 +101,7 @@ export default function DashboardLayout({
   const navLinks = [
     { href: "/dashboard", label: "ダッシュボード" },
     { href: "/dashboard/channels/new", label: "QRコード作成" },
+    { href: "/dashboard/flyers", label: "チラシ管理" },
     { href: "/dashboard/diagnoses", label: "診断管理" },
     { href: "/dashboard/meetings", label: "議事録" },
     { href: "/dashboard/settings", label: "設定" },

@@ -86,6 +86,7 @@ export async function PATCH(
       distributionQuantity,
       distributionPeriod,
       documents,
+      flyerId,
     } = body;
 
     const existingChannel = await prisma.channel.findFirst({
@@ -145,6 +146,26 @@ export async function PATCH(
       }
     }
 
+    // flyerId が指定された場合、必ず同一医院のチラシかを検証
+    // （null = チラシ紐付け解除、undefined = 変更なし）
+    if (flyerId !== undefined && flyerId !== null) {
+      if (typeof flyerId !== "string" || flyerId.trim() === "") {
+        return NextResponse.json(
+          { error: "チラシIDが不正です" },
+          { status: 400 }
+        );
+      }
+      const flyer = await prisma.flyer.findFirst({
+        where: { id: flyerId, clinicId: session.clinicId },
+      });
+      if (!flyer) {
+        return NextResponse.json(
+          { error: "指定されたチラシが見つかりません" },
+          { status: 400 }
+        );
+      }
+    }
+
     const channel = (await prisma.channel.update({
       where: { id },
       data: {
@@ -161,6 +182,7 @@ export async function PATCH(
         ...(distributionQuantity !== undefined && { distributionQuantity: distributionQuantity !== null && distributionQuantity !== "" ? parseInt(distributionQuantity, 10) : null }),
         ...(distributionPeriod !== undefined && { distributionPeriod: distributionPeriod?.trim() || null }),
         ...(documents !== undefined && { documents: documents || [] }),
+        ...(flyerId !== undefined && { flyerId: flyerId || null }),
       },
     })) as Channel;
 

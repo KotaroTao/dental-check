@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, displayName, description, channelType, diagnosisTypeSlug, redirectUrl, imageUrl, expiresAt, budget, distributionMethod, distributionQuantity, distributionPeriod } = body;
+    const { name, displayName, description, channelType, diagnosisTypeSlug, redirectUrl, imageUrl, expiresAt, budget, distributionMethod, distributionQuantity, distributionPeriod, flyerId } = body;
 
     if (!name || name.trim() === "") {
       return NextResponse.json(
@@ -192,6 +192,27 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // チラシ紐付け（任意）: 指定された場合は同一医院のチラシかを検証
+    let resolvedFlyerId: string | null = null;
+    if (flyerId) {
+      if (typeof flyerId !== "string") {
+        return NextResponse.json(
+          { error: "チラシIDが不正です" },
+          { status: 400 }
+        );
+      }
+      const flyer = await prisma.flyer.findFirst({
+        where: { id: flyerId, clinicId: session.clinicId },
+      });
+      if (!flyer) {
+        return NextResponse.json(
+          { error: "指定されたチラシが見つかりません" },
+          { status: 400 }
+        );
+      }
+      resolvedFlyerId = flyer.id;
+    }
+
     // ユニークなコードを生成
     const code = await generateUniqueChannelCode();
 
@@ -210,6 +231,7 @@ export async function POST(request: NextRequest) {
         distributionMethod: distributionMethod || null,
         distributionQuantity: distributionQuantity ? parseInt(distributionQuantity, 10) : null,
         distributionPeriod: distributionPeriod?.trim() || null,
+        flyerId: resolvedFlyerId,
         code,
       },
     })) as Channel;

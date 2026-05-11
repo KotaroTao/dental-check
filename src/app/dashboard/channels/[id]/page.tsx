@@ -77,10 +77,17 @@ interface Channel {
   distributionQuantity: number | null;
   distributionPeriod: string | null;
   documents: DocumentItem[];
+  flyerId: string | null;
 }
 
 interface SubscriptionInfo {
   isDemo?: boolean;
+}
+
+// チラシ選択用に最小限の情報だけ持つ型（フェッチ結果を保持）
+interface FlyerOption {
+  id: string;
+  name: string;
 }
 
 export default function ChannelDetailPage() {
@@ -91,6 +98,8 @@ export default function ChannelDetailPage() {
   const [copied, setCopied] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
+  // 「このQRを掲載するチラシ」セレクトのための選択肢
+  const [flyerOptions, setFlyerOptions] = useState<FlyerOption[]>([]);
   const { DemoModal } = useDemoGuard();
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -109,6 +118,7 @@ export default function ChannelDetailPage() {
     distributionQuantity: "",
     distributionPeriod: "",
     documents: [] as DocumentItem[],
+    flyerId: "",
   });
   const [isUploadingDoc, setIsUploadingDoc] = useState(false);
   const [error, setError] = useState("");
@@ -160,6 +170,7 @@ export default function ChannelDetailPage() {
             distributionQuantity: data.channel.distributionQuantity !== null ? String(data.channel.distributionQuantity) : "",
             distributionPeriod: data.channel.distributionPeriod || "",
             documents: data.channel.documents || [],
+            flyerId: data.channel.flyerId || "",
           });
           // 初回読み込み完了 → 以降の変更で自動保存を有効化
           setTimeout(() => { isInitialLoad.current = false; }, 100);
@@ -183,9 +194,28 @@ export default function ChannelDetailPage() {
       }
     };
 
+    // チラシセレクト用に医院の全チラシを取得
+    const fetchFlyers = async () => {
+      try {
+        const response = await fetch("/api/flyers");
+        if (response.ok) {
+          const data = await response.json();
+          setFlyerOptions(
+            (data.flyers || []).map((f: { id: string; name: string }) => ({
+              id: f.id,
+              name: f.name,
+            }))
+          );
+        }
+      } catch (error) {
+        console.error("Failed to fetch flyers:", error);
+      }
+    };
+
     if (id) {
       fetchChannel();
       fetchSubscription();
+      fetchFlyers();
     }
   }, [id]);
 
@@ -284,6 +314,8 @@ export default function ChannelDetailPage() {
         distributionQuantity: dataToSave.distributionQuantity || null,
         distributionPeriod: dataToSave.distributionPeriod || null,
         documents: dataToSave.documents,
+        // flyerId: 空文字 → null（チラシ紐付け解除）、値あり → そのIDに紐付け
+        flyerId: dataToSave.flyerId || null,
       };
       if (dataToSave.distributionMethod) {
         patchBody.distributionMethod = dataToSave.distributionMethod;
@@ -759,6 +791,55 @@ export default function ChannelDetailPage() {
             title="効果分析設定"
             hint="QR掲載方法は必須・他は任意"
           >
+          {/* 掲載するチラシ（任意）
+              ─ 1枚のチラシに複数QRを掲載する場合、ここで紐付けると
+                チラシ側の配布枚数・予算が集計に使われる（重複加算を防ぐ） */}
+          <div className="space-y-2">
+            <Label htmlFor="flyerId" className="flex items-center gap-2">
+              <ImageIcon className="w-4 h-4 text-gray-500" />
+              このQRを掲載するチラシ（任意）
+            </Label>
+            <select
+              id="flyerId"
+              name="flyerId"
+              value={formData.flyerId}
+              onChange={handleChange}
+              disabled={!!isDemo}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <option value="">（チラシに紐付けない・単独QR）</option>
+              {flyerOptions.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name}
+                </option>
+              ))}
+            </select>
+            {formData.flyerId ? (
+              <div className="text-xs bg-blue-50 border border-blue-100 rounded px-3 py-2 text-blue-700">
+                ℹ️ 効果分析では、配布枚数・予算・配布方法・配布期間・チラシ画像は
+                <span className="font-medium">
+                  「{flyerOptions.find((f) => f.id === formData.flyerId)?.name || "選択中のチラシ"}」
+                </span>
+                の設定が使われます。下記の各項目はこのQR個別のメモとして編集できますが、集計には反映されません。
+                <br />
+                <Link
+                  href={`/dashboard/flyers/${formData.flyerId}`}
+                  className="text-blue-600 hover:underline mt-1 inline-block"
+                >
+                  → チラシ編集ページを開く
+                </Link>
+              </div>
+            ) : (
+              <p className="text-xs text-gray-500">
+                同じチラシに複数QRを載せる場合、
+                <Link href="/dashboard/flyers" className="text-blue-600 hover:underline">
+                  チラシ管理
+                </Link>
+                でチラシを作成してから選択してください。
+              </p>
+            )}
+          </div>
+
           {/* QR掲載方法（必須） */}
           <div className="space-y-2">
             <Label htmlFor="distributionMethod" className="flex items-center gap-2">
