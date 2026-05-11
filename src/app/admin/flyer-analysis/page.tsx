@@ -37,20 +37,12 @@ interface ChannelAnalysis {
   distributionQuantity: number | null;
   distributionPeriod: string | null;
   budget: number | null;
-  // ファネル各段階の生カウント
-  qrScans: number;          // QRスキャンの瞬間（c/[code]リダイレクトで計測）
-  diagnosisStarts: number;  // 診断ページに到達した数（page_view）
-  scans: number;            // 実効スキャン数（後方互換）
-  completions: number;
-  ctaClicks: number;
-  // 各種率
-  responseRate: number | null;
-  diagnosisStartRate: number | null;  // QRスキャン → 診断到達
-  completionRate: number | null;
-  ctaRate: number | null;
-  overallCvRate: number | null;       // QRスキャン → CTAクリック（全体CV率）
-  costPerScan: number | null;
-  costPerCta: number | null;
+  // 生のカウント
+  qrScans: number;          // 真のQRスキャン数（c/[code]リダイレクトで計測）
+  scans: number;            // 実効スキャン数（qr_scan が無ければ page_view にフォールバック）
+  // 算出指標
+  qrScanRate: number | null;  // QRスキャン÷配布枚数（%）
+  qrScanCost: number | null;  // 予算÷QRスキャン（円）
   createdAt: string;
 }
 
@@ -59,16 +51,10 @@ interface MethodStat {
   count: number;
   totalScans: number;
   totalQrScans: number;
-  totalDiagnosisStarts: number;
-  totalCompletions: number;
-  totalCtaClicks: number;
-  avgResponseRate: number | null;
-  avgDiagnosisStartRate: number | null;
-  avgCompletionRate: number | null;
-  avgCtaRate: number | null;
-  avgOverallCvRate: number | null;
-  avgCostPerScan: number | null;
-  avgCostPerCta: number | null;
+  totalQuantity: number;
+  totalBudget: number;
+  avgQrScanRate: number | null;
+  avgQrScanCost: number | null;
 }
 
 interface AnalysisData {
@@ -77,18 +63,7 @@ interface AnalysisData {
   period: number;
 }
 
-type SortKey =
-  | "responseRate"
-  | "diagnosisStartRate"
-  | "completionRate"
-  | "ctaRate"
-  | "overallCvRate"
-  | "costPerScan"
-  | "costPerCta"
-  | "scans"
-  | "diagnosisStarts"
-  | "completions"
-  | "ctaClicks";
+type SortKey = "scans" | "qrScanRate" | "qrScanCost";
 
 export default function FlyerAnalysisPage() {
   const [data, setData] = useState<AnalysisData | null>(null);
@@ -126,9 +101,6 @@ export default function FlyerAnalysisPage() {
   }, [fetchData]);
 
   // 各QRの編集ページを開く（管理者→医院になりすまし→新タブで遷移）
-  // 1. POST /api/admin/clinics/[clinicId]/impersonate でその医院の auth_token を発行
-  // 2. 別タブで /dashboard/channels/[channelId] を開く（auth_token cookieが効く）
-  // → 操作は監査ログに記録される（impersonate API側で実装済み）
   const [openingChannelId, setOpeningChannelId] = useState<string | null>(null);
   const handleOpenChannelEditor = async (clinicId: string, channelId: string) => {
     setOpeningChannelId(channelId);
@@ -154,7 +126,6 @@ export default function FlyerAnalysisPage() {
         const aVal = a[sortKey];
         const bVal = b[sortKey];
         // データなし（null/undefined）は昇順・降順に関わらず常に末尾へ
-        // 例: 「1CVコスト（安い順）」で予算未設定のQRを上位に出さない
         const aIsNull = aVal === null || aVal === undefined;
         const bIsNull = bVal === null || bVal === undefined;
         if (aIsNull && bIsNull) return 0;
@@ -180,38 +151,29 @@ export default function FlyerAnalysisPage() {
 
   if (!data) return null;
 
+  // 配布方法別チャート用データ。QRスキャン率(%) と QRスキャン単価(円) を併せて見せる
   const methodChartData = data.methodStats
     .filter((m) => m.method !== "未設定")
     .map((m) => ({
       method: m.method,
-      反応率: m.avgResponseRate ?? 0,
-      診断到達率: m.avgDiagnosisStartRate ?? 0,
-      完了率: m.avgCompletionRate ?? 0,
-      CTA率: m.avgCtaRate ?? 0,
-      全体CV率: m.avgOverallCvRate ?? 0,
+      QRスキャン率: m.avgQrScanRate ?? 0,
+      QRスキャン単価: m.avgQrScanCost ?? 0,
     }));
 
-  // ファネルは「診断付きQR」のみを集計対象にする
-  // リンク型QRは「診断ページ到達/完了」というステージが存在しないため、
-  // 一緒に集計すると完了率が母数を超えるなど、数値がおかしくなる
+  // 診断付きQRとリンク型QRはサマリー上は別カードで表示するが、
+  // 表示する指標（5項目）は両者で共通
   const diagnosisChannels = sortedChannels.filter((ch) => ch.channelType === "diagnosis");
   const linkChannels = sortedChannels.filter((ch) => ch.channelType === "link");
 
-  // 診断付きQRのファネル合計
-  const totalQrScans = diagnosisChannels.reduce((acc, ch) => acc + ch.qrScans, 0);
-  const totalScans = diagnosisChannels.reduce((acc, ch) => acc + ch.scans, 0);
-  const totalCompletions = diagnosisChannels.reduce((acc, ch) => acc + ch.completions, 0);
-  const totalCtaClicks = diagnosisChannels.reduce((acc, ch) => acc + ch.ctaClicks, 0);
-  const totalQuantity = diagnosisChannels.reduce((acc, ch) => acc + (ch.distributionQuantity || 0), 0);
-  const totalBudget = diagnosisChannels.reduce((acc, ch) => acc + (ch.budget || 0), 0);
+  const sumChannels = (chs: ChannelAnalysis[]) => ({
+    qrScans: chs.reduce((acc, ch) => acc + ch.qrScans, 0),
+    scans: chs.reduce((acc, ch) => acc + ch.scans, 0),
+    quantity: chs.reduce((acc, ch) => acc + (ch.distributionQuantity || 0), 0),
+    budget: chs.reduce((acc, ch) => acc + (ch.budget || 0), 0),
+  });
 
-  // リンク型QRサマリー（別カードで表示）
-  // リンク型は「スキャン → リダイレクト先（=CTAクリック）」の単純フロー
-  const linkTotalScans = linkChannels.reduce((acc, ch) => acc + ch.scans, 0);
-  const linkTotalCompletions = linkChannels.reduce((acc, ch) => acc + ch.completions, 0);
-  const linkTotalCtaClicks = linkChannels.reduce((acc, ch) => acc + ch.ctaClicks, 0);
-  const linkTotalQuantity = linkChannels.reduce((acc, ch) => acc + (ch.distributionQuantity || 0), 0);
-  const linkTotalBudget = linkChannels.reduce((acc, ch) => acc + (ch.budget || 0), 0);
+  const diagnosisTotals = sumChannels(diagnosisChannels);
+  const linkTotals = sumChannels(linkChannels);
 
   // QR掲載方法の選択肢（チップ式フィルタで使用）
   const METHOD_OPTIONS = [
@@ -230,7 +192,6 @@ export default function FlyerAnalysisPage() {
         <h1 className="text-2xl font-bold">QR効果分析</h1>
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex gap-1 flex-wrap">
-            {/* days=0 は API 側で「全期間」として扱われる */}
             {[
               { days: 30, label: "30日" },
               { days: 90, label: "90日" },
@@ -254,7 +215,7 @@ export default function FlyerAnalysisPage() {
         </div>
       </div>
 
-      {/* QR掲載方法フィルタ（チップ式・スマホでも横スクロール対応） */}
+      {/* QR掲載方法フィルタ */}
       <div className="bg-white rounded-lg border p-3 flex items-center gap-2 overflow-x-auto">
         <span className="text-xs text-gray-500 shrink-0 mr-1">掲載方法:</span>
         <button
@@ -282,18 +243,15 @@ export default function FlyerAnalysisPage() {
         ))}
       </div>
 
-      {/* 診断付きQR と リンク型QR を同じ表示形式で並べる
-          → 比較しやすくするため、両方とも QrSummaryCard を使う */}
+      {/* 診断付きQR と リンク型QR を並べる（指標は両者共通） */}
       {diagnosisChannels.length > 0 && (
         <QrSummaryCard
           variant="diagnosis"
           channelCount={diagnosisChannels.length}
-          scans={totalScans}
-          qrScans={totalQrScans}
-          completions={totalCompletions}
-          ctaClicks={totalCtaClicks}
-          quantity={totalQuantity}
-          budget={totalBudget}
+          qrScans={diagnosisTotals.qrScans}
+          scans={diagnosisTotals.scans}
+          quantity={diagnosisTotals.quantity}
+          budget={diagnosisTotals.budget}
         />
       )}
 
@@ -301,16 +259,14 @@ export default function FlyerAnalysisPage() {
         <QrSummaryCard
           variant="link"
           channelCount={linkChannels.length}
-          scans={linkTotalScans}
-          qrScans={0}
-          completions={linkTotalCompletions}
-          ctaClicks={linkTotalCtaClicks}
-          quantity={linkTotalQuantity}
-          budget={linkTotalBudget}
+          qrScans={linkTotals.qrScans}
+          scans={linkTotals.scans}
+          quantity={linkTotals.quantity}
+          budget={linkTotals.budget}
         />
       )}
 
-      {/* 配布方法別比較チャート */}
+      {/* 配布方法別比較チャート（QRスキャン率と単価の2軸で比較） */}
       {methodChartData.length > 1 && (
         <Card>
           <CardHeader>
@@ -325,14 +281,28 @@ export default function FlyerAnalysisPage() {
                 <BarChart data={methodChartData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="method" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} unit="%" />
-                  <Tooltip formatter={(value) => `${value}%`} />
+                  {/* 左Y軸: QRスキャン率(%)。右Y軸: QRスキャン単価(¥) */}
+                  <YAxis
+                    yAxisId="left"
+                    tick={{ fontSize: 12 }}
+                    unit="%"
+                  />
+                  <YAxis
+                    yAxisId="right"
+                    orientation="right"
+                    tick={{ fontSize: 12 }}
+                    tickFormatter={(v) => `¥${Number(v).toLocaleString()}`}
+                  />
+                  <Tooltip
+                    formatter={(value: number, name: string) =>
+                      name === "QRスキャン単価"
+                        ? `¥${Number(value).toLocaleString()}`
+                        : `${value}%`
+                    }
+                  />
                   <Legend />
-                  <Bar dataKey="反応率" fill="#3B82F6" />
-                  <Bar dataKey="診断到達率" fill="#06B6D4" />
-                  <Bar dataKey="完了率" fill="#10B981" />
-                  <Bar dataKey="CTA率" fill="#8B5CF6" />
-                  <Bar dataKey="全体CV率" fill="#F59E0B" />
+                  <Bar yAxisId="left" dataKey="QRスキャン率" fill="#3B82F6" />
+                  <Bar yAxisId="right" dataKey="QRスキャン単価" fill="#F59E0B" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -340,14 +310,14 @@ export default function FlyerAnalysisPage() {
         </Card>
       )}
 
-      {/* QR別詳細（PC・モバイル共通カードレイアウト・3行構成） */}
+      {/* QR別詳細 */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-3">
           <CardTitle className="flex items-center gap-2">
             <Eye className="w-5 h-5" />
             QR別詳細（{sortedChannels.length}件）
           </CardTitle>
-          {/* 並び替え（旧テーブルのソートヘッダの代わり） */}
+          {/* 並び替え */}
           <div className="flex items-center gap-2 text-sm">
             <span className="text-xs text-gray-500">並び替え:</span>
             <select
@@ -360,12 +330,8 @@ export default function FlyerAnalysisPage() {
               className="h-9 rounded-md border border-input bg-background px-2 text-sm"
             >
               <option value="scans:desc">QRスキャン数（多い順）</option>
-              <option value="completions:desc">診断完了数（多い順）</option>
-              <option value="ctaClicks:desc">CTAクリック数（多い順）</option>
-              <option value="responseRate:desc">配布反応率（高い順）</option>
-              <option value="completionRate:desc">診断完了率（高い順）</option>
-              <option value="overallCvRate:desc">全体CV率（高い順）</option>
-              <option value="costPerCta:asc">1CVコスト（安い順）</option>
+              <option value="qrScanRate:desc">QRスキャン率（高い順）</option>
+              <option value="qrScanCost:asc">QRスキャン単価（安い順）</option>
             </select>
           </div>
         </CardHeader>
@@ -408,11 +374,9 @@ export default function FlyerAnalysisPage() {
 
 
 // QR別詳細の1行（PC・モバイル共通）
-// 構成は3つの横ブロックに分かれる:
-//   1段目: 写真(表/裏) + クリニック + QRコード名 + 掲載方法 + 予算 + 配布期間
-//          + 効果判定バッジ + 「QRを編集」ボタン
-//   2段目: 配布枚数 / QRスキャン / 診断完了 / CTAクリック (生カウント)
-//   3段目: 配布反応率 / 診断完了率 / 全体CV率 / 1CVコスト (指標)
+// 構成は2つの横ブロックに分かれる:
+//   1段目: 写真(表/裏) + クリニック + QRコード名 + 掲載方法 + 配布期間 + 「QRを編集」ボタン
+//   2段目: 配布枚数 / 予算 / QRスキャン / QRスキャン率 / QRスキャン単価（5タイル）
 function QrDetailRow({
   ch,
   onPreviewImage,
@@ -428,13 +392,11 @@ function QrDetailRow({
     <div className="p-4 hover:bg-gray-50 space-y-3">
       {/* 1段目: メタ情報 */}
       <div className="flex items-start gap-3">
-        {/* 写真(表・裏) */}
         <div className="flex gap-1 shrink-0">
           <ThumbnailImage url={ch.imageUrl} alt="表" onClick={onPreviewImage} />
           <ThumbnailImage url={ch.imageUrl2} alt="裏" onClick={onPreviewImage} />
         </div>
 
-        {/* クリニック + QRコード名 + バッジ群 */}
         <div className="flex-1 min-w-0">
           <div className="text-xs text-gray-500 truncate">{ch.clinicName}</div>
           <div className="text-sm sm:text-base font-medium truncate">{ch.name}</div>
@@ -449,11 +411,6 @@ function QrDetailRow({
               </span>
             )}
             <span className="text-gray-500 whitespace-nowrap">
-              予算: <span className="text-gray-800 font-medium">
-                {ch.budget !== null ? `¥${ch.budget.toLocaleString()}` : "—"}
-              </span>
-            </span>
-            <span className="text-gray-500 whitespace-nowrap">
               配布期間: <span className="text-gray-800 font-medium">
                 {ch.distributionPeriod || "—"}
               </span>
@@ -461,7 +418,6 @@ function QrDetailRow({
           </div>
         </div>
 
-        {/* 編集ボタン（効果判定バッジは表示しない） */}
         <div className="flex flex-col items-end gap-2 shrink-0">
           <Button
             size="sm"
@@ -486,9 +442,10 @@ function QrDetailRow({
         </div>
       </div>
 
-      {/* 2段目: QR系4タイル（配布枚数 / QRスキャン / QR読込率 / QR読込単価）
-          ─ 配布枚数または予算が未入力なら「データ未入力」を赤字で表示 */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+      {/* 2段目: 5タイル
+          配布枚数 / 予算 / QRスキャン / QRスキャン率 / QRスキャン単価
+          ─ 元データ（配布枚数 or 予算）が未入力なら「データ未入力」を赤字表示 */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">
         <DetailMetric
           label="配布枚数"
           value={
@@ -499,78 +456,38 @@ function QrDetailRow({
           missing={ch.distributionQuantity === null}
         />
         <DetailMetric
+          label="予算"
+          value={ch.budget !== null ? `¥${ch.budget.toLocaleString()}` : ""}
+          missing={ch.budget === null}
+        />
+        <DetailMetric
           label="QRスキャン"
           value={ch.scans.toLocaleString()}
-          warn={ch.qrScans === 0 && ch.diagnosisStarts > 0}
+          color="text-blue-600"
         />
-        {/* QR読込率 = QRスキャン ÷ 配布枚数 */}
         <DetailMetric
-          label="QR読込率"
+          label="QRスキャン率"
           value={
-            ch.distributionQuantity && ch.distributionQuantity > 0
-              ? `${(Math.round((ch.scans / ch.distributionQuantity) * 10000) / 100).toFixed(2)}%`
+            ch.qrScanRate !== null
+              ? `${ch.qrScanRate.toFixed(2)}%`
               : ""
           }
           color="text-blue-600"
           sub="QRスキャン÷配布枚数"
-          missing={!ch.distributionQuantity || ch.distributionQuantity <= 0}
+          missing={ch.qrScanRate === null}
         />
-        {/* QR読込単価 = 予算 ÷ QRスキャン */}
         <DetailMetric
-          label="QR読込単価"
+          label="QRスキャン単価"
           value={
-            ch.budget !== null && ch.scans > 0
-              ? `¥${Math.round(ch.budget / ch.scans).toLocaleString()}`
-              : ch.budget !== null
-              ? "—"
-              : ""
-          }
-          color="text-gray-700"
-          sub="予算÷QRスキャン"
-          missing={ch.budget === null}
-        />
-      </div>
-
-      {/* 3段目: CTA系4タイル（診断完了 / CTAクリック / CTAクリック率 / CTA単価）
-          ─ リンク型では全タイルが「-」（CTAは診断ファネル前提のため）
-          ─ 診断型でも予算が未入力なら CTA単価 は「データ未入力」赤字 */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
-        <DetailMetric
-          label="診断完了"
-          value={ch.channelType === "link" ? "-" : ch.completions.toLocaleString()}
-        />
-        <DetailMetric
-          label="CTAクリック"
-          value={ch.channelType === "link" ? "-" : ch.ctaClicks.toLocaleString()}
-        />
-        {/* CTAクリック率 = 診断完了 ÷ CTAクリック（リンク型は対象外） */}
-        <DetailMetric
-          label="CTAクリック率"
-          value={
-            ch.channelType === "link"
-              ? "-"
-              : ch.ctaClicks > 0
-              ? `${(Math.round((ch.completions / ch.ctaClicks) * 1000) / 10).toFixed(1)}%`
+            ch.qrScanCost !== null
+              ? `¥${ch.qrScanCost.toLocaleString()}`
+              : ch.budget === null
+              ? ""
               : "—"
           }
           color="text-amber-600"
-          sub={ch.channelType === "link" ? "対象外" : "診断完了÷CTAクリック"}
-        />
-        {/* CTA単価 = 予算 ÷ CTAクリック（リンク型は対象外） */}
-        <DetailMetric
-          label="CTA単価"
-          value={
-            ch.channelType === "link"
-              ? "-"
-              : ch.budget !== null && ch.ctaClicks > 0
-              ? `¥${Math.round(ch.budget / ch.ctaClicks).toLocaleString()}`
-              : ch.budget !== null
-              ? "—"
-              : ""
-          }
-          color="text-gray-700"
-          sub={ch.channelType === "link" ? "対象外" : "予算÷CTAクリック"}
-          missing={ch.channelType !== "link" && ch.budget === null}
+          sub="予算÷QRスキャン"
+          missing={ch.budget === null}
         />
       </div>
     </div>
@@ -609,24 +526,21 @@ function ThumbnailImage({
   );
 }
 
-// 各タイル（ラベル+大きい数値+補足）。QR別詳細の2段目・3段目で共通利用
+// 各タイル（ラベル+大きい数値+補足）
 // missing=true のときは「データ未入力」を赤色で目立たせる
 function DetailMetric({
   label,
   value,
   color,
-  warn,
   sub,
   missing,
 }: {
   label: string;
   value: string;
   color?: string;
-  warn?: boolean;
   sub?: string;
   missing?: boolean;
 }) {
-  // missing なら value を強制的に「データ未入力」赤字に差し替え
   const displayValue = missing ? "データ未入力" : value;
   const valueColor = missing ? "text-red-600" : color || "text-gray-800";
   const valueSize = missing ? "text-xs" : "text-base";
@@ -635,14 +549,6 @@ function DetailMetric({
       <div className="text-[11px] text-gray-500 whitespace-nowrap">{label}</div>
       <div className={`${valueSize} font-bold tabular-nums whitespace-nowrap ${valueColor}`}>
         {displayValue}
-        {warn && !missing && (
-          <span
-            className="ml-0.5 text-[10px] text-amber-600"
-            title="QRスキャン直接計測前のデータ"
-          >
-            *
-          </span>
-        )}
       </div>
       {sub && <div className="text-[10px] text-gray-400 whitespace-nowrap">{sub}</div>}
     </div>
@@ -650,51 +556,35 @@ function DetailMetric({
 }
 
 // 診断付き/リンク型 共通サマリーカード
-// 両者を「同じ並びのタイル」で見比べられるようにし、リンク型では
-// 該当しない指標（診断完了・CTA関連）は「-」として明示する。
-//
-// 表示構成（ファネルのQR段階とCTA段階でグルーピング）:
-//   上段4タイル: 配布枚数 / QRスキャン / QR読込率 / QR読込単価
-//   下段4タイル: 診断完了 / CTAクリック / CTAクリック率 / CTA単価
+// 表示する5タイルは両者で同じ。説明文だけ少し変える。
 function QrSummaryCard({
   variant,
   channelCount,
-  scans,
   qrScans,
-  completions,
-  ctaClicks,
+  scans,
   quantity,
   budget,
 }: {
   variant: "diagnosis" | "link";
   channelCount: number;
-  scans: number;
   qrScans: number;
-  completions: number;
-  ctaClicks: number;
+  scans: number;
   quantity: number;
   budget: number;
 }) {
   const isLink = variant === "link";
 
-  // qr_scan未計測期間の警告（診断型のみ。リンク型はctaClicksフォールバックなので警告不要）
+  // qr_scan未計測期間の警告（診断型のみ。リンク型は qr_scan が必ず計測されている前提）
   const isLegacy = !isLink && qrScans === 0 && scans > 0;
 
   // 各指標の計算
-  // QR読込率 = QRスキャン÷配布枚数（配布枚数が未入力ならデータ未入力）
-  const qrReadRateMissing = quantity <= 0;
-  const qrReadRate = !qrReadRateMissing ? (scans / quantity) * 100 : null;
+  // QRスキャン率 = QRスキャン÷配布枚数（配布枚数が未入力ならデータ未入力）
+  const qrScanRateMissing = quantity <= 0;
+  const qrScanRate = !qrScanRateMissing ? (scans / quantity) * 100 : null;
 
-  // QR読込単価 = 予算÷QRスキャン（予算が未入力ならデータ未入力）
-  const qrCostMissing = budget <= 0;
-  const qrCost = !qrCostMissing && scans > 0 ? Math.round(budget / scans) : null;
-
-  // CTA単価 = 予算÷CTAクリック（リンク型は対象外。予算が未入力ならデータ未入力）
-  const ctaCostMissing = !isLink && budget <= 0;
-  const ctaCost = !isLink && !ctaCostMissing && ctaClicks > 0 ? Math.round(budget / ctaClicks) : null;
-
-  // CTAクリック率 = 診断完了÷CTAクリック（リンク型は対象外）
-  const ctaClickRate = !isLink && ctaClicks > 0 ? (completions / ctaClicks) * 100 : null;
+  // QRスキャン単価 = 予算÷QRスキャン（予算が未入力ならデータ未入力）
+  const qrScanCostMissing = budget <= 0;
+  const qrScanCost = !qrScanCostMissing && scans > 0 ? Math.round(budget / scans) : null;
 
   return (
     <Card>
@@ -706,28 +596,23 @@ function QrSummaryCard({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {isLink ? (
-          <div className="mb-3 text-[11px] text-gray-500">
-            ℹ️ リンク型は診断を介さず直接URLへ飛ばすため、「診断完了」「CTAクリック」関連の指標は対象外です。
-          </div>
-        ) : (
-          <div className="mb-3 text-[11px] text-gray-500 bg-blue-50/50 border border-blue-100 rounded px-3 py-2">
-            ℹ️ 診断付きQRは「配布 → QRスキャン → 診断完了 → CTAクリック」のファネルで計測します。
-          </div>
-        )}
         {isLegacy && (
           <div className="mb-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
             ⚠️ この期間はQRスキャン直接計測の前のデータです。「QRスキャン」は診断ページ到達数で代用しています。
           </div>
         )}
 
-        {/* 上段: QR系4タイル（配布枚数 / QRスキャン / QR読込率 / QR読込単価）
-            ─ 元データ（配布枚数 or 予算）未入力なら「データ未入力」を赤字表示 */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center mb-3">
+        {/* 5タイル: 配布枚数 / 予算 / QRスキャン / QRスキャン率 / QRスキャン単価 */}
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center">
           <SummaryTile
             label="配布枚数"
             value={quantity > 0 ? `${quantity.toLocaleString()}枚` : ""}
             missing={quantity <= 0}
+          />
+          <SummaryTile
+            label="予算"
+            value={budget > 0 ? `¥${budget.toLocaleString()}` : ""}
+            missing={budget <= 0}
           />
           <SummaryTile
             label="QRスキャン"
@@ -735,69 +620,26 @@ function QrSummaryCard({
             color="text-blue-600"
           />
           <SummaryTile
-            label="QR読込率"
-            value={qrReadRate !== null ? `${qrReadRate.toFixed(2)}%` : ""}
+            label="QRスキャン率"
+            value={qrScanRate !== null ? `${qrScanRate.toFixed(2)}%` : ""}
             sub="QRスキャン÷配布枚数"
             color="text-blue-600"
-            missing={qrReadRateMissing}
+            missing={qrScanRateMissing}
           />
           <SummaryTile
-            label="QR読込単価"
+            label="QRスキャン単価"
             value={
-              qrCost !== null
-                ? `¥${qrCost.toLocaleString()}`
-                : qrCostMissing
+              qrScanCost !== null
+                ? `¥${qrScanCost.toLocaleString()}`
+                : qrScanCostMissing
                 ? ""
                 : "—"
             }
             sub="予算÷QRスキャン"
-            color="text-gray-700"
-            missing={qrCostMissing}
-          />
-        </div>
-
-        {/* 下段: CTA系4タイル（診断完了 / CTAクリック / CTAクリック率 / CTA単価）
-            ─ リンク型は全タイル「-」、診断型でも予算未入力なら CTA単価 は「データ未入力」赤字 */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-          <SummaryTile
-            label="診断完了"
-            value={isLink ? "-" : completions.toLocaleString()}
-            color="text-emerald-600"
-          />
-          <SummaryTile
-            label="CTAクリック"
-            value={isLink ? "-" : ctaClicks.toLocaleString()}
-            color="text-purple-600"
-          />
-          <SummaryTile
-            label="CTAクリック率"
-            value={
-              isLink
-                ? "-"
-                : ctaClickRate !== null
-                ? `${ctaClickRate.toFixed(1)}%`
-                : "—"
-            }
-            sub={isLink ? "対象外" : "診断完了÷CTAクリック"}
             color="text-amber-600"
-          />
-          <SummaryTile
-            label="CTA単価"
-            value={
-              isLink
-                ? "-"
-                : ctaCost !== null
-                ? `¥${ctaCost.toLocaleString()}`
-                : ctaCostMissing
-                ? ""
-                : "—"
-            }
-            sub={isLink ? "対象外" : "予算÷CTAクリック"}
-            color="text-gray-700"
-            missing={ctaCostMissing}
+            missing={qrScanCostMissing}
           />
         </div>
-
       </CardContent>
     </Card>
   );
