@@ -166,7 +166,6 @@ export default function FlyerAnalysisPage() {
   const linkChannels = sortedChannels.filter((ch) => ch.channelType === "link");
 
   const sumChannels = (chs: ChannelAnalysis[]) => ({
-    qrScans: chs.reduce((acc, ch) => acc + ch.qrScans, 0),
     scans: chs.reduce((acc, ch) => acc + ch.scans, 0),
     quantity: chs.reduce((acc, ch) => acc + (ch.distributionQuantity || 0), 0),
     budget: chs.reduce((acc, ch) => acc + (ch.budget || 0), 0),
@@ -248,7 +247,6 @@ export default function FlyerAnalysisPage() {
         <QrSummaryCard
           variant="diagnosis"
           channelCount={diagnosisChannels.length}
-          qrScans={diagnosisTotals.qrScans}
           scans={diagnosisTotals.scans}
           quantity={diagnosisTotals.quantity}
           budget={diagnosisTotals.budget}
@@ -259,7 +257,6 @@ export default function FlyerAnalysisPage() {
         <QrSummaryCard
           variant="link"
           channelCount={linkChannels.length}
-          qrScans={linkTotals.qrScans}
           scans={linkTotals.scans}
           quantity={linkTotals.quantity}
           budget={linkTotals.budget}
@@ -444,8 +441,9 @@ function QrDetailRow({
 
       {/* 2段目: 5タイル
           配布枚数 / 予算 / QRスキャン / QRスキャン率 / QRスキャン単価
-          ─ 元データ（配布枚数 or 予算）が未入力なら「データ未入力」を赤字表示 */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">
+          ─ 元データ（配布枚数 or 予算）が未入力なら「データ未入力」を赤字表示
+          ─ iPad縦・スマホは2列（最下段が1個になる）、PCワイド(lg≧1024px)で5列横並び */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 text-center">
         <DetailMetric
           label="配布枚数"
           value={
@@ -560,22 +558,17 @@ function DetailMetric({
 function QrSummaryCard({
   variant,
   channelCount,
-  qrScans,
   scans,
   quantity,
   budget,
 }: {
   variant: "diagnosis" | "link";
   channelCount: number;
-  qrScans: number;
   scans: number;
   quantity: number;
   budget: number;
 }) {
   const isLink = variant === "link";
-
-  // qr_scan未計測期間の警告（診断型のみ。リンク型は qr_scan が必ず計測されている前提）
-  const isLegacy = !isLink && qrScans === 0 && scans > 0;
 
   // 各指標の計算
   // QRスキャン率 = QRスキャン÷配布枚数（配布枚数が未入力ならデータ未入力）
@@ -596,14 +589,9 @@ function QrSummaryCard({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {isLegacy && (
-          <div className="mb-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
-            ⚠️ この期間はQRスキャン直接計測の前のデータです。「QRスキャン」は診断ページ到達数で代用しています。
-          </div>
-        )}
-
-        {/* 5タイル: 配布枚数 / 予算 / QRスキャン / QRスキャン率 / QRスキャン単価 */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center">
+        {/* 5タイル: 配布枚数 / 予算 / QRスキャン / QRスキャン率 / QRスキャン単価
+            iPad縦・スマホは2列（最下段が1個になる）、PCワイド(lg≧1024px)で5列横並び */}
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 text-center">
           <SummaryTile
             label="配布枚数"
             value={quantity > 0 ? `${quantity.toLocaleString()}枚` : ""}

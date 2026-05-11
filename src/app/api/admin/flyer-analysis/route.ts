@@ -68,19 +68,33 @@ export async function GET(request: Request) {
     // アクセスログを eventType 別に集計
     // - qr_scan   : QRをスキャンした瞬間（c/[code] のリダイレクトで記録、本来の指標）
     // - page_view : 診断ページに到達したアクセス（旧計測のフォールバック用）
-    // qr_scan 計測導入前のチャネル/期間は qr_scan=0 になるため、page_view を実効スキャン数として補完する
-    const accessCounts = channelIds.length > 0
-      ? await prisma.accessLog.groupBy({
-          by: ["channelId", "eventType"],
-          where: {
-            channelId: { in: channelIds },
-            isDeleted: false,
-            eventType: { in: ["qr_scan", "page_view"] },
-            ...(dateFilter ? { createdAt: dateFilter } : {}),
-          },
-          _count: { id: true },
-        })
-      : [];
+    // qr_scan 計測導入前のチャネル/期間は qr_scan=0 になるため、
+    // 診断付きQRは page_view、リンク型QRは CTAClick（= 1スキャン1リダイレクト）にフォールバック
+    const [accessCounts, ctaCounts] = await Promise.all([
+      channelIds.length > 0
+        ? prisma.accessLog.groupBy({
+            by: ["channelId", "eventType"],
+            where: {
+              channelId: { in: channelIds },
+              isDeleted: false,
+              eventType: { in: ["qr_scan", "page_view"] },
+              ...(dateFilter ? { createdAt: dateFilter } : {}),
+            },
+            _count: { id: true },
+          })
+        : [],
+      channelIds.length > 0
+        ? prisma.cTAClick.groupBy({
+            by: ["channelId"],
+            where: {
+              channelId: { in: channelIds },
+              isDeleted: false,
+              ...(dateFilter ? { createdAt: dateFilter } : {}),
+            },
+            _count: { id: true },
+          })
+        : [],
+    ]);
 
     const qrScanMap: Record<string, number> = {};
     const pageViewMap: Record<string, number> = {};
@@ -90,11 +104,22 @@ export async function GET(request: Request) {
       else if (ac.eventType === "page_view") pageViewMap[ac.channelId] = ac._count.id;
     }
 
+    const ctaCountMap: Record<string, number> = {};
+    for (const cc of ctaCounts) {
+      if (cc.channelId) ctaCountMap[cc.channelId] = cc._count.id;
+    }
+
     // チャネルごとの分析データを構築
     const channelAnalysis = typedChannels.map((ch) => {
       const qrScans = qrScanMap[ch.id] || 0;
-      // qr_scan 計測前のフォールバック（診断ページ到達数を実効スキャンとして扱う）
-      const fallbackScans = pageViewMap[ch.id] || 0;
+      // qr_scan 計測前のフォールバック：
+      // - 診断付きQR: 診断ページ到達数（page_view）を実効スキャンとして扱う
+      // - リンク型QR : page_view が存在しないため、CTAClick 数（=リダイレクト数）で代用
+      //   （link-complete で1スキャン=1CTAが必ず作成されるため、CTA数=有効スキャン数）
+      const fallbackScans =
+        ch.channelType === "link"
+          ? ctaCountMap[ch.id] || 0
+          : pageViewMap[ch.id] || 0;
       const effectiveScans = qrScans > 0 ? qrScans : fallbackScans;
 
       const quantity = ch.distributionQuantity;
