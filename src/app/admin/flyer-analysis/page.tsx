@@ -551,8 +551,8 @@ function LinkedChannelsTable({
       {/* ヘッダ行 */}
       <div className="grid grid-cols-[1fr_auto_auto_auto] gap-2 px-2 py-1.5 bg-gray-50 text-[10px] text-gray-500">
         <div>QR名（管理用）</div>
-        <div className="w-16 text-right">アクセス</div>
-        <div className="w-16 text-right">アクセス率</div>
+        <div className="w-16 text-right">QRアクセス</div>
+        <div className="w-16 text-right">QRアクセス率</div>
         <div className="w-7" aria-hidden="true" />
       </div>
       <div className="divide-y divide-gray-100">
