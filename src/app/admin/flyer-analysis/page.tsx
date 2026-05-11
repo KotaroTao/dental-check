@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { FlyerDetailStats } from "@/components/dashboard/flyer-detail-stats";
 import {
   RefreshCw,
   Image as ImageIcon,
@@ -10,7 +11,6 @@ import {
   Pencil,
   ExternalLink,
   Loader2,
-  Layers,
   QrCode,
 } from "lucide-react";
 import {
@@ -342,65 +342,56 @@ export default function FlyerAnalysisPage() {
         </select>
       </div>
 
-      {/* チラシ別詳細 */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Layers className="w-5 h-5" />
-            チラシ別詳細（{sortedFlyers.length}件）
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {sortedFlyers.length === 0 ? (
-            <div className="py-12 text-center text-gray-500 text-sm">
-              該当するチラシがありません
-            </div>
-          ) : (
-            <div className="divide-y">
-              {sortedFlyers.map((f) => (
-                <FlyerRow
-                  key={f.id}
-                  flyer={f}
-                  onPreviewImage={setPreviewImage}
-                  onEditFlyer={() => handleOpenFlyerEditor(f.clinicId, f.id)}
-                  onEditChannel={(channelId) => handleOpenChannelEditor(f.clinicId, channelId)}
-                  isOpeningFlyer={openingFlyerId === f.id}
-                  openingChannelId={openingChannelId}
-                />
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* チラシ別詳細（医院ダッシュボードと同じカード形式） */}
+      <div className="space-y-3">
+        <h2 className="text-base font-bold text-gray-800">
+          チラシ別詳細（{sortedFlyers.length}件）
+        </h2>
+        {sortedFlyers.length === 0 ? (
+          <div className="bg-white rounded-xl border py-12 text-center text-gray-500 text-sm">
+            該当するチラシがありません
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            {sortedFlyers.map((f) => (
+              <FlyerCard
+                key={f.id}
+                flyer={f}
+                onPreviewImage={setPreviewImage}
+                onEditFlyer={() => handleOpenFlyerEditor(f.clinicId, f.id)}
+                onEditChannel={(channelId) => handleOpenChannelEditor(f.clinicId, channelId)}
+                isOpeningFlyer={openingFlyerId === f.id}
+                openingChannelId={openingChannelId}
+              />
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* 未分類QR（チラシ未紐付け）の救済表示
           Phase 2 ではすべてのQRがチラシに属するように移行されているはずだが、
           万一 flyerId=null のQRが残っている場合は警告と一緒に表示する */}
       {sortedStandalone.length > 0 && (
-        <Card className="border-amber-200">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <QrCode className="w-5 h-5 text-amber-600" />
-              未分類QR（{sortedStandalone.length}件）
-              <span className="ml-2 text-xs font-normal text-amber-700">
-                チラシに紐付いていないQR — 該当医院の対応が必要
-              </span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="divide-y">
-              {sortedStandalone.map((ch) => (
-                <StandaloneChannelRow
-                  key={ch.id}
-                  ch={ch}
-                  onPreviewImage={setPreviewImage}
-                  onEdit={() => handleOpenChannelEditor(ch.clinicId, ch.id)}
-                  isOpening={openingChannelId === ch.id}
-                />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <div className="space-y-3">
+          <h2 className="text-base font-bold flex items-center gap-2 text-amber-700">
+            <QrCode className="w-4 h-4" />
+            未分類QR（{sortedStandalone.length}件）
+            <span className="text-xs font-normal text-amber-700">
+              チラシに紐付いていないQR — 該当医院の対応が必要
+            </span>
+          </h2>
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            {sortedStandalone.map((ch) => (
+              <StandaloneChannelCard
+                key={ch.id}
+                ch={ch}
+                onPreviewImage={setPreviewImage}
+                onEdit={() => handleOpenChannelEditor(ch.clinicId, ch.id)}
+                isOpening={openingChannelId === ch.id}
+              />
+            ))}
+          </div>
+        </div>
       )}
 
       {/* 画像プレビューモーダル */}
@@ -421,16 +412,16 @@ export default function FlyerAnalysisPage() {
   );
 }
 
-// SummaryCard は廃止された（全体サマリーは不要との要件のため）。
-// SummaryTile も他で使われていないが、念のため残し将来再利用に備える。
-
-// チラシ1件分の詳細行（展開時に配下のQR一覧を表示）
-// チラシ1件の行（折りたたみ廃止、常に紐付QR一覧を表示）
-// レイアウトは医院ダッシュボード(/dashboard) のチラシカード形式に揃える：
-//   1段目: 画像 + クリニック名/チラシ名 + 配布方法/配布開始日 + チラシ編集ボタン
-//   2段目: 5タイル（配布枚数 / 予算 / QRアクセス / QRアクセス率 / QRアクセス単価）
-//   3段目: 紐付QR一覧テーブル（QR名 / アクセス / アクセス率 / 編集）
-function FlyerRow({
+// チラシ1件のカード（医院ダッシュボードの FlyerCard と同等レイアウト）
+//   ヘッダ: チラシ名 + チラシ編集ボタン
+//   1段目: 画像（左）+ メタ情報（作成日 / 配布方法 / 予算 / 配布開始日）
+//   2段目: 4タイル（配布枚数 / QRアクセス / QRアクセス率 / QRアクセス単価）
+//          ─ ダッシュボードと揃えるため、QRアクセスはチラシ配下QRの合計を使う
+//   3段目: 紐付QR一覧テーブル（QR名 / QRアクセス / QRアクセス率 / 編集）
+//          ─ 「このチラシにQRを追加」は管理者画面にない機能なので除外
+//   4段目: 詳細統計を見る（性別・年齢・地図・履歴）
+// クリニック名は管理者画面特有のため、ヘッダ上部に表示する
+function FlyerCard({
   flyer,
   onPreviewImage,
   onEditFlyer,
@@ -445,89 +436,111 @@ function FlyerRow({
   isOpeningFlyer: boolean;
   openingChannelId: string | null;
 }) {
+  // チラシレベルの集計値（紐付QRのスキャン合計をベースに再計算）。
+  // 既存の flyer.scans/qrScanRate/qrScanCost をそのまま使う。
   return (
-    <div className="p-4 hover:bg-gray-50 space-y-3">
-      {/* 1段目: メタ情報 */}
-      <div className="flex items-start gap-3">
-        <div className="flex gap-1 shrink-0">
-          <Thumbnail url={flyer.imageUrl} alt="表" onClick={onPreviewImage} />
-          <Thumbnail url={flyer.imageUrl2} alt="裏" onClick={onPreviewImage} />
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <div className="text-xs text-gray-500 truncate">{flyer.clinicName}</div>
-          <div className="text-sm sm:text-base font-medium truncate">
-            {flyer.name}
-            <span className="ml-2 text-xs text-gray-500 font-normal">
-              QR×{flyer.channelCount}
-            </span>
+    <Card className="hover:shadow-md transition-shadow">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base flex items-center justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            {/* 管理者画面はクリニック名を上に明示 */}
+            <div className="text-[11px] text-gray-500 truncate font-normal">
+              {flyer.clinicName}
+            </div>
+            <div className="truncate">{flyer.name}</div>
           </div>
-          <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px]">
-            {flyer.distributionMethod ? (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 whitespace-nowrap">
-                {flyer.distributionMethod}
-              </span>
-            ) : (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-gray-100 text-gray-400 whitespace-nowrap">
-                配布方法未設定
-              </span>
-            )}
-            <span className="text-gray-500 whitespace-nowrap">
-              配布開始日: <span className="text-gray-800 font-medium">{formatStartDate(flyer.distributionPeriod)}</span>
-            </span>
-          </div>
-        </div>
-
-        <div className="flex flex-col items-end gap-2 shrink-0">
           <Button
             size="sm"
+            variant="outline"
             disabled={isOpeningFlyer}
             onClick={onEditFlyer}
             title="医院になりすましてチラシ編集ページを別タブで開く"
-            className="h-8 bg-blue-600 hover:bg-blue-700 text-white gap-1"
+            className="shrink-0 h-7 text-xs gap-1"
           >
             {isOpeningFlyer ? (
-              <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                開いています…
-              </>
+              <Loader2 className="w-3 h-3 animate-spin" />
             ) : (
               <>
-                <Pencil className="w-3.5 h-3.5" />
-                チラシ編集
+                <Pencil className="w-3 h-3" />
+                編集
                 <ExternalLink className="w-3 h-3 opacity-70" />
               </>
             )}
           </Button>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="pt-0 space-y-3">
+        {/* 画像（左）+ メタ情報（右） */}
+        <div className="flex gap-3">
+          <div className="flex gap-2 shrink-0">
+            <FlyerThumb url={flyer.imageUrl} alt="表" onClick={onPreviewImage} />
+            <FlyerThumb url={flyer.imageUrl2} alt="裏" onClick={onPreviewImage} />
+          </div>
+          <div className="flex-1 min-w-0 grid grid-cols-1 gap-1 text-[11px] content-center">
+            <MetaRow label="作成日" value={formatJaDate(flyer.createdAt)} />
+            <MetaRow label="配布方法" value={flyer.distributionMethod || "—"} />
+            <MetaRow
+              label="予算"
+              value={flyer.budget !== null ? `¥${flyer.budget.toLocaleString()}` : "—"}
+            />
+            <MetaRow label="配布開始日" value={formatStartDate(flyer.distributionPeriod)} />
+          </div>
         </div>
-      </div>
 
-      {/* 2段目: 5タイル */}
-      <MetricTiles
-        quantity={flyer.distributionQuantity}
-        budget={flyer.budget}
-        scans={flyer.scans}
-        qrScanRate={flyer.qrScanRate}
-        qrScanCost={flyer.qrScanCost}
-      />
-
-      {/* 3段目: 紐付QR一覧（常に表示・ダッシュボードと同じテーブル形式） */}
-      <div className="border-t pt-3 space-y-2">
-        <div className="text-xs text-gray-500">
-          紐付けQR: <span className="font-medium text-gray-800">{flyer.channelCount}件</span>
-        </div>
-        {flyer.channels.length > 0 ? (
-          <LinkedChannelsTable
-            channels={flyer.channels}
-            quantity={flyer.distributionQuantity}
-            onEditChannel={onEditChannel}
-            openingChannelId={openingChannelId}
+        {/* 4タイル（配布枚数 / QRアクセス / QRアクセス率 / QRアクセス単価） */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+          <Stat
+            label="配布枚数"
+            value={
+              flyer.distributionQuantity !== null
+                ? `${flyer.distributionQuantity.toLocaleString()}枚`
+                : "—"
+            }
           />
-        ) : (
-          <div className="text-xs text-gray-500">このチラシに紐付いているQRはありません</div>
-        )}
-      </div>
-    </div>
+          <Stat label="QRアクセス" value={flyer.scans.toLocaleString()} />
+          <Stat
+            label="QRアクセス率"
+            value={flyer.qrScanRate !== null ? `${flyer.qrScanRate.toFixed(2)}%` : "—"}
+          />
+          <Stat
+            label="QRアクセス単価"
+            value={flyer.qrScanCost !== null ? `¥${flyer.qrScanCost.toLocaleString()}` : "—"}
+          />
+        </div>
+
+        {/* 紐付QR一覧テーブル */}
+        <div className="border-t pt-3 space-y-2">
+          <div className="text-xs text-gray-500">
+            紐付けQR:{" "}
+            <span className="font-medium text-gray-800">{flyer.channelCount}件</span>
+          </div>
+          {flyer.channels.length > 0 ? (
+            <LinkedChannelsTable
+              channels={flyer.channels}
+              quantity={flyer.distributionQuantity}
+              onEditChannel={onEditChannel}
+              openingChannelId={openingChannelId}
+            />
+          ) : (
+            <div className="text-xs text-gray-500">このチラシに紐付いているQRはありません</div>
+          )}
+        </div>
+
+        {/* 詳細統計（性別・年齢・地図・履歴）— ダッシュボードと共通コンポーネントを再利用。
+            管理者は対象クリニックを明示するため clinicId を渡す。 */}
+        <FlyerDetailStats
+          flyerId={flyer.id}
+          channels={flyer.channels.map((c) => ({
+            id: c.id,
+            name: c.name,
+            channelType: c.channelType,
+            // 管理者画面では isActive を区別しないため一律 true 扱い
+            isActive: true,
+          }))}
+          clinicId={flyer.clinicId}
+        />
+      </CardContent>
+    </Card>
   );
 }
 
@@ -597,8 +610,8 @@ function LinkedChannelsTable({
   );
 }
 
-// 単独QR詳細1行（チラシなし）
-function StandaloneChannelRow({
+// 単独QRのカード（チラシ未紐付け版）。チラシのレイアウトに準じる。
+function StandaloneChannelCard({
   ch,
   onPreviewImage,
   onEdit,
@@ -610,136 +623,90 @@ function StandaloneChannelRow({
   isOpening: boolean;
 }) {
   return (
-    <div className="p-4 hover:bg-gray-50 space-y-3">
-      <div className="flex items-start gap-3">
-        <div className="flex gap-1 shrink-0">
-          <Thumbnail url={ch.imageUrl} alt="表" onClick={onPreviewImage} />
-          <Thumbnail url={ch.imageUrl2} alt="裏" onClick={onPreviewImage} />
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <div className="text-xs text-gray-500 truncate">{ch.clinicName}</div>
-          <div className="text-sm sm:text-base font-medium truncate">
-            {ch.name}
-            <span className="ml-2 text-xs text-gray-500 font-normal">
-              {ch.channelType === "diagnosis" ? "診断付き" : "リンク型"}
-            </span>
-          </div>
-          <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px]">
-            {ch.distributionMethod ? (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 whitespace-nowrap">
-                {ch.distributionMethod}
+    <Card className="border-amber-200 hover:shadow-md transition-shadow">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base flex items-center justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="text-[11px] text-gray-500 truncate font-normal">
+              {ch.clinicName}
+            </div>
+            <div className="truncate">
+              {ch.name}
+              <span className="ml-2 text-xs text-gray-500 font-normal">
+                {ch.channelType === "diagnosis" ? "診断付き" : "リンク型"}
               </span>
-            ) : (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-gray-100 text-gray-400 whitespace-nowrap">
-                配布方法未設定
-              </span>
-            )}
-            <span className="text-gray-500 whitespace-nowrap">
-              配布開始日: <span className="text-gray-800 font-medium">{formatStartDate(ch.distributionPeriod)}</span>
-            </span>
+            </div>
           </div>
-        </div>
-
-        <div className="flex flex-col items-end gap-2 shrink-0">
           <Button
             size="sm"
+            variant="outline"
             disabled={isOpening}
             onClick={onEdit}
-            className="h-8 bg-blue-600 hover:bg-blue-700 text-white gap-1"
+            className="shrink-0 h-7 text-xs gap-1"
           >
             {isOpening ? (
-              <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                開いています…
-              </>
+              <Loader2 className="w-3 h-3 animate-spin" />
             ) : (
               <>
-                <Pencil className="w-3.5 h-3.5" />
+                <Pencil className="w-3 h-3" />
                 QR編集
                 <ExternalLink className="w-3 h-3 opacity-70" />
               </>
             )}
           </Button>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="pt-0 space-y-3">
+        <div className="flex gap-3">
+          <div className="flex gap-2 shrink-0">
+            <FlyerThumb url={ch.imageUrl} alt="表" onClick={onPreviewImage} />
+            <FlyerThumb url={ch.imageUrl2} alt="裏" onClick={onPreviewImage} />
+          </div>
+          <div className="flex-1 min-w-0 grid grid-cols-1 gap-1 text-[11px] content-center">
+            <MetaRow label="配布方法" value={ch.distributionMethod || "—"} />
+            <MetaRow
+              label="予算"
+              value={ch.budget !== null ? `¥${ch.budget.toLocaleString()}` : "—"}
+            />
+            <MetaRow label="配布開始日" value={formatStartDate(ch.distributionPeriod)} />
+          </div>
         </div>
-      </div>
 
-      <MetricTiles
-        quantity={ch.distributionQuantity}
-        budget={ch.budget}
-        scans={ch.scans}
-        qrScanRate={ch.qrScanRate}
-        qrScanCost={ch.qrScanCost}
-      />
-    </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+          <Stat
+            label="配布枚数"
+            value={
+              ch.distributionQuantity !== null
+                ? `${ch.distributionQuantity.toLocaleString()}枚`
+                : "—"
+            }
+          />
+          <Stat label="QRアクセス" value={ch.scans.toLocaleString()} />
+          <Stat
+            label="QRアクセス率"
+            value={ch.qrScanRate !== null ? `${ch.qrScanRate.toFixed(2)}%` : "—"}
+          />
+          <Stat
+            label="QRアクセス単価"
+            value={ch.qrScanCost !== null ? `¥${ch.qrScanCost.toLocaleString()}` : "—"}
+          />
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
 // 5タイル（配布枚数/予算/QRアクセス/QRアクセス率/QRアクセス単価）
-// チラシ行と単独QR行で共通利用
-function MetricTiles({
-  quantity,
-  budget,
-  scans,
-  qrScanRate,
-  qrScanCost,
-}: {
-  quantity: number | null;
-  budget: number | null;
-  scans: number;
-  qrScanRate: number | null;
-  qrScanCost: number | null;
-}) {
-  return (
-    <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 text-center">
-      <DetailMetric
-        label="配布枚数"
-        value={quantity !== null ? `${quantity.toLocaleString()}枚` : ""}
-        missing={quantity === null}
-      />
-      <DetailMetric
-        label="予算"
-        value={budget !== null ? `¥${budget.toLocaleString()}` : ""}
-        missing={budget === null}
-      />
-      <DetailMetric
-        label="QRアクセス"
-        value={scans.toLocaleString()}
-        color="text-blue-600"
-      />
-      <DetailMetric
-        label="QRアクセス率"
-        value={qrScanRate !== null ? `${qrScanRate.toFixed(2)}%` : ""}
-        color="text-blue-600"
-        sub="QRアクセス÷配布枚数"
-        missing={qrScanRate === null}
-      />
-      <DetailMetric
-        label="QRアクセス単価"
-        value={
-          qrScanCost !== null
-            ? `¥${qrScanCost.toLocaleString()}`
-            : budget === null
-            ? ""
-            : "—"
-        }
-        color="text-amber-600"
-        sub="予算÷QRアクセス"
-        missing={budget === null}
-      />
-    </div>
-  );
-}
-
-// 表/裏画像サムネイル
-function Thumbnail({
+// 画像サムネイル（チラシ全体が見えるよう object-contain でレンダ）。
+// クリックで拡大プレビューを開く。
+function FlyerThumb({
   url,
   alt,
   onClick,
 }: {
   url: string | null;
   alt: string;
-  onClick: (url: string) => void;
+  onClick?: (url: string) => void;
 }) {
   if (url) {
     return (
@@ -748,50 +715,51 @@ function Thumbnail({
         src={url}
         alt={alt}
         title={alt === "表" ? "表面" : "裏面"}
-        className="w-14 h-14 object-cover rounded cursor-pointer hover:opacity-80"
-        onClick={() => onClick(url)}
+        className="w-20 h-20 object-contain rounded border bg-gray-50 cursor-pointer hover:opacity-80 transition-opacity"
+        onClick={() => onClick?.(url)}
       />
     );
   }
   return (
     <div
-      className="w-14 h-14 bg-gray-100 rounded flex items-center justify-center"
+      className="w-20 h-20 bg-gray-100 rounded border flex items-center justify-center"
       title={alt === "表" ? "表面（未登録）" : "裏面（未登録）"}
     >
-      <ImageIcon className="w-5 h-5 text-gray-300" />
+      <ImageIcon className="w-6 h-6 text-gray-300" />
     </div>
   );
 }
 
-// 詳細行用タイル
-function DetailMetric({
-  label,
-  value,
-  color,
-  sub,
-  missing,
-}: {
-  label: string;
-  value: string;
-  color?: string;
-  sub?: string;
-  missing?: boolean;
-}) {
-  const displayValue = missing ? "データ未入力" : value;
-  const valueColor = missing ? "text-red-600" : color || "text-gray-800";
-  const valueSize = missing ? "text-xs" : "text-base";
+// 画像の右に並べるメタ情報の1行（ラベル: 値）
+function MetaRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="bg-gray-50 rounded px-3 py-2">
-      <div className="text-[11px] text-gray-500 whitespace-nowrap">{label}</div>
-      <div className={`${valueSize} font-bold tabular-nums whitespace-nowrap ${valueColor}`}>
-        {displayValue}
-      </div>
-      {sub && <div className="text-[10px] text-gray-400 whitespace-nowrap">{sub}</div>}
+    <div className="flex items-baseline gap-2 min-w-0">
+      <span className="text-gray-500 shrink-0 w-16">{label}</span>
+      <span className="font-medium text-gray-800 truncate">{value}</span>
     </div>
   );
 }
 
-// SummaryTile / SummaryCard は廃止された（全体サマリー撤去）
+// 4タイル用の小さなボックス
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="bg-gray-50 rounded px-2 py-1.5">
+      <div className="text-[10px] text-gray-500">{label}</div>
+      <div className="text-xs font-medium truncate">{value}</div>
+    </div>
+  );
+}
+
+// 作成日を「2026年5月11日」形式に整形
+function formatJaDate(isoString: string): string {
+  try {
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return "—";
+    return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
+  } catch {
+    return "—";
+  }
+}
 
 // 配布開始日を「2026年5月11日」形式に整形。
 // 新仕様（type=date 入力）では "YYYY-MM-DD" が保存される。

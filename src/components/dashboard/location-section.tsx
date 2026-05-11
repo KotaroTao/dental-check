@@ -61,6 +61,8 @@ interface LocationSectionProps {
   channels: Channel[];
   customStartDate?: string;
   customEndDate?: string;
+  // 管理者画面から呼ぶ場合に対象クリニックIDを指定（医院セッションが無い時の代替）
+  clinicId?: string;
 }
 
 export function LocationSection({
@@ -68,6 +70,7 @@ export function LocationSection({
   channels,
   customStartDate,
   customEndDate,
+  clinicId,
 }: LocationSectionProps) {
   const [locations, setLocations] = useState<LocationData[]>([]);
   const [total, setTotal] = useState(0);
@@ -147,6 +150,7 @@ export function LocationSection({
         params.set("startDate", customStartDate);
         params.set("endDate", customEndDate);
       }
+      if (clinicId) params.set("clinicId", clinicId);
 
       const response = await fetch(`/api/dashboard/location-demographics?${params}`);
       if (response.ok) {
@@ -178,6 +182,7 @@ export function LocationSection({
           params.set("startDate", customStartDate);
           params.set("endDate", customEndDate);
         }
+        if (clinicId) params.set("clinicId", clinicId);
 
         const response = await fetch(`/api/dashboard/locations?${params}`);
         if (response.ok) {
@@ -198,7 +203,7 @@ export function LocationSection({
     };
 
     fetchLocations();
-  }, [period, channelIdsKey, customStartDate, customEndDate]);
+  }, [period, channelIdsKey, customStartDate, customEndDate, clinicId]);
 
   // 位置情報があるデータのみ抽出。
   // 都道府県(region)が空でも市区町村(city)が取れている場合は有効として扱う

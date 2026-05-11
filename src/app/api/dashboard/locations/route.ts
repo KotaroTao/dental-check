@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { resolveClinicContext } from "@/lib/dashboard-auth";
 import { prisma } from "@/lib/prisma";
 import { forwardGeocode } from "@/lib/geocoding";
 import type { ClinicPage } from "@/types/clinic";
@@ -27,10 +27,11 @@ interface RegionGroupResult {
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getSession();
-    if (!session) {
+    const ctx = await resolveClinicContext(request);
+    if (!ctx) {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
     }
+    const session = { clinicId: ctx.clinicId };
 
     const { searchParams } = new URL(request.url);
     const channelId = searchParams.get("channelId");
