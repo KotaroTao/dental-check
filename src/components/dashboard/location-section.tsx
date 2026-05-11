@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import dynamic from "next/dynamic";
-import { MapPin, Check, SquareCheck, Square, HelpCircle, ChevronDown, ChevronUp, Users, X } from "lucide-react";
+import { MapPin, HelpCircle, ChevronDown, ChevronUp, Users, X } from "lucide-react";
 import {
   PREFECTURE_CENTERS,
   normalizePrefectureName,
@@ -63,20 +63,6 @@ interface LocationSectionProps {
   customEndDate?: string;
 }
 
-// チャンネルごとの色を定義（最大10色）
-const CHANNEL_COLORS = [
-  "#3b82f6", // blue
-  "#ef4444", // red
-  "#22c55e", // green
-  "#f59e0b", // amber
-  "#8b5cf6", // violet
-  "#ec4899", // pink
-  "#06b6d4", // cyan
-  "#f97316", // orange
-  "#84cc16", // lime
-  "#6366f1", // indigo
-];
-
 export function LocationSection({
   period,
   channels,
@@ -105,48 +91,10 @@ export function LocationSection({
   // リスト展開状態
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // 選択されたチャンネルID（初期値は全てのアクティブチャンネル）
-  const activeChannels = channels.filter((c) => c.isActive);
-  const [selectedChannelIds, setSelectedChannelIds] = useState<string[]>(
-    activeChannels.map((c) => c.id)
-  );
-
-  // チャンネルが変更されたら選択を更新
-  useEffect(() => {
-    const activeIds = channels.filter((c) => c.isActive).map((c) => c.id);
-    setSelectedChannelIds((prev) => {
-      // 既存の選択からアクティブでないものを除外
-      const filtered = prev.filter((id) => activeIds.includes(id));
-      // 新しく追加されたチャンネルがあれば追加
-      const newIds = activeIds.filter((id) => !prev.includes(id));
-      return [...filtered, ...newIds];
-    });
-  }, [channels]);
-
-  // チャンネルIDと色のマッピング
-  const channelColorMap: Record<string, string> = {};
-  activeChannels.forEach((channel, index) => {
-    channelColorMap[channel.id] = CHANNEL_COLORS[index % CHANNEL_COLORS.length];
-  });
-
-  const toggleChannel = (channelId: string) => {
-    setSelectedChannelIds((prev) =>
-      prev.includes(channelId)
-        ? prev.filter((id) => id !== channelId)
-        : [...prev, channelId]
-    );
-  };
-
-  const selectAll = () => {
-    setSelectedChannelIds(activeChannels.map((c) => c.id));
-  };
-
-  const deselectAll = () => {
-    setSelectedChannelIds([]);
-  };
-
-  const isAllSelected = selectedChannelIds.length === activeChannels.length;
-  const isNoneSelected = selectedChannelIds.length === 0;
+  // チャンネル選択UIは廃止。常にチラシ配下の全アクティブQRを対象にする。
+  const activeChannelIds = channels.filter((c) => c.isActive).map((c) => c.id);
+  // 依存配列で「同じ内容なら再フェッチしない」ために join 済み文字列を使う
+  const channelIdsKey = activeChannelIds.join(",");
 
   // ヘルプポップオーバーの表示状態
   const [showHelp, setShowHelp] = useState(false);
@@ -190,7 +138,7 @@ export function LocationSection({
         region: location.region,
         city: location.city,
         period,
-        channelIds: selectedChannelIds.join(","),
+        channelIds: channelIdsKey,
       });
       if (location.town) {
         params.set("town", location.town);
@@ -214,7 +162,7 @@ export function LocationSection({
 
   useEffect(() => {
     const fetchLocations = async () => {
-      if (selectedChannelIds.length === 0) {
+      if (!channelIdsKey) {
         setLocations([]);
         setTotal(0);
         setIsLoading(false);
@@ -225,7 +173,7 @@ export function LocationSection({
       try {
         const params = new URLSearchParams();
         params.set("period", period);
-        params.set("channelIds", selectedChannelIds.join(","));
+        params.set("channelIds", channelIdsKey);
         if (period === "custom" && customStartDate && customEndDate) {
           params.set("startDate", customStartDate);
           params.set("endDate", customEndDate);
@@ -250,61 +198,13 @@ export function LocationSection({
     };
 
     fetchLocations();
-  }, [period, selectedChannelIds, customStartDate, customEndDate]);
+  }, [period, channelIdsKey, customStartDate, customEndDate]);
 
   // 位置情報があるデータのみ抽出。
   // 都道府県(region)が空でも市区町村(city)が取れている場合は有効として扱う
   // （例: 「港区」だけ取れているデータも地図に出したい）。
   const validLocations = locations.filter(
     (loc) => loc.region || loc.city
-  );
-
-  // チャンネル選択UI
-  const ChannelSelector = () => (
-    <div className="mb-4">
-      <div className="flex flex-wrap items-center gap-2 mb-2">
-        <span className="text-sm text-gray-600 font-medium">QRコード:</span>
-        <button
-          onClick={selectAll}
-          className={`text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center gap-1 ${isAllSelected ? "ring-1 ring-emerald-500" : ""}`}
-        >
-          <SquareCheck className="w-3 h-3" />
-          全選択
-        </button>
-        <button
-          onClick={deselectAll}
-          className={`text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center gap-1 ${isNoneSelected ? "ring-1 ring-gray-400" : ""}`}
-        >
-          <Square className="w-3 h-3" />
-          全解除
-        </button>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {activeChannels.map((channel) => {
-          const isSelected = selectedChannelIds.includes(channel.id);
-          const color = channelColorMap[channel.id];
-          return (
-            <button
-              key={channel.id}
-              onClick={() => toggleChannel(channel.id)}
-              className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs border transition-colors ${
-                isSelected
-                  ? "border-current bg-opacity-10"
-                  : "border-gray-200 text-gray-400 bg-gray-50"
-              }`}
-              style={isSelected ? { color, backgroundColor: `${color}15` } : {}}
-            >
-              <span
-                className="w-2.5 h-2.5 rounded-full"
-                style={{ backgroundColor: isSelected ? color : "#d1d5db" }}
-              />
-              {channel.name}
-              {isSelected && <Check className="w-3 h-3" />}
-            </button>
-          );
-        })}
-      </div>
-    </div>
   );
 
   if (isLoading) {
@@ -314,7 +214,6 @@ export function LocationSection({
           <MapPin className="w-5 h-5" />
           QR読み込みエリア
         </h2>
-        <ChannelSelector />
         <div className="animate-pulse">
           <div className="h-64 bg-gray-100 rounded-lg mb-4"></div>
           <div className="space-y-2">
@@ -327,17 +226,16 @@ export function LocationSection({
     );
   }
 
-  if (locations.length === 0 || selectedChannelIds.length === 0) {
+  if (locations.length === 0 || !channelIdsKey) {
     return (
       <div className="bg-white rounded-xl shadow-sm border p-6">
         <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
           <MapPin className="w-5 h-5" />
           QR読み込みエリア
         </h2>
-        <ChannelSelector />
         <div className="text-center py-8 text-gray-500">
           <MapPin className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-          <p>{selectedChannelIds.length === 0 ? "QRコードを選択してください" : "この期間のエリアデータはありません"}</p>
+          <p>{!channelIdsKey ? "アクティブなQRコードがありません" : "この期間のエリアデータはありません"}</p>
           <p className="text-sm mt-1">QRコードが読み込まれると、ここに地域別の統計が表示されます</p>
         </div>
       </div>
@@ -433,8 +331,6 @@ export function LocationSection({
           )}
         </div>
       </div>
-
-      <ChannelSelector />
 
       <div className="grid md:grid-cols-2 gap-6">
         {/* 地図（都道府県ポリゴン表示） */}
