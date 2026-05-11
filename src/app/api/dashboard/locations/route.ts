@@ -81,6 +81,9 @@ export async function GET(request: NextRequest) {
       : {};
 
     // DB側でGROUP BY集計（パフォーマンス改善）
+    // 注意: 「市区町村だけ取れていて都道府県が無い」レコードも地図に出したいので、
+    // region: { not: null } の要件は撤去。少なくとも city があれば緯度経度から
+    // 地図にプロットできる（履歴では「📍 港区」のように表示される類のデータ）。
     const locationData = await prisma.diagnosisSession.groupBy({
       by: ["region", "city", "town", "channelId"],
       where: {
@@ -89,7 +92,6 @@ export async function GET(request: NextRequest) {
         isDemo: false,
         isDeleted: false,
         ...dateRangeFilter,
-        region: { not: null },
         city: { not: null },
         ...channelFilter,
       },
@@ -121,6 +123,7 @@ export async function GET(request: NextRequest) {
     }));
 
     // QRスキャン（リンクタイプ）のエリアデータを取得
+    // 同上、region が無いレコードも city ベースで地図表示できるよう region 要件を撤去。
     const qrScanData = await prisma.accessLog.groupBy({
       by: ["region", "city", "channelId"],
       where: {
@@ -128,7 +131,6 @@ export async function GET(request: NextRequest) {
         eventType: "qr_scan",
         isDeleted: false,
         ...dateRangeFilter,
-        region: { not: null },
         city: { not: null },
         ...channelFilter,
       },
