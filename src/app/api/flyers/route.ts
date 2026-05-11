@@ -71,7 +71,8 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: "desc" },
       include: {
         channels: {
-          where: { isActive: true },
+          // 非表示（isActive=false）も含めて返す。
+          // 非表示にした後にUIで再表示できるよう、一覧から消えないようにするため。
           orderBy: { createdAt: "asc" },
           select: {
             id: true,

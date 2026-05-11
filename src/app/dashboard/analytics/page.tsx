@@ -267,34 +267,19 @@ export default function AnalyticsPage() {
             該当する履歴がありません
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 whitespace-nowrap">
-                    日時
-                  </th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 whitespace-nowrap">
-                    QRコード
-                  </th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 whitespace-nowrap">
-                    年齢
-                  </th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 whitespace-nowrap">
-                    性別
-                  </th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 whitespace-nowrap">
-                    結果
-                  </th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 whitespace-nowrap">
-                    エリア
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {filteredHistory.slice(0, 50).map((h) => (
-                  <tr key={h.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-2.5 text-xs text-gray-700 whitespace-nowrap">
+          <>
+            {/* スマホ・タブレット縦（< md=768px）: カード形式
+                小画面で6列の表を出すと崩れるので、1行=1カードに積み重ねる。
+                ブラウザサイズが変わっても各情報が必ず見える。 */}
+            <div className="md:hidden divide-y">
+              {filteredHistory.slice(0, 50).map((h) => (
+                <div key={h.id} className="p-4 space-y-1.5">
+                  {/* 1行目: 日時 + QRコード名 */}
+                  <div className="flex items-start justify-between gap-2 text-xs">
+                    <div className="font-medium text-gray-800 break-words min-w-0 flex-1">
+                      {h.channelName || "—"}
+                    </div>
+                    <div className="text-gray-500 whitespace-nowrap shrink-0 tabular-nums">
                       {new Date(h.createdAt).toLocaleString("ja-JP", {
                         year: "numeric",
                         month: "2-digit",
@@ -302,32 +287,101 @@ export default function AnalyticsPage() {
                         hour: "2-digit",
                         minute: "2-digit",
                       })}
-                    </td>
-                    <td className="px-4 py-2.5 text-xs text-gray-700">
-                      {h.channelName || "—"}
-                    </td>
-                    <td className="px-4 py-2.5 text-xs text-gray-700 whitespace-nowrap">
-                      {h.userAge !== null && h.userAge !== undefined ? `${h.userAge}歳` : "—"}
-                    </td>
-                    <td className="px-4 py-2.5 text-xs text-gray-700 whitespace-nowrap">
-                      {h.userGender || "—"}
-                    </td>
-                    <td className="px-4 py-2.5 text-xs text-gray-700">
-                      {h.resultCategory || "—"}
-                    </td>
-                    <td className="px-4 py-2.5 text-xs text-gray-700">
-                      {h.area && h.area !== "-" ? h.area : "—"}
-                    </td>
+                    </div>
+                  </div>
+                  {/* 2行目: 年齢・性別・結果（パイプ区切り） */}
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-gray-600">
+                    <span>
+                      {h.userAge !== null && h.userAge !== undefined
+                        ? `${h.userAge}歳`
+                        : "年齢不明"}
+                    </span>
+                    <span className="text-gray-300">・</span>
+                    <span>{h.userGender || "性別不明"}</span>
+                    {h.resultCategory && (
+                      <>
+                        <span className="text-gray-300">・</span>
+                        <span>結果: {h.resultCategory}</span>
+                      </>
+                    )}
+                  </div>
+                  {/* 3行目: エリア（あれば表示） */}
+                  {h.area && h.area !== "-" && (
+                    <div className="text-xs text-gray-500 break-words">
+                      📍 {h.area}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* PC・タブレット横（≥ md）: 表形式
+                overflow-x-auto で widths が膨らんだ時にも横スクロールでフォールバック */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 whitespace-nowrap">
+                      日時
+                    </th>
+                    <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">
+                      QRコード
+                    </th>
+                    <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 whitespace-nowrap">
+                      年齢
+                    </th>
+                    <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 whitespace-nowrap">
+                      性別
+                    </th>
+                    <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">
+                      結果
+                    </th>
+                    <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">
+                      エリア
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y">
+                  {filteredHistory.slice(0, 50).map((h) => (
+                    <tr key={h.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-2.5 text-xs text-gray-700 whitespace-nowrap tabular-nums">
+                        {new Date(h.createdAt).toLocaleString("ja-JP", {
+                          year: "numeric",
+                          month: "2-digit",
+                          day: "2-digit",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </td>
+                      <td className="px-4 py-2.5 text-xs text-gray-700 break-words">
+                        {h.channelName || "—"}
+                      </td>
+                      <td className="px-4 py-2.5 text-xs text-gray-700 whitespace-nowrap">
+                        {h.userAge !== null && h.userAge !== undefined
+                          ? `${h.userAge}歳`
+                          : "—"}
+                      </td>
+                      <td className="px-4 py-2.5 text-xs text-gray-700 whitespace-nowrap">
+                        {h.userGender || "—"}
+                      </td>
+                      <td className="px-4 py-2.5 text-xs text-gray-700 break-words">
+                        {h.resultCategory || "—"}
+                      </td>
+                      <td className="px-4 py-2.5 text-xs text-gray-700 break-words">
+                        {h.area && h.area !== "-" ? h.area : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
             {filteredHistory.length > 50 && (
               <div className="text-center text-xs text-gray-400 py-3 border-t">
                 最新50件を表示（全{filteredHistory.length}件中）
               </div>
             )}
-          </div>
+          </>
         )}
       </div>
     </div>
