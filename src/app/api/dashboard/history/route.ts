@@ -25,6 +25,11 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const channelId = searchParams.get("channelId");
+    // channelIds=id1,id2 形式でも受け付ける（チラシ単位フィルタ用）
+    const channelIdsParam = searchParams.get("channelIds");
+    const channelIds = channelIdsParam
+      ? channelIdsParam.split(",").map((s) => s.trim()).filter(Boolean)
+      : null;
     const diagnosisType = searchParams.get("diagnosisType");
     const VALID_PERIODS = ["today", "week", "month", "all", "custom"];
     const period = VALID_PERIODS.includes(searchParams.get("period") || "")
@@ -96,6 +101,10 @@ export async function GET(request: NextRequest) {
 
     if (channelId) {
       whereFilter.channelId = channelId;
+    } else if (channelIds && channelIds.length > 0) {
+      // channelIds= で複数指定（チラシ単位フィルタ）。アクティブ・非アクティブ問わず、
+      // 指定されたチャネルの履歴を返す。
+      whereFilter.channelId = { in: channelIds };
     } else if (activeChannelIds.length > 0) {
       // 特定チャンネル指定がない場合、アクティブチャンネルのみ
       whereFilter.channelId = { in: activeChannelIds };
@@ -238,6 +247,8 @@ export async function GET(request: NextRequest) {
 
     if (channelId) {
       accessLogFilter.channelId = channelId;
+    } else if (channelIds && channelIds.length > 0) {
+      accessLogFilter.channelId = { in: channelIds };
     } else if (activeChannelIds.length > 0) {
       accessLogFilter.channelId = { in: activeChannelIds };
     }
