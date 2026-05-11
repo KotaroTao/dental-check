@@ -697,7 +697,7 @@ export default function ChannelDetailPage() {
               placeholder="例: チラシ①（駅前配布）"
               value={formData.name}
               onChange={handleChange}
-              disabled={isSaving || !!isDemo}
+              disabled={!!isDemo}
             />
             <p className="text-xs text-gray-500">管理画面で表示される名前です</p>
           </div>
@@ -714,7 +714,7 @@ export default function ChannelDetailPage() {
               placeholder="例: お口の健康チェック"
               value={formData.displayName}
               onChange={handleChange}
-              disabled={isSaving || !!isDemo}
+              disabled={!!isDemo}
             />
             <p className="text-xs text-gray-500">QRコードを読み込んだ際のアンケートページに表示される名前です</p>
           </div>
@@ -745,7 +745,7 @@ export default function ChannelDetailPage() {
                 placeholder="https://example.com/page"
                 value={formData.redirectUrl}
                 onChange={handleChange}
-                disabled={isSaving || !!isDemo}
+                disabled={!!isDemo}
               />
               <p className="text-xs text-gray-500">QRコードをスキャンした際のリダイレクト先URL</p>
             </div>
@@ -771,7 +771,7 @@ export default function ChannelDetailPage() {
               name="distributionMethod"
               value={formData.distributionMethod}
               onChange={handleChange}
-              disabled={isSaving || !!isDemo}
+              disabled={!!isDemo}
               required
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -810,7 +810,7 @@ export default function ChannelDetailPage() {
                   placeholder="例: 5000"
                   value={formData.distributionQuantity}
                   onChange={handleChange}
-                  disabled={isSaving || !!isDemo}
+                  disabled={!!isDemo}
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">枚</span>
               </div>
@@ -849,7 +849,7 @@ export default function ChannelDetailPage() {
                   placeholder="例: 50000"
                   value={formData.budget}
                   onChange={handleChange}
-                  disabled={isSaving || !!isDemo}
+                  disabled={!!isDemo}
                   className="pl-7"
                 />
               </div>
@@ -886,7 +886,7 @@ export default function ChannelDetailPage() {
               placeholder="例: 2024年1月〜3月"
               value={formData.distributionPeriod}
               onChange={handleChange}
-              disabled={isSaving || !!isDemo}
+              disabled={!!isDemo}
             />
             <p className="text-xs text-gray-500">
               配布した期間を記録できます
@@ -905,7 +905,7 @@ export default function ChannelDetailPage() {
                 type="datetime-local"
                 value={formData.expiresAt}
                 onChange={handleChange}
-                disabled={isSaving || !!isDemo}
+                disabled={!!isDemo}
                 className="flex-1"
               />
               {formData.expiresAt && !isDemo && (
@@ -945,7 +945,7 @@ export default function ChannelDetailPage() {
               placeholder="メモや備考を自由に記入できます"
               value={formData.description}
               onChange={handleChange}
-              disabled={isSaving || !!isDemo}
+              disabled={!!isDemo}
             />
           </div>
 
@@ -1080,7 +1080,7 @@ export default function ChannelDetailPage() {
                 name="isActive"
                 checked={formData.isActive}
                 onChange={handleChange}
-                disabled={isSaving || !!isDemo}
+                disabled={!!isDemo}
                 className="h-4 w-4 rounded border-gray-300"
               />
               <Label htmlFor="isActive" className="cursor-pointer">
