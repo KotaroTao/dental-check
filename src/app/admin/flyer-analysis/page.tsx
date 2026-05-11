@@ -486,8 +486,8 @@ function QrDetailRow({
         </div>
       </div>
 
-      {/* 2段目: 生カウント4タイル（配布枚数 / QRスキャン / 診断完了 / CTAクリック）
-          ─ 診断完了とCTAクリックはリンク型では「-」を表示する */}
+      {/* 2段目: QR系4タイル（配布枚数 / QRスキャン / QR読込率 / QR読込単価）
+          ─ 配布枚数または予算が未入力なら「データ未入力」を赤字で表示 */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
         <DetailMetric
           label="配布枚数"
@@ -503,20 +503,6 @@ function QrDetailRow({
           value={ch.scans.toLocaleString()}
           warn={ch.qrScans === 0 && ch.diagnosisStarts > 0}
         />
-        <DetailMetric
-          label="診断完了"
-          value={ch.channelType === "link" ? "-" : ch.completions.toLocaleString()}
-        />
-        <DetailMetric
-          label="CTAクリック"
-          value={ch.channelType === "link" ? "-" : ch.ctaClicks.toLocaleString()}
-        />
-      </div>
-
-      {/* 3段目: 指標4タイル（QR読込率 / QR読込単価 / CTA単価 / CTAクリック率）
-          ─ 必要な元データ（配布枚数 or 予算）が未入力なら「データ未入力」を赤字表示
-          ─ CTA系の指標はリンク型では「-」 */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
         {/* QR読込率 = QRスキャン ÷ 配布枚数 */}
         <DetailMetric
           label="QR読込率"
@@ -543,6 +529,33 @@ function QrDetailRow({
           sub="予算÷QRスキャン"
           missing={ch.budget === null}
         />
+      </div>
+
+      {/* 3段目: CTA系4タイル（診断完了 / CTAクリック / CTAクリック率 / CTA単価）
+          ─ リンク型では全タイルが「-」（CTAは診断ファネル前提のため）
+          ─ 診断型でも予算が未入力なら CTA単価 は「データ未入力」赤字 */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+        <DetailMetric
+          label="診断完了"
+          value={ch.channelType === "link" ? "-" : ch.completions.toLocaleString()}
+        />
+        <DetailMetric
+          label="CTAクリック"
+          value={ch.channelType === "link" ? "-" : ch.ctaClicks.toLocaleString()}
+        />
+        {/* CTAクリック率 = 診断完了 ÷ CTAクリック（リンク型は対象外） */}
+        <DetailMetric
+          label="CTAクリック率"
+          value={
+            ch.channelType === "link"
+              ? "-"
+              : ch.ctaClicks > 0
+              ? `${(Math.round((ch.completions / ch.ctaClicks) * 1000) / 10).toFixed(1)}%`
+              : "—"
+          }
+          color="text-amber-600"
+          sub={ch.channelType === "link" ? "対象外" : "診断完了÷CTAクリック"}
+        />
         {/* CTA単価 = 予算 ÷ CTAクリック（リンク型は対象外） */}
         <DetailMetric
           label="CTA単価"
@@ -558,19 +571,6 @@ function QrDetailRow({
           color="text-gray-700"
           sub={ch.channelType === "link" ? "対象外" : "予算÷CTAクリック"}
           missing={ch.channelType !== "link" && ch.budget === null}
-        />
-        {/* CTAクリック率 = 診断完了 ÷ CTAクリック（リンク型は対象外） */}
-        <DetailMetric
-          label="CTAクリック率"
-          value={
-            ch.channelType === "link"
-              ? "-"
-              : ch.ctaClicks > 0
-              ? `${(Math.round((ch.completions / ch.ctaClicks) * 1000) / 10).toFixed(1)}%`
-              : "—"
-          }
-          color="text-amber-600"
-          sub={ch.channelType === "link" ? "対象外" : "診断完了÷CTAクリック"}
         />
       </div>
     </div>
@@ -653,9 +653,9 @@ function DetailMetric({
 // 両者を「同じ並びのタイル」で見比べられるようにし、リンク型では
 // 該当しない指標（診断完了・CTA関連）は「-」として明示する。
 //
-// 表示構成:
-//   上段4タイル: 配布枚数 / QRスキャン / 診断完了 / CTAクリック（生カウント）
-//   下段4タイル: QR読込率 / QR読込単価 / CTA単価 / CTAクリック率（指標）
+// 表示構成（ファネルのQR段階とCTA段階でグルーピング）:
+//   上段4タイル: 配布枚数 / QRスキャン / QR読込率 / QR読込単価
+//   下段4タイル: 診断完了 / CTAクリック / CTAクリック率 / CTA単価
 function QrSummaryCard({
   variant,
   channelCount,
@@ -721,8 +721,8 @@ function QrSummaryCard({
           </div>
         )}
 
-        {/* 上段: 生カウント4タイル（配布枚数 / QRスキャン / 診断完了 / CTAクリック）
-            ─ 診断完了とCTAクリックはリンク型では「-」を表示 */}
+        {/* 上段: QR系4タイル（配布枚数 / QRスキャン / QR読込率 / QR読込単価）
+            ─ 元データ（配布枚数 or 予算）未入力なら「データ未入力」を赤字表示 */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center mb-3">
           <SummaryTile
             label="配布枚数"
@@ -734,21 +734,6 @@ function QrSummaryCard({
             value={scans.toLocaleString()}
             color="text-blue-600"
           />
-          <SummaryTile
-            label="診断完了"
-            value={isLink ? "-" : completions.toLocaleString()}
-            color="text-emerald-600"
-          />
-          <SummaryTile
-            label="CTAクリック"
-            value={isLink ? "-" : ctaClicks.toLocaleString()}
-            color="text-purple-600"
-          />
-        </div>
-
-        {/* 下段: 指標4タイル（QR読込率 / QR読込単価 / CTA単価 / CTAクリック率）
-            ─ 元データ未入力なら「データ未入力」を赤字表示 */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
           <SummaryTile
             label="QR読込率"
             value={qrReadRate !== null ? `${qrReadRate.toFixed(2)}%` : ""}
@@ -769,6 +754,33 @@ function QrSummaryCard({
             color="text-gray-700"
             missing={qrCostMissing}
           />
+        </div>
+
+        {/* 下段: CTA系4タイル（診断完了 / CTAクリック / CTAクリック率 / CTA単価）
+            ─ リンク型は全タイル「-」、診断型でも予算未入力なら CTA単価 は「データ未入力」赤字 */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+          <SummaryTile
+            label="診断完了"
+            value={isLink ? "-" : completions.toLocaleString()}
+            color="text-emerald-600"
+          />
+          <SummaryTile
+            label="CTAクリック"
+            value={isLink ? "-" : ctaClicks.toLocaleString()}
+            color="text-purple-600"
+          />
+          <SummaryTile
+            label="CTAクリック率"
+            value={
+              isLink
+                ? "-"
+                : ctaClickRate !== null
+                ? `${ctaClickRate.toFixed(1)}%`
+                : "—"
+            }
+            sub={isLink ? "対象外" : "診断完了÷CTAクリック"}
+            color="text-amber-600"
+          />
           <SummaryTile
             label="CTA単価"
             value={
@@ -783,18 +795,6 @@ function QrSummaryCard({
             sub={isLink ? "対象外" : "予算÷CTAクリック"}
             color="text-gray-700"
             missing={ctaCostMissing}
-          />
-          <SummaryTile
-            label="CTAクリック率"
-            value={
-              isLink
-                ? "-"
-                : ctaClickRate !== null
-                ? `${ctaClickRate.toFixed(1)}%`
-                : "—"
-            }
-            sub={isLink ? "対象外" : "診断完了÷CTAクリック"}
-            color="text-amber-600"
           />
         </div>
 
