@@ -294,7 +294,7 @@ export default function FlyerAnalysisPage() {
                     tickFormatter={(v) => `¥${Number(v).toLocaleString()}`}
                   />
                   <Tooltip
-                    formatter={(value: number, name: string) =>
+                    formatter={(value, name) =>
                       name === "QRスキャン単価"
                         ? `¥${Number(value).toLocaleString()}`
                         : `${value}%`
