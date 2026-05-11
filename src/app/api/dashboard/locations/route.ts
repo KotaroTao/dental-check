@@ -281,19 +281,24 @@ export async function GET(request: NextRequest) {
         loc.count > max.count ? loc : max
       , locations[0]);
 
-      if (topLocation.region && topLocation.city) {
+      // region が空でも city があり GPS が取れていれば hotspot として扱う。
+      // GPS が無い場合は都道府県中心にフォールバックするので region が必須。
+      const hasGPS = topLocation.latitude !== null && topLocation.longitude !== null;
+      const hasLocation = topLocation.region || topLocation.city;
+
+      if (hasLocation) {
         // GPS座標があればそれを使用
-        if (topLocation.latitude !== null && topLocation.longitude !== null) {
+        if (hasGPS) {
           hotspot = {
-            latitude: topLocation.latitude,
-            longitude: topLocation.longitude,
-            region: topLocation.region,
-            city: topLocation.city,
+            latitude: topLocation.latitude!,
+            longitude: topLocation.longitude!,
+            region: topLocation.region || "",
+            city: topLocation.city || "",
             town: topLocation.town,
             count: topLocation.count,
           };
-        } else {
-          // GPS座標がない場合は都道府県中心座標を使用
+        } else if (topLocation.region) {
+          // GPS座標がない場合は都道府県中心座標を使用（region が必須）
           const { PREFECTURE_CENTERS, normalizePrefectureName } = await import("@/data/japan-prefectures");
           const prefName = normalizePrefectureName(topLocation.region);
           const prefCenter = PREFECTURE_CENTERS[prefName];
@@ -302,7 +307,7 @@ export async function GET(request: NextRequest) {
               latitude: prefCenter[0],
               longitude: prefCenter[1],
               region: topLocation.region,
-              city: topLocation.city,
+              city: topLocation.city || "",
               town: topLocation.town,
               count: topLocation.count,
             };

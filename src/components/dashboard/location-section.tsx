@@ -372,10 +372,13 @@ export function LocationSection({
   const hasMore = remainingCount > 0;
 
   // 地域クリック時のハンドラー
+  // region が空のレコード（city だけ取れている「港区」等）も
+  // GPS 座標があれば地図フォーカスできるよう、region 必須は撤廃する。
   const handleLocationClick = (loc: { region: string | null; city: string | null; town: string | null }) => {
-    if (!loc.region || !loc.city) return;
+    // 都道府県も市区町村も無い場合は位置不明なので何もしない
+    if (!loc.region && !loc.city) return;
 
-    // 元のlocationsからGPS座標を探す
+    // 元のlocationsからGPS座標を探す（region/town は null 同士でもマッチさせる）
     const original = locations.find(
       (l) => l.region === loc.region && l.city === loc.city && l.town === loc.town
     );
@@ -385,8 +388,11 @@ export function LocationSection({
         latitude: original.latitude,
         longitude: original.longitude,
       });
-    } else {
-      // GPS座標がない場合は都道府県中心座標を使用
+      return;
+    }
+
+    // GPS が無い場合は region から都道府県中心座標を使う（region がなければ諦める）
+    if (loc.region) {
       const prefCenter = PREFECTURE_CENTERS[normalizePrefectureName(loc.region)];
       if (prefCenter) {
         setSelectedLocation({
