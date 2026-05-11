@@ -10,8 +10,6 @@ import {
   Pencil,
   ExternalLink,
   Loader2,
-  ChevronDown,
-  ChevronRight,
   Layers,
   QrCode,
 } from "lucide-react";
@@ -107,7 +105,7 @@ export default function FlyerAnalysisPage() {
   const [sortAsc, setSortAsc] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   // 各チラシ行の「QR一覧」展開状態を保持
-  const [expandedFlyerIds, setExpandedFlyerIds] = useState<Set<string>>(new Set());
+  // 折りたたみ廃止 — 旧 expandedFlyerIds state は削除
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -208,25 +206,15 @@ export default function FlyerAnalysisPage() {
     .filter((m) => m.method !== "未設定")
     .map((m) => ({
       method: m.method,
-      QRスキャン率: m.avgQrScanRate ?? 0,
-      QRスキャン単価: m.avgQrScanCost ?? 0,
+      QRアクセス率: m.avgQrScanRate ?? 0,
+      QRアクセス単価: m.avgQrScanCost ?? 0,
     }));
 
   const sortedFlyers = sortItems(data.flyers);
   const sortedStandalone = sortItems(data.standaloneChannels);
 
-  // サマリーは「チラシ + 単独QR」を統合して集計
-  // → 同じ配布枚数を重複して足さない（Flyerの配布枚数は1度だけカウント）
-  const totalQuantity =
-    data.flyers.reduce((acc, f) => acc + (f.distributionQuantity ?? 0), 0) +
-    data.standaloneChannels.reduce((acc, ch) => acc + (ch.distributionQuantity ?? 0), 0);
-  const totalBudget =
-    data.flyers.reduce((acc, f) => acc + (f.budget ?? 0), 0) +
-    data.standaloneChannels.reduce((acc, ch) => acc + (ch.budget ?? 0), 0);
-  const totalScans =
-    data.flyers.reduce((acc, f) => acc + f.scans, 0) +
-    data.standaloneChannels.reduce((acc, ch) => acc + ch.scans, 0);
-  const totalUnitCount = data.flyers.length + data.standaloneChannels.length;
+  // 集計値は SummaryCard 撤去に伴い使用しなくなったので削除した。
+  // チラシごと・単独QRごとの値は各 Row コンポーネント内で扱う。
 
   const METHOD_OPTIONS = [
     "ポスティング",
@@ -236,15 +224,6 @@ export default function FlyerAnalysisPage() {
     "LP (広告から誘導)",
     "その他",
   ];
-
-  const toggleFlyer = (id: string) => {
-    setExpandedFlyerIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
 
   return (
     <div className="space-y-6">
@@ -304,15 +283,7 @@ export default function FlyerAnalysisPage() {
         ))}
       </div>
 
-      {/* 全体サマリー（チラシ + 単独QR を統合した数値） */}
-      <SummaryCard
-        unitCount={totalUnitCount}
-        flyerCount={data.flyers.length}
-        standaloneCount={data.standaloneChannels.length}
-        scans={totalScans}
-        quantity={totalQuantity}
-        budget={totalBudget}
-      />
+      {/* 全体サマリーは廃止（チラシ単位の数値で十分なため） */}
 
       {/* 配布方法別比較チャート */}
       {methodChartData.length > 1 && (
@@ -338,14 +309,14 @@ export default function FlyerAnalysisPage() {
                   />
                   <Tooltip
                     formatter={(value, name) =>
-                      name === "QRスキャン単価"
+                      name === "QRアクセス単価"
                         ? `¥${Number(value).toLocaleString()}`
                         : `${value}%`
                     }
                   />
                   <Legend />
-                  <Bar yAxisId="left" dataKey="QRスキャン率" fill="#3B82F6" />
-                  <Bar yAxisId="right" dataKey="QRスキャン単価" fill="#F59E0B" />
+                  <Bar yAxisId="left" dataKey="QRアクセス率" fill="#3B82F6" />
+                  <Bar yAxisId="right" dataKey="QRアクセス単価" fill="#F59E0B" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -365,9 +336,9 @@ export default function FlyerAnalysisPage() {
           }}
           className="h-9 rounded-md border border-input bg-background px-2 text-sm"
         >
-          <option value="scans:desc">QRスキャン数（多い順）</option>
-          <option value="qrScanRate:desc">QRスキャン率（高い順）</option>
-          <option value="qrScanCost:asc">QRスキャン単価（安い順）</option>
+          <option value="scans:desc">QRアクセス数（多い順）</option>
+          <option value="qrScanRate:desc">QRアクセス率（高い順）</option>
+          <option value="qrScanCost:asc">QRアクセス単価（安い順）</option>
         </select>
       </div>
 
@@ -390,8 +361,6 @@ export default function FlyerAnalysisPage() {
                 <FlyerRow
                   key={f.id}
                   flyer={f}
-                  expanded={expandedFlyerIds.has(f.id)}
-                  onToggle={() => toggleFlyer(f.id)}
                   onPreviewImage={setPreviewImage}
                   onEditFlyer={() => handleOpenFlyerEditor(f.clinicId, f.id)}
                   onEditChannel={(channelId) => handleOpenChannelEditor(f.clinicId, channelId)}
@@ -452,86 +421,17 @@ export default function FlyerAnalysisPage() {
   );
 }
 
-// 全体サマリーカード（チラシ + 単独QR を統合）
-function SummaryCard({
-  unitCount,
-  flyerCount,
-  standaloneCount,
-  scans,
-  quantity,
-  budget,
-}: {
-  unitCount: number;
-  flyerCount: number;
-  standaloneCount: number;
-  scans: number;
-  quantity: number;
-  budget: number;
-}) {
-  const qrScanRateMissing = quantity <= 0;
-  const qrScanRate = !qrScanRateMissing ? (scans / quantity) * 100 : null;
-  const qrScanCostMissing = budget <= 0;
-  const qrScanCost = !qrScanCostMissing && scans > 0 ? Math.round(budget / scans) : null;
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 flex-wrap">
-          <TrendingUp className="w-5 h-5" />
-          全体サマリー
-          <span className="ml-auto text-xs text-gray-500 font-normal">
-            {unitCount}件を集計（チラシ{flyerCount}件・単独QR{standaloneCount}件）
-          </span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 text-center">
-          <SummaryTile
-            label="配布枚数"
-            value={quantity > 0 ? `${quantity.toLocaleString()}枚` : ""}
-            missing={quantity <= 0}
-          />
-          <SummaryTile
-            label="予算"
-            value={budget > 0 ? `¥${budget.toLocaleString()}` : ""}
-            missing={budget <= 0}
-          />
-          <SummaryTile
-            label="QRスキャン"
-            value={scans.toLocaleString()}
-            color="text-blue-600"
-          />
-          <SummaryTile
-            label="QRスキャン率"
-            value={qrScanRate !== null ? `${qrScanRate.toFixed(2)}%` : ""}
-            sub="QRスキャン÷配布枚数"
-            color="text-blue-600"
-            missing={qrScanRateMissing}
-          />
-          <SummaryTile
-            label="QRスキャン単価"
-            value={
-              qrScanCost !== null
-                ? `¥${qrScanCost.toLocaleString()}`
-                : qrScanCostMissing
-                ? ""
-                : "—"
-            }
-            sub="予算÷QRスキャン"
-            color="text-amber-600"
-            missing={qrScanCostMissing}
-          />
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
+// SummaryCard は廃止された（全体サマリーは不要との要件のため）。
+// SummaryTile も他で使われていないが、念のため残し将来再利用に備える。
 
 // チラシ1件分の詳細行（展開時に配下のQR一覧を表示）
+// チラシ1件の行（折りたたみ廃止、常に紐付QR一覧を表示）
+// レイアウトは医院ダッシュボード(/dashboard) のチラシカード形式に揃える：
+//   1段目: 画像 + クリニック名/チラシ名 + 配布方法/配布開始日 + チラシ編集ボタン
+//   2段目: 5タイル（配布枚数 / 予算 / QRアクセス / QRアクセス率 / QRアクセス単価）
+//   3段目: 紐付QR一覧テーブル（QR名 / アクセス / アクセス率 / 編集）
 function FlyerRow({
   flyer,
-  expanded,
-  onToggle,
   onPreviewImage,
   onEditFlyer,
   onEditChannel,
@@ -539,8 +439,6 @@ function FlyerRow({
   openingChannelId,
 }: {
   flyer: FlyerAnalysis;
-  expanded: boolean;
-  onToggle: () => void;
   onPreviewImage: (url: string) => void;
   onEditFlyer: () => void;
   onEditChannel: (channelId: string) => void;
@@ -549,20 +447,8 @@ function FlyerRow({
 }) {
   return (
     <div className="p-4 hover:bg-gray-50 space-y-3">
-      {/* 1段目: メタ情報 + 展開ボタン */}
+      {/* 1段目: メタ情報 */}
       <div className="flex items-start gap-3">
-        <button
-          onClick={onToggle}
-          className="mt-1 shrink-0 p-1 rounded hover:bg-gray-200"
-          aria-label={expanded ? "QR一覧を閉じる" : "QR一覧を開く"}
-        >
-          {expanded ? (
-            <ChevronDown className="w-4 h-4 text-gray-500" />
-          ) : (
-            <ChevronRight className="w-4 h-4 text-gray-500" />
-          )}
-        </button>
-
         <div className="flex gap-1 shrink-0">
           <Thumbnail url={flyer.imageUrl} alt="表" onClick={onPreviewImage} />
           <Thumbnail url={flyer.imageUrl2} alt="裏" onClick={onPreviewImage} />
@@ -625,52 +511,88 @@ function FlyerRow({
         qrScanCost={flyer.qrScanCost}
       />
 
-      {/* 展開時: 配下のQR一覧 */}
-      {expanded && (
-        <div className="ml-7 bg-gray-50 rounded p-3 space-y-2">
-          {flyer.channels.length === 0 ? (
-            <div className="text-xs text-gray-500">このチラシに紐付いているQRはありません</div>
-          ) : (
-            <div className="divide-y divide-gray-200">
-              {flyer.channels.map((ch) => (
-                <div
-                  key={ch.id}
-                  className="py-2 flex items-center justify-between gap-3"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate">{ch.name}</div>
-                    <div className="text-xs text-gray-500 mt-0.5">
-                      {ch.channelType === "diagnosis" ? "診断付き" : "リンク型"}
-                      <span className="ml-2">
-                        QRスキャン:{" "}
-                        <span className="font-medium text-gray-800">
-                          {ch.scans.toLocaleString()}
-                        </span>
-                      </span>
-                    </div>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={openingChannelId === ch.id}
-                    onClick={() => onEditChannel(ch.id)}
-                    className="h-7 text-xs"
-                  >
-                    {openingChannelId === ch.id ? (
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                    ) : (
-                      <>
-                        <Pencil className="w-3 h-3 mr-1" />
-                        QR編集
-                      </>
-                    )}
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
+      {/* 3段目: 紐付QR一覧（常に表示・ダッシュボードと同じテーブル形式） */}
+      <div className="border-t pt-3 space-y-2">
+        <div className="text-xs text-gray-500">
+          紐付けQR: <span className="font-medium text-gray-800">{flyer.channelCount}件</span>
         </div>
-      )}
+        {flyer.channels.length > 0 ? (
+          <LinkedChannelsTable
+            channels={flyer.channels}
+            quantity={flyer.distributionQuantity}
+            onEditChannel={onEditChannel}
+            openingChannelId={openingChannelId}
+          />
+        ) : (
+          <div className="text-xs text-gray-500">このチラシに紐付いているQRはありません</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// チラシ配下のQR一覧テーブル（管理者画面用）
+// 列: QR名（管理用） / QRアクセス / QRアクセス率 / 編集
+// 各QRの QRアクセス率 = ch.scans ÷ flyer.distributionQuantity
+// （単価はチラシレベルの合計値で表示するためここでは出さない）
+function LinkedChannelsTable({
+  channels,
+  quantity,
+  onEditChannel,
+  openingChannelId,
+}: {
+  channels: FlyerAnalysis["channels"];
+  quantity: number | null;
+  onEditChannel: (channelId: string) => void;
+  openingChannelId: string | null;
+}) {
+  return (
+    <div className="rounded border border-gray-200 overflow-hidden">
+      {/* ヘッダ行 */}
+      <div className="grid grid-cols-[1fr_auto_auto_auto] gap-2 px-2 py-1.5 bg-gray-50 text-[10px] text-gray-500">
+        <div>QR名（管理用）</div>
+        <div className="w-16 text-right">アクセス</div>
+        <div className="w-16 text-right">アクセス率</div>
+        <div className="w-7" aria-hidden="true" />
+      </div>
+      <div className="divide-y divide-gray-100">
+        {channels.map((ch) => {
+          const rate =
+            quantity !== null && quantity > 0
+              ? (ch.scans / quantity) * 100
+              : null;
+          return (
+            <div
+              key={ch.id}
+              className="grid grid-cols-[1fr_auto_auto_auto] gap-2 px-2 py-1.5 text-xs items-center"
+            >
+              <div className="min-w-0 truncate" title={ch.name}>
+                {ch.name}
+              </div>
+              <div className="w-16 text-right tabular-nums">
+                {ch.scans.toLocaleString()}
+              </div>
+              <div className="w-16 text-right tabular-nums text-blue-600">
+                {rate !== null ? `${rate.toFixed(2)}%` : "—"}
+              </div>
+              <button
+                type="button"
+                onClick={() => onEditChannel(ch.id)}
+                disabled={openingChannelId === ch.id}
+                title="このQRを編集（医院になりすまし）"
+                aria-label="このQRを編集"
+                className="w-7 h-7 inline-flex items-center justify-center rounded text-gray-500 hover:bg-gray-100 hover:text-blue-600 transition-colors disabled:opacity-50"
+              >
+                {openingChannelId === ch.id ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Pencil className="w-3.5 h-3.5" />
+                )}
+              </button>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -753,7 +675,7 @@ function StandaloneChannelRow({
   );
 }
 
-// 5タイル（配布枚数/予算/QRスキャン/QRスキャン率/QRスキャン単価）
+// 5タイル（配布枚数/予算/QRアクセス/QRアクセス率/QRアクセス単価）
 // チラシ行と単独QR行で共通利用
 function MetricTiles({
   quantity,
@@ -781,19 +703,19 @@ function MetricTiles({
         missing={budget === null}
       />
       <DetailMetric
-        label="QRスキャン"
+        label="QRアクセス"
         value={scans.toLocaleString()}
         color="text-blue-600"
       />
       <DetailMetric
-        label="QRスキャン率"
+        label="QRアクセス率"
         value={qrScanRate !== null ? `${qrScanRate.toFixed(2)}%` : ""}
         color="text-blue-600"
-        sub="QRスキャン÷配布枚数"
+        sub="QRアクセス÷配布枚数"
         missing={qrScanRate === null}
       />
       <DetailMetric
-        label="QRスキャン単価"
+        label="QRアクセス単価"
         value={
           qrScanCost !== null
             ? `¥${qrScanCost.toLocaleString()}`
@@ -802,7 +724,7 @@ function MetricTiles({
             : "—"
         }
         color="text-amber-600"
-        sub="予算÷QRスキャン"
+        sub="予算÷QRアクセス"
         missing={budget === null}
       />
     </div>
@@ -869,31 +791,7 @@ function DetailMetric({
   );
 }
 
-// サマリーカード用タイル
-function SummaryTile({
-  label,
-  value,
-  sub,
-  color,
-  missing,
-}: {
-  label: string;
-  value: string;
-  sub?: string;
-  color?: string;
-  missing?: boolean;
-}) {
-  const displayValue = missing ? "データ未入力" : value;
-  const valueColor = missing ? "text-red-600" : color || "text-gray-800";
-  const valueSize = missing ? "text-sm" : "text-xl";
-  return (
-    <div className="bg-gray-50 rounded p-3">
-      <div className="text-xs text-gray-500">{label}</div>
-      <div className={`${valueSize} font-bold tabular-nums ${valueColor}`}>{displayValue}</div>
-      {sub && <div className="text-[10px] text-gray-400">{sub}</div>}
-    </div>
-  );
-}
+// SummaryTile / SummaryCard は廃止された（全体サマリー撤去）
 
 // 配布開始日を「2026年5月11日」形式に整形。
 // 新仕様（type=date 入力）では "YYYY-MM-DD" が保存される。
