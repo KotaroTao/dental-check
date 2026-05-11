@@ -19,6 +19,7 @@ import {
   Check,
   AlertCircle,
   Plus,
+  X,
 } from "lucide-react";
 
 const METHOD_OPTIONS = [
@@ -372,14 +373,33 @@ export default function EditFlyerPage() {
               {/* チラシ一覧の並び替え基準に使うため、自由記入ではなく日付ピッカーで入力。
                   DB上のカラム名は distributionPeriod のまま（YYYY-MM-DD 形式の文字列を保存）。
                   既存の自由記入データ（例: "2024年1月〜3月"）は日付ピッカーでは空欄表示になるが、
-                  保存しなければ DB の値は維持される。 */}
-              <Input
-                id="distributionPeriod"
-                name="distributionPeriod"
-                type="date"
-                value={formData.distributionPeriod}
-                onChange={handleChange}
-              />
+                  保存しなければ DB の値は維持される。
+                  iOS Safari 等で date input から日付を消すのが困難なので、
+                  隣に明示的なクリアボタンを置いて空にできるようにする。 */}
+              <div className="flex gap-2">
+                <Input
+                  id="distributionPeriod"
+                  name="distributionPeriod"
+                  type="date"
+                  value={formData.distributionPeriod}
+                  onChange={handleChange}
+                  className="flex-1"
+                />
+                {formData.distributionPeriod && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setFormData((prev) => ({ ...prev, distributionPeriod: "" }))
+                    }
+                    className="shrink-0"
+                    title="配布開始日をクリア"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
 

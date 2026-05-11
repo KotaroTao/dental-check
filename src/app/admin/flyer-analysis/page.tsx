@@ -587,7 +587,7 @@ function FlyerRow({
               </span>
             )}
             <span className="text-gray-500 whitespace-nowrap">
-              配布期間: <span className="text-gray-800 font-medium">{flyer.distributionPeriod || "—"}</span>
+              配布開始日: <span className="text-gray-800 font-medium">{formatStartDate(flyer.distributionPeriod)}</span>
             </span>
           </div>
         </div>
@@ -714,7 +714,7 @@ function StandaloneChannelRow({
               </span>
             )}
             <span className="text-gray-500 whitespace-nowrap">
-              配布期間: <span className="text-gray-800 font-medium">{ch.distributionPeriod || "—"}</span>
+              配布開始日: <span className="text-gray-800 font-medium">{formatStartDate(ch.distributionPeriod)}</span>
             </span>
           </div>
         </div>
@@ -893,5 +893,20 @@ function SummaryTile({
       {sub && <div className="text-[10px] text-gray-400">{sub}</div>}
     </div>
   );
+}
+
+// 配布開始日を「2026年5月11日」形式に整形。
+// 新仕様（type=date 入力）では "YYYY-MM-DD" が保存される。
+// 旧データ（自由記入の "2024年1月〜3月" 等）は Date パースできないため、その場合は
+// 元の文字列をそのまま表示する。未入力は "—"。
+function formatStartDate(value: string | null): string {
+  if (!value) return "—";
+  if (/^\d{4}-\d{2}-\d{2}/.test(value)) {
+    const d = new Date(value);
+    if (!isNaN(d.getTime())) {
+      return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
+    }
+  }
+  return value;
 }
 
