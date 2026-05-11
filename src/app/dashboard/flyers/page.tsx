@@ -11,6 +11,14 @@ import {
   Loader2,
 } from "lucide-react";
 
+// チラシに紐付くQR1件の集計情報（リスト画面で1行で表示する用）
+interface LinkedChannel {
+  id: string;
+  name: string;
+  channelType: "diagnosis" | "link";
+  scans: number;
+}
+
 interface Flyer {
   id: string;
   name: string;
@@ -21,6 +29,7 @@ interface Flyer {
   imageUrl: string | null;
   imageUrl2: string | null;
   channelCount: number;
+  channels: LinkedChannel[];
   createdAt: string;
   updatedAt: string;
 }
@@ -88,52 +97,133 @@ export default function FlyersListPage() {
           <CardContent className="py-12 text-center text-gray-500 space-y-3">
             <p>まだチラシが登録されていません。</p>
             <p className="text-xs text-gray-400">
-              ※チラシを使わずに各QRに直接「配布枚数」「予算」を入力することもできます。
-              <br />
-              チラシ機能は、1枚のチラシに複数のQRを掲載するときに便利です。
+              「新規チラシ作成」からチラシを作り、そのチラシに紐づけてQRを追加してください。
             </p>
           </CardContent>
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {flyers.map((f) => (
-            <Card key={f.id} className="hover:shadow-md transition-shadow">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center justify-between gap-2">
-                  <span className="truncate">{f.name}</span>
-                  <Link href={`/dashboard/flyers/${f.id}`}>
-                    <Button size="sm" variant="outline" className="shrink-0 h-7 text-xs">
-                      <Pencil className="w-3 h-3 mr-1" />
-                      編集
-                    </Button>
-                  </Link>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0 space-y-3">
-                <div className="flex gap-2">
-                  <FlyerThumb url={f.imageUrl} alt="表" />
-                  <FlyerThumb url={f.imageUrl2} alt="裏" />
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <Stat
-                    label="配布枚数"
-                    value={f.distributionQuantity !== null ? `${f.distributionQuantity.toLocaleString()}枚` : "—"}
-                  />
-                  <Stat
-                    label="予算"
-                    value={f.budget !== null ? `¥${f.budget.toLocaleString()}` : "—"}
-                  />
-                  <Stat label="配布方法" value={f.distributionMethod || "—"} />
-                  <Stat label="配布期間" value={f.distributionPeriod || "—"} />
-                </div>
-                <div className="text-xs text-gray-500">
-                  紐付けQR: <span className="font-medium text-gray-800">{f.channelCount}件</span>
-                </div>
-              </CardContent>
-            </Card>
+            <FlyerCard key={f.id} flyer={f} />
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+// 1枚のチラシカード（チラシ情報 + 紐付くQR詳細表）
+function FlyerCard({ flyer: f }: { flyer: Flyer }) {
+  return (
+    <Card className="hover:shadow-md transition-shadow">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base flex items-center justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="truncate">{f.name}</div>
+            {/* チラシ作成日（DBの created_at をフォーマット表示。編集不可） */}
+            <div className="text-[11px] font-normal text-gray-500 mt-0.5">
+              作成日: {formatJaDate(f.createdAt)}
+            </div>
+          </div>
+          <Link href={`/dashboard/flyers/${f.id}`}>
+            <Button size="sm" variant="outline" className="shrink-0 h-7 text-xs">
+              <Pencil className="w-3 h-3 mr-1" />
+              編集
+            </Button>
+          </Link>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="pt-0 space-y-3">
+        <div className="flex gap-2">
+          <FlyerThumb url={f.imageUrl} alt="表" />
+          <FlyerThumb url={f.imageUrl2} alt="裏" />
+        </div>
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          <Stat
+            label="配布枚数"
+            value={f.distributionQuantity !== null ? `${f.distributionQuantity.toLocaleString()}枚` : "—"}
+          />
+          <Stat
+            label="予算"
+            value={f.budget !== null ? `¥${f.budget.toLocaleString()}` : "—"}
+          />
+          <Stat label="配布方法" value={f.distributionMethod || "—"} />
+          <Stat label="配布期間" value={f.distributionPeriod || "—"} />
+        </div>
+
+        {/* 紐付くQR一覧（1QR1行・スマホでも崩れないようにヘッダ + tabular-nums で整列） */}
+        <div className="border-t pt-3">
+          <div className="text-xs text-gray-500 mb-2">
+            紐付けQR: <span className="font-medium text-gray-800">{f.channelCount}件</span>
+          </div>
+          {f.channels.length > 0 && (
+            <LinkedChannelsTable
+              channels={f.channels}
+              quantity={f.distributionQuantity}
+              budget={f.budget}
+            />
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// 紐付くQRの一覧表（1QR1行・PC・スマホ共通レイアウト）
+// 列構成: QR名 / QRスキャン / QRスキャン率 / QRスキャン単価
+// ─ 率 = ch.scans ÷ flyer.distributionQuantity
+// ─ 単価 = flyer.budget ÷ ch.scans
+// 配布枚数 / 予算 が未入力なら "—" を表示
+function LinkedChannelsTable({
+  channels,
+  quantity,
+  budget,
+}: {
+  channels: LinkedChannel[];
+  quantity: number | null;
+  budget: number | null;
+}) {
+  return (
+    <div className="rounded border border-gray-200 overflow-hidden">
+      {/* ヘッダ行 */}
+      <div className="grid grid-cols-[1fr_auto_auto_auto] gap-2 px-2 py-1.5 bg-gray-50 text-[10px] text-gray-500">
+        <div>QR名（管理用）</div>
+        <div className="w-12 text-right">スキャン</div>
+        <div className="w-14 text-right">読込率</div>
+        <div className="w-16 text-right">スキャン単価</div>
+      </div>
+      <div className="divide-y divide-gray-100">
+        {channels.map((ch) => {
+          const rate =
+            quantity !== null && quantity > 0
+              ? (ch.scans / quantity) * 100
+              : null;
+          // 単価: 予算 ÷ スキャン数（スキャン数が0なら計算不可）
+          const cost =
+            budget !== null && budget > 0 && ch.scans > 0
+              ? Math.round(budget / ch.scans)
+              : null;
+          return (
+            <div
+              key={ch.id}
+              className="grid grid-cols-[1fr_auto_auto_auto] gap-2 px-2 py-1.5 text-xs items-center"
+            >
+              <div className="truncate" title={ch.name}>
+                {ch.name}
+              </div>
+              <div className="w-12 text-right tabular-nums">
+                {ch.scans.toLocaleString()}
+              </div>
+              <div className="w-14 text-right tabular-nums text-blue-600">
+                {rate !== null ? `${rate.toFixed(2)}%` : "—"}
+              </div>
+              <div className="w-16 text-right tabular-nums text-amber-600">
+                {cost !== null ? `¥${cost.toLocaleString()}` : "—"}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -163,4 +253,16 @@ function Stat({ label, value }: { label: string; value: string }) {
       <div className="text-xs font-medium truncate">{value}</div>
     </div>
   );
+}
+
+// 日付を「2026年1月15日」形式に整形するヘルパー
+// API からは ISO 文字列（"2026-01-15T01:23:45.000Z"）で届くので、Date に変換してから出力
+function formatJaDate(isoString: string): string {
+  try {
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return "—";
+    return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
+  } catch {
+    return "—";
+  }
 }
