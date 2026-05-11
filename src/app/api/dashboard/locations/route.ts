@@ -40,13 +40,16 @@ export async function GET(request: NextRequest) {
     const endDate = searchParams.get("endDate");
 
     // 期間の計算
-    let dateFrom: Date;
-    const dateTo = new Date();
+    // period="all" の場合は日付フィルタを適用しない（全期間を対象）
+    let dateFrom: Date | null = null;
+    const dateTo: Date | null = period === "all" ? null : new Date();
 
-    if (period === "custom" && startDate && endDate) {
+    if (period === "all") {
+      dateFrom = null;
+    } else if (period === "custom" && startDate && endDate) {
       dateFrom = new Date(startDate);
-      dateTo.setTime(new Date(endDate).getTime());
-      dateTo.setHours(23, 59, 59, 999);
+      (dateTo as Date).setTime(new Date(endDate).getTime());
+      (dateTo as Date).setHours(23, 59, 59, 999);
     } else {
       switch (period) {
         case "today":
@@ -66,6 +69,9 @@ export async function GET(request: NextRequest) {
           break;
       }
     }
+    // 期間フィルタ用ヘルパー: period="all" 時は空オブジェクトで where に展開
+    const dateRangeFilter =
+      dateFrom && dateTo ? { createdAt: { gte: dateFrom, lte: dateTo } } : {};
 
     // チャンネルフィルター条件を作成
     const channelFilter = channelIds
@@ -82,10 +88,7 @@ export async function GET(request: NextRequest) {
         completedAt: { not: null },
         isDemo: false,
         isDeleted: false,
-        createdAt: {
-          gte: dateFrom,
-          lte: dateTo,
-        },
+        ...dateRangeFilter,
         region: { not: null },
         city: { not: null },
         ...channelFilter,
@@ -124,10 +127,7 @@ export async function GET(request: NextRequest) {
         clinicId: session.clinicId,
         eventType: "qr_scan",
         isDeleted: false,
-        createdAt: {
-          gte: dateFrom,
-          lte: dateTo,
-        },
+        ...dateRangeFilter,
         region: { not: null },
         city: { not: null },
         ...channelFilter,
@@ -166,10 +166,7 @@ export async function GET(request: NextRequest) {
         completedAt: { not: null },
         isDemo: false,
         isDeleted: false,
-        createdAt: {
-          gte: dateFrom,
-          lte: dateTo,
-        },
+        ...dateRangeFilter,
         region: { not: null },
         ...channelFilter,
       },
@@ -190,10 +187,7 @@ export async function GET(request: NextRequest) {
         clinicId: session.clinicId,
         eventType: "qr_scan",
         isDeleted: false,
-        createdAt: {
-          gte: dateFrom,
-          lte: dateTo,
-        },
+        ...dateRangeFilter,
         region: { not: null },
         ...channelFilter,
       },
@@ -226,10 +220,7 @@ export async function GET(request: NextRequest) {
           completedAt: { not: null },
           isDemo: false,
           isDeleted: false,
-          createdAt: {
-            gte: dateFrom,
-            lte: dateTo,
-          },
+          ...dateRangeFilter,
           ...channelFilter,
         },
       }),
@@ -238,10 +229,7 @@ export async function GET(request: NextRequest) {
           clinicId: session.clinicId,
           eventType: "qr_scan",
           isDeleted: false,
-          createdAt: {
-            gte: dateFrom,
-            lte: dateTo,
-          },
+          ...dateRangeFilter,
           ...channelFilter,
         },
       }),
@@ -328,8 +316,9 @@ export async function GET(request: NextRequest) {
       clinicCenter,
       hotspot,
       period: {
-        from: dateFrom.toISOString(),
-        to: dateTo.toISOString(),
+        // period="all" 時は dateFrom/dateTo が null（全期間）
+        from: dateFrom ? dateFrom.toISOString() : null,
+        to: dateTo ? dateTo.toISOString() : null,
       },
     });
   } catch (error) {

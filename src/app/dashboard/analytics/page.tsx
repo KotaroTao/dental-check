@@ -34,13 +34,18 @@ interface ChannelLite {
   channelType: "diagnosis" | "link";
 }
 
+// /api/dashboard/history のレスポンス型に合わせる
+// 注: createdAt（completedAt ではない）、userAge / userGender が正しいフィールド名
 interface HistoryItem {
   id: string;
-  completedAt: string;
+  type: "diagnosis" | "link" | "qr_scan";
+  createdAt: string;
   channelName: string | null;
-  resultName: string | null;
-  age: number | null;
-  gender: string | null;
+  diagnosisType: string | null;
+  resultCategory: string | null;
+  userAge: number | null;
+  userGender: string | null; // 既にAPI側で「男性」「女性」「-」等の表示名に変換済み
+  area: string | null;
   ctaClickCount: number;
 }
 
@@ -266,31 +271,31 @@ export default function AnalyticsPage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 whitespace-nowrap">
                     日時
                   </th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 whitespace-nowrap">
                     QRコード
                   </th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 whitespace-nowrap">
                     年齢
                   </th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 whitespace-nowrap">
                     性別
                   </th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 whitespace-nowrap">
                     結果
                   </th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">
-                    CTA
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 whitespace-nowrap">
+                    エリア
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {filteredHistory.slice(0, 50).map((h) => (
                   <tr key={h.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-2.5 text-xs text-gray-700">
-                      {new Date(h.completedAt).toLocaleString("ja-JP", {
+                    <td className="px-4 py-2.5 text-xs text-gray-700 whitespace-nowrap">
+                      {new Date(h.createdAt).toLocaleString("ja-JP", {
                         year: "numeric",
                         month: "2-digit",
                         day: "2-digit",
@@ -301,17 +306,17 @@ export default function AnalyticsPage() {
                     <td className="px-4 py-2.5 text-xs text-gray-700">
                       {h.channelName || "—"}
                     </td>
-                    <td className="px-4 py-2.5 text-xs text-gray-700">
-                      {h.age !== null ? `${h.age}歳` : "—"}
+                    <td className="px-4 py-2.5 text-xs text-gray-700 whitespace-nowrap">
+                      {h.userAge !== null && h.userAge !== undefined ? `${h.userAge}歳` : "—"}
+                    </td>
+                    <td className="px-4 py-2.5 text-xs text-gray-700 whitespace-nowrap">
+                      {h.userGender || "—"}
                     </td>
                     <td className="px-4 py-2.5 text-xs text-gray-700">
-                      {h.gender || "—"}
+                      {h.resultCategory || "—"}
                     </td>
                     <td className="px-4 py-2.5 text-xs text-gray-700">
-                      {h.resultName || "—"}
-                    </td>
-                    <td className="px-4 py-2.5 text-xs text-gray-700 tabular-nums">
-                      {h.ctaClickCount}
+                      {h.area && h.area !== "-" ? h.area : "—"}
                     </td>
                   </tr>
                 ))}
