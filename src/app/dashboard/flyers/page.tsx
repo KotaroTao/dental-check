@@ -152,8 +152,8 @@ function FlyerCard({ flyer: f }: { flyer: Flyer }) {
         </div>
 
         {/* 紐付くQR一覧（1QR1行・スマホでも崩れないようにヘッダ + tabular-nums で整列） */}
-        <div className="border-t pt-3">
-          <div className="text-xs text-gray-500 mb-2">
+        <div className="border-t pt-3 space-y-2">
+          <div className="text-xs text-gray-500">
             紐付けQR: <span className="font-medium text-gray-800">{f.channelCount}件</span>
           </div>
           {f.channels.length > 0 && (
@@ -163,6 +163,15 @@ function FlyerCard({ flyer: f }: { flyer: Flyer }) {
               budget={f.budget}
             />
           )}
+          {/* このチラシ配下にQRを追加するボタン
+              チラシ起点でQRを増やすフローを一覧ページ上でも完結できるようにする */}
+          <Link
+            href={`/dashboard/flyers/${f.id}/channels/new`}
+            className="inline-flex items-center justify-center gap-1 w-full h-8 rounded border border-dashed border-blue-300 text-blue-600 text-xs font-medium hover:bg-blue-50 transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            このチラシにQRを追加
+          </Link>
         </div>
       </CardContent>
     </Card>
@@ -185,12 +194,13 @@ function LinkedChannelsTable({
 }) {
   return (
     <div className="rounded border border-gray-200 overflow-hidden">
-      {/* ヘッダ行 */}
-      <div className="grid grid-cols-[1fr_auto_auto_auto] gap-2 px-2 py-1.5 bg-gray-50 text-[10px] text-gray-500">
+      {/* ヘッダ行（編集列はアイコンのみなのでラベルなしの空白） */}
+      <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-2 px-2 py-1.5 bg-gray-50 text-[10px] text-gray-500">
         <div>QR名（管理用）</div>
         <div className="w-12 text-right">スキャン</div>
         <div className="w-14 text-right">読込率</div>
         <div className="w-16 text-right">スキャン単価</div>
+        <div className="w-7" aria-hidden="true" />
       </div>
       <div className="divide-y divide-gray-100">
         {channels.map((ch) => {
@@ -206,7 +216,7 @@ function LinkedChannelsTable({
           return (
             <div
               key={ch.id}
-              className="grid grid-cols-[1fr_auto_auto_auto] gap-2 px-2 py-1.5 text-xs items-center"
+              className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-2 px-2 py-1.5 text-xs items-center"
             >
               <div className="truncate" title={ch.name}>
                 {ch.name}
@@ -220,6 +230,15 @@ function LinkedChannelsTable({
               <div className="w-16 text-right tabular-nums text-amber-600">
                 {cost !== null ? `¥${cost.toLocaleString()}` : "—"}
               </div>
+              {/* QR個別の編集ボタン（アイコンのみ・スマホでも幅を取らない） */}
+              <Link
+                href={`/dashboard/channels/${ch.id}`}
+                title="このQRを編集"
+                aria-label="このQRを編集"
+                className="w-7 h-7 inline-flex items-center justify-center rounded text-gray-500 hover:bg-gray-100 hover:text-blue-600 transition-colors"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+              </Link>
             </div>
           );
         })}
