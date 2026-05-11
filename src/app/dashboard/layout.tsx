@@ -98,11 +98,14 @@ export default function DashboardLayout({
     );
   }
 
-  // Phase 2 で QR作成のエントリポイントを「チラシ管理」一本に統合。
-  // QR は必ずチラシ配下に作成する設計のため、左ナビの「QRコード作成」は撤去。
+  // Phase 3 でダッシュボード構造を再編:
+  //   /dashboard          → チラシ一覧（旧 /dashboard/flyers の中身）
+  //   /dashboard/analytics → 効果測定（旧 /dashboard の中身を簡略化）
+  // /dashboard/flyers も後方互換のためチラシ一覧として残しているが、
+  // ナビからの主要導線は /dashboard に統一。
   const navLinks = [
-    { href: "/dashboard", label: "ダッシュボード" },
-    { href: "/dashboard/flyers", label: "チラシ管理" },
+    { href: "/dashboard", label: "チラシ管理" },
+    { href: "/dashboard/analytics", label: "効果測定" },
     { href: "/dashboard/diagnoses", label: "診断管理" },
     { href: "/dashboard/meetings", label: "議事録" },
     { href: "/dashboard/settings", label: "設定" },

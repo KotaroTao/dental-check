@@ -6,12 +6,45 @@ import { getSubscriptionState } from "@/lib/subscription";
 // 医院に属するチラシ一覧を取得
 // 各チラシに紐付くQRごとの「QR名 / スキャン数」も併せて返す
 // （/dashboard/flyers 画面で 1QR 1行 表示するための情報）
-export async function GET() {
+// クエリパラメータ period（today/week/month/all/custom）でスキャン集計対象期間を絞れる。
+// custom の場合は startDate / endDate（YYYY-MM-DD）も併せて指定する。
+export async function GET(request: NextRequest) {
   try {
     const session = await getSession();
     if (!session) {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
     }
+
+    // 期間フィルタを構築（既存の /api/channels と同じパターン）
+    const { searchParams } = new URL(request.url);
+    const period = searchParams.get("period") || "all";
+    const startDateParam = searchParams.get("startDate");
+    const endDateParam = searchParams.get("endDate");
+
+    let dateFrom: Date | null = null;
+    let dateTo: Date | null = null;
+    if (period !== "all") {
+      dateTo = new Date();
+      if (period === "custom" && startDateParam && endDateParam) {
+        dateFrom = new Date(startDateParam);
+        dateTo = new Date(endDateParam);
+        dateTo.setHours(23, 59, 59, 999);
+      } else if (period === "today") {
+        dateFrom = new Date();
+        dateFrom.setHours(0, 0, 0, 0);
+      } else if (period === "week") {
+        dateFrom = new Date();
+        dateFrom.setDate(dateFrom.getDate() - 7);
+        dateFrom.setHours(0, 0, 0, 0);
+      } else {
+        // month（デフォルト）
+        dateFrom = new Date();
+        dateFrom.setMonth(dateFrom.getMonth() - 1);
+        dateFrom.setHours(0, 0, 0, 0);
+      }
+    }
+    const dateRangeFilter =
+      dateFrom && dateTo ? { createdAt: { gte: dateFrom, lte: dateTo } } : {};
 
     type FlyerWithChannels = {
       id: string;
@@ -63,6 +96,7 @@ export async function GET() {
               channelId: { in: channelIds },
               isDeleted: false,
               eventType: "qr_scan",
+              ...dateRangeFilter,
             },
             _count: { id: true },
           })
@@ -73,6 +107,7 @@ export async function GET() {
             where: {
               channelId: { in: channelIds },
               isDeleted: false,
+              ...dateRangeFilter,
             },
             _count: { id: true },
           })
@@ -84,6 +119,7 @@ export async function GET() {
               channelId: { in: channelIds },
               isDeleted: false,
               eventType: "page_view",
+              ...dateRangeFilter,
             },
             _count: { id: true },
           })
