@@ -15,6 +15,7 @@ import {
   Image as ImageIcon,
   Upload,
   Trash2,
+  X,
 } from "lucide-react";
 
 // チラシ作成時の「配布方法」候補
@@ -222,14 +223,33 @@ export default function NewFlyerPage() {
               <div className="space-y-2">
                 <Label htmlFor="distributionPeriod">配布開始日（任意）</Label>
                 {/* チラシ一覧の並び替え基準に使うため、自由記入ではなく日付ピッカーで入力する。
-                    DB上のカラム名は distributionPeriod のまま（YYYY-MM-DD 形式の文字列を保存）。 */}
-                <Input
-                  id="distributionPeriod"
-                  name="distributionPeriod"
-                  type="date"
-                  value={formData.distributionPeriod}
-                  onChange={handleChange}
-                />
+                    DB上のカラム名は distributionPeriod のまま（YYYY-MM-DD 形式の文字列を保存）。
+                    iOS Safari 等で date input から日付を消すのが困難なので、
+                    隣に明示的なクリアボタンを置いて空にできるようにする。 */}
+                <div className="flex gap-2">
+                  <Input
+                    id="distributionPeriod"
+                    name="distributionPeriod"
+                    type="date"
+                    value={formData.distributionPeriod}
+                    onChange={handleChange}
+                    className="flex-1"
+                  />
+                  {formData.distributionPeriod && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setFormData((prev) => ({ ...prev, distributionPeriod: "" }))
+                      }
+                      className="shrink-0"
+                      title="配布開始日をクリア"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
 
