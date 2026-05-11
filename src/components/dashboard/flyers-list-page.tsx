@@ -125,13 +125,7 @@ function FlyerCard({ flyer: f }: { flyer: Flyer }) {
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center justify-between gap-2">
-          <div className="min-w-0 flex-1">
-            <div className="truncate">{f.name}</div>
-            {/* チラシ作成日（DBの created_at をフォーマット表示。編集不可） */}
-            <div className="text-[11px] font-normal text-gray-500 mt-0.5">
-              作成日: {formatJaDate(f.createdAt)}
-            </div>
-          </div>
+          <div className="min-w-0 flex-1 truncate">{f.name}</div>
           <Link href={`/dashboard/flyers/${f.id}`}>
             <Button size="sm" variant="outline" className="shrink-0 h-7 text-xs">
               <Pencil className="w-3 h-3 mr-1" />
@@ -141,22 +135,54 @@ function FlyerCard({ flyer: f }: { flyer: Flyer }) {
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-0 space-y-3">
-        <div className="flex gap-2">
-          <FlyerThumb url={f.imageUrl} alt="表" onClick={setZoomUrl} />
-          <FlyerThumb url={f.imageUrl2} alt="裏" onClick={setZoomUrl} />
+        {/* 画像（左）+ メタ情報（右）の横並び。メタ情報は画像の縦幅に合わせて等間隔で並べる */}
+        <div className="flex gap-3">
+          <div className="flex gap-2 shrink-0">
+            <FlyerThumb url={f.imageUrl} alt="表" onClick={setZoomUrl} />
+            <FlyerThumb url={f.imageUrl2} alt="裏" onClick={setZoomUrl} />
+          </div>
+          <div className="flex-1 min-w-0 grid grid-cols-1 gap-1 text-[11px] content-center">
+            <MetaRow label="作成日" value={formatJaDate(f.createdAt)} />
+            <MetaRow label="配布方法" value={f.distributionMethod || "—"} />
+            <MetaRow
+              label="予算"
+              value={f.budget !== null ? `¥${f.budget.toLocaleString()}` : "—"}
+            />
+            <MetaRow label="配布開始日" value={formatStartDate(f.distributionPeriod)} />
+          </div>
         </div>
-        <div className="grid grid-cols-2 gap-2 text-xs">
-          <Stat
-            label="配布枚数"
-            value={f.distributionQuantity !== null ? `${f.distributionQuantity.toLocaleString()}枚` : "—"}
-          />
-          <Stat
-            label="予算"
-            value={f.budget !== null ? `¥${f.budget.toLocaleString()}` : "—"}
-          />
-          <Stat label="配布方法" value={f.distributionMethod || "—"} />
-          <Stat label="配布開始日" value={formatStartDate(f.distributionPeriod)} />
-        </div>
+
+        {/* チラシデータ: 配布枚数 + QRアクセス系の集計（QR合計値ベース）
+            アクセス率 = QR合計スキャン ÷ 配布枚数
+            アクセス単価 = 予算 ÷ QR合計スキャン */}
+        {(() => {
+          const totalScans = f.channels.reduce((acc, ch) => acc + ch.scans, 0);
+          const rate =
+            f.distributionQuantity !== null && f.distributionQuantity > 0
+              ? (totalScans / f.distributionQuantity) * 100
+              : null;
+          const cost =
+            f.budget !== null && f.budget > 0 && totalScans > 0
+              ? Math.round(f.budget / totalScans)
+              : null;
+          return (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+              <Stat
+                label="配布枚数"
+                value={f.distributionQuantity !== null ? `${f.distributionQuantity.toLocaleString()}枚` : "—"}
+              />
+              <Stat label="QRアクセス" value={totalScans.toLocaleString()} />
+              <Stat
+                label="QRアクセス率"
+                value={rate !== null ? `${rate.toFixed(2)}%` : "—"}
+              />
+              <Stat
+                label="QRアクセス単価"
+                value={cost !== null ? `¥${cost.toLocaleString()}` : "—"}
+              />
+            </div>
+          );
+        })()}
 
         {/* 紐付くQR一覧（1QR1行・スマホでも崩れないようにヘッダ + tabular-nums で整列） */}
         <div className="border-t pt-3 space-y-2">
@@ -167,7 +193,6 @@ function FlyerCard({ flyer: f }: { flyer: Flyer }) {
             <LinkedChannelsTable
               channels={f.channels}
               quantity={f.distributionQuantity}
-              budget={f.budget}
             />
           )}
           {/* このチラシ配下にQRを追加するボタン
@@ -199,27 +224,23 @@ function FlyerCard({ flyer: f }: { flyer: Flyer }) {
 }
 
 // 紐付くQRの一覧表（1QR1行・PC・スマホ共通レイアウト）
-// 列構成: QR名 / QRスキャン / QRスキャン率 / QRスキャン単価
+// 列構成: QR名 / QRアクセス / QRアクセス率 / 編集
 // ─ 率 = ch.scans ÷ flyer.distributionQuantity
-// ─ 単価 = flyer.budget ÷ ch.scans
-// 配布枚数 / 予算 が未入力なら "—" を表示
+// 単価はチラシレベル（QR合計値ベース）で表示するためここでは出さない
 function LinkedChannelsTable({
   channels,
   quantity,
-  budget,
 }: {
   channels: LinkedChannel[];
   quantity: number | null;
-  budget: number | null;
 }) {
   return (
     <div className="rounded border border-gray-200 overflow-hidden">
       {/* ヘッダ行（編集列はアイコンのみなのでラベルなしの空白） */}
-      <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-2 px-2 py-1.5 bg-gray-50 text-[10px] text-gray-500">
+      <div className="grid grid-cols-[1fr_auto_auto_auto] gap-2 px-2 py-1.5 bg-gray-50 text-[10px] text-gray-500">
         <div>QR名（管理用）</div>
-        <div className="w-12 text-right">スキャン</div>
-        <div className="w-14 text-right">読込率</div>
-        <div className="w-16 text-right">スキャン単価</div>
+        <div className="w-16 text-right">QRアクセス</div>
+        <div className="w-16 text-right">QRアクセス率</div>
         <div className="w-7" aria-hidden="true" />
       </div>
       <div className="divide-y divide-gray-100">
@@ -227,11 +248,6 @@ function LinkedChannelsTable({
           const rate =
             quantity !== null && quantity > 0
               ? (ch.scans / quantity) * 100
-              : null;
-          // 単価: 予算 ÷ スキャン数（スキャン数が0なら計算不可）
-          const cost =
-            budget !== null && budget > 0 && ch.scans > 0
-              ? Math.round(budget / ch.scans)
               : null;
           // 非表示（isActive=false）の QR は行全体をグレーアウトし、
           // 名前の右に「非表示」バッジを出す。編集ボタンは生かして再有効化導線を残す。
@@ -241,7 +257,7 @@ function LinkedChannelsTable({
           return (
             <div
               key={ch.id}
-              className={`grid grid-cols-[1fr_auto_auto_auto_auto] gap-2 px-2 py-1.5 text-xs items-center ${
+              className={`grid grid-cols-[1fr_auto_auto_auto] gap-2 px-2 py-1.5 text-xs items-center ${
                 inactive ? "bg-gray-50/60 text-gray-400" : ""
               }`}
             >
@@ -255,22 +271,15 @@ function LinkedChannelsTable({
                   </span>
                 )}
               </div>
-              <div className="w-12 text-right tabular-nums">
+              <div className="w-16 text-right tabular-nums">
                 {ch.scans.toLocaleString()}
               </div>
               <div
-                className={`w-14 text-right tabular-nums ${
+                className={`w-16 text-right tabular-nums ${
                   inactive ? "text-gray-400" : "text-blue-600"
                 }`}
               >
                 {rate !== null ? `${rate.toFixed(2)}%` : "—"}
-              </div>
-              <div
-                className={`w-16 text-right tabular-nums ${
-                  inactive ? "text-gray-400" : "text-amber-600"
-                }`}
-              >
-                {cost !== null ? `¥${cost.toLocaleString()}` : "—"}
               </div>
               {/* QR個別の編集ボタン（非表示QRでも生きていて再有効化に使える） */}
               <Link
@@ -314,6 +323,17 @@ function FlyerThumb({
   return (
     <div className="w-20 h-20 bg-gray-100 rounded border flex items-center justify-center">
       <ImageIcon className="w-6 h-6 text-gray-300" />
+    </div>
+  );
+}
+
+// 画像の右側に並べるメタ情報の1行（ラベル: 値）
+// ラベルは固定幅で揃え、値は折り返さずに省略する
+function MetaRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-baseline gap-2 min-w-0">
+      <span className="text-gray-500 shrink-0 w-16">{label}</span>
+      <span className="font-medium text-gray-800 truncate">{value}</span>
     </div>
   );
 }
