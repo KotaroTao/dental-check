@@ -3,7 +3,9 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getSubscriptionState } from "@/lib/subscription";
 
-// 医院に属するチラシ一覧を取得（紐付くQR数も一緒に返す）
+// 医院に属するチラシ一覧を取得
+// 各チラシに紐付くQRごとの「QR名 / スキャン数」も併せて返す
+// （/dashboard/flyers 画面で 1QR 1行 表示するための情報）
 export async function GET() {
   try {
     const session = await getSession();
@@ -11,8 +13,7 @@ export async function GET() {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
     }
 
-    // Prisma の include + _count で「紐付くQR件数」も一緒に取得
-    type FlyerWithCount = {
+    type FlyerWithChannels = {
       id: string;
       name: string;
       description: string | null;
@@ -24,15 +25,88 @@ export async function GET() {
       imageUrl2: string | null;
       createdAt: Date;
       updatedAt: Date;
-      _count: { channels: number };
+      channels: Array<{
+        id: string;
+        name: string;
+        channelType: string;
+        isActive: boolean;
+      }>;
     };
+
     const flyers = (await prisma.flyer.findMany({
       where: { clinicId: session.clinicId },
       orderBy: { createdAt: "desc" },
       include: {
-        _count: { select: { channels: true } },
+        channels: {
+          where: { isActive: true },
+          orderBy: { createdAt: "asc" },
+          select: {
+            id: true,
+            name: true,
+            channelType: true,
+            isActive: true,
+          },
+        },
       },
-    })) as unknown as FlyerWithCount[];
+    })) as unknown as FlyerWithChannels[];
+
+    // 全チラシに紐付く全Channel IDを集めて、一括でスキャン関連カウントを取得
+    const channelIds = flyers.flatMap((f) => f.channels.map((c) => c.id));
+
+    // qr_scan が本来のスキャン計測。リンク型は qr_scan 計測導入前のフォールバックとして
+    // CTAClick 数（リンク型は1スキャン=1CTA）、診断付きは page_view を使う。
+    const [qrScanCounts, ctaCounts, pageViewCounts] = await Promise.all([
+      channelIds.length > 0
+        ? prisma.accessLog.groupBy({
+            by: ["channelId"],
+            where: {
+              channelId: { in: channelIds },
+              isDeleted: false,
+              eventType: "qr_scan",
+            },
+            _count: { id: true },
+          })
+        : [],
+      channelIds.length > 0
+        ? prisma.cTAClick.groupBy({
+            by: ["channelId"],
+            where: {
+              channelId: { in: channelIds },
+              isDeleted: false,
+            },
+            _count: { id: true },
+          })
+        : [],
+      channelIds.length > 0
+        ? prisma.accessLog.groupBy({
+            by: ["channelId"],
+            where: {
+              channelId: { in: channelIds },
+              isDeleted: false,
+              eventType: "page_view",
+            },
+            _count: { id: true },
+          })
+        : [],
+    ]);
+
+    const qrScanMap: Record<string, number> = {};
+    for (const r of qrScanCounts) if (r.channelId) qrScanMap[r.channelId] = r._count.id;
+    const ctaMap: Record<string, number> = {};
+    for (const r of ctaCounts) if (r.channelId) ctaMap[r.channelId] = r._count.id;
+    const pageViewMap: Record<string, number> = {};
+    for (const r of pageViewCounts) if (r.channelId) pageViewMap[r.channelId] = r._count.id;
+
+    // 各 Channel ごとの実効スキャン数を計算（qr_scan があればそれ、なければフォールバック）
+    const channelScansMap: Record<string, number> = {};
+    for (const f of flyers) {
+      for (const c of f.channels) {
+        const qrScans = qrScanMap[c.id] || 0;
+        const fallback =
+          c.channelType === "link" ? ctaMap[c.id] || 0 : pageViewMap[c.id] || 0;
+        channelScansMap[c.id] = qrScans > 0 ? qrScans : fallback;
+      }
+    }
 
     return NextResponse.json({
       flyers: flyers.map((f) => ({
@@ -45,7 +119,13 @@ export async function GET() {
         budget: f.budget,
         imageUrl: f.imageUrl,
         imageUrl2: f.imageUrl2,
-        channelCount: f._count.channels,
+        channelCount: f.channels.length,
+        channels: f.channels.map((c) => ({
+          id: c.id,
+          name: c.name,
+          channelType: c.channelType,
+          scans: channelScansMap[c.id] || 0,
+        })),
         createdAt: f.createdAt,
         updatedAt: f.updatedAt,
       })),
