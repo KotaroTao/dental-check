@@ -12,10 +12,13 @@ import {
 } from "lucide-react";
 
 // チラシに紐付くQR1件の集計情報（リスト画面で1行で表示する用）
+// isActive=false の場合「非表示中」として行をグレーアウト表示し、編集導線は残す。
+// 非表示にしたあと再度有効化できるよう、一覧から消さない方針。
 interface LinkedChannel {
   id: string;
   name: string;
   channelType: "diagnosis" | "link";
+  isActive: boolean;
   scans: number;
 }
 
@@ -213,24 +216,44 @@ function LinkedChannelsTable({
             budget !== null && budget > 0 && ch.scans > 0
               ? Math.round(budget / ch.scans)
               : null;
+          // 非表示（isActive=false）の QR は行全体をグレーアウトし、
+          // 名前の右に「非表示」バッジを出す。編集ボタンは生かして再有効化導線を残す。
+          const inactive = !ch.isActive;
           return (
             <div
               key={ch.id}
-              className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-2 px-2 py-1.5 text-xs items-center"
+              className={`grid grid-cols-[1fr_auto_auto_auto_auto] gap-2 px-2 py-1.5 text-xs items-center ${
+                inactive ? "bg-gray-50/60 text-gray-400" : ""
+              }`}
             >
-              <div className="truncate" title={ch.name}>
-                {ch.name}
+              <div className="min-w-0 flex items-center gap-1.5">
+                <span className="truncate" title={ch.name}>
+                  {ch.name}
+                </span>
+                {inactive && (
+                  <span className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-medium bg-gray-200 text-gray-600">
+                    非表示
+                  </span>
+                )}
               </div>
               <div className="w-12 text-right tabular-nums">
                 {ch.scans.toLocaleString()}
               </div>
-              <div className="w-14 text-right tabular-nums text-blue-600">
+              <div
+                className={`w-14 text-right tabular-nums ${
+                  inactive ? "text-gray-400" : "text-blue-600"
+                }`}
+              >
                 {rate !== null ? `${rate.toFixed(2)}%` : "—"}
               </div>
-              <div className="w-16 text-right tabular-nums text-amber-600">
+              <div
+                className={`w-16 text-right tabular-nums ${
+                  inactive ? "text-gray-400" : "text-amber-600"
+                }`}
+              >
                 {cost !== null ? `¥${cost.toLocaleString()}` : "—"}
               </div>
-              {/* QR個別の編集ボタン（アイコンのみ・スマホでも幅を取らない） */}
+              {/* QR個別の編集ボタン（非表示QRでも生きていて再有効化に使える） */}
               <Link
                 href={`/dashboard/channels/${ch.id}`}
                 title="このQRを編集"

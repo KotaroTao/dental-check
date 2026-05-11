@@ -19,7 +19,8 @@ export async function GET(
       where: { id, clinicId: session.clinicId },
       include: {
         channels: {
-          where: { isActive: true },
+          // 非表示（isActive=false）の QR も含めて返す。
+          // 非表示にしたあと再度有効化したい時、編集ページへ戻る導線が必要なため。
           orderBy: { createdAt: "desc" },
           select: {
             id: true,
