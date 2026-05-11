@@ -108,7 +108,7 @@ export default function FlyersListPage() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {sortFlyersByStartDate(flyers).map((f) => (
+          {sortFlyersByCreatedAt(flyers).map((f) => (
             <FlyerCard key={f.id} flyer={f} />
           ))}
         </div>
@@ -373,30 +373,14 @@ function formatStartDate(value: string | null): string {
   return value; // 旧データは元の文字列で表示
 }
 
-// チラシ一覧の並び順を「配布開始日順」にするヘルパー。
-// ルール:
-//   1) 配布開始日が未入力（null/空文字/無効な値）のチラシは上に並べる
-//   2) その下に配布開始日が入力されているチラシ。新しい日付ほど上（降順）
-// 旧データ（"2024年1月〜3月" 等）は Date パース不可なので「未入力」と同じ扱いで上に並ぶ。
-function sortFlyersByStartDate(flyers: Flyer[]): Flyer[] {
-  const parseStart = (v: string | null): number | null => {
-    if (!v || !/^\d{4}-\d{2}-\d{2}/.test(v)) return null;
+// チラシ一覧の並び順を「作成日が新しい順」にするヘルパー。
+// 新しく作ったチラシほど上に並ぶ。createdAt が無効な値は末尾に流す。
+function sortFlyersByCreatedAt(flyers: Flyer[]): Flyer[] {
+  const parseCreated = (v: string): number => {
     const d = new Date(v);
-    return isNaN(d.getTime()) ? null : d.getTime();
+    return isNaN(d.getTime()) ? 0 : d.getTime();
   };
-
-  // 元の配列を変更しないようにスプレッドしてからソート
-  return [...flyers].sort((a, b) => {
-    const aTs = parseStart(a.distributionPeriod);
-    const bTs = parseStart(b.distributionPeriod);
-    // 1) 未入力（null）は上に
-    if (aTs === null && bTs === null) {
-      // 両方未入力なら作成日が新しい順
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    }
-    if (aTs === null) return -1;
-    if (bTs === null) return 1;
-    // 2) 配布開始日の新しい順（降順）
-    return bTs - aTs;
-  });
+  return [...flyers].sort(
+    (a, b) => parseCreated(b.createdAt) - parseCreated(a.createdAt)
+  );
 }
