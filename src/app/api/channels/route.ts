@@ -145,7 +145,9 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, displayName, description, channelType, diagnosisTypeSlug, redirectUrl, imageUrl, expiresAt, budget, distributionMethod, distributionQuantity, distributionPeriod } = body;
+    // 配布関連の項目 (distributionMethod / distributionQuantity / distributionPeriod / budget) は
+    // Phase 2 でチラシ側に移管されたため、Channel POST API では受け付けない（送られても無視）
+    const { name, displayName, description, channelType, diagnosisTypeSlug, redirectUrl, imageUrl, expiresAt, flyerId } = body;
 
     if (!name || name.trim() === "") {
       return NextResponse.json(
@@ -172,10 +174,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // QR掲載方法は必須（効果分析の母集団作成に必要）
-    if (!distributionMethod || String(distributionMethod).trim() === "") {
+    // チラシ紐付けは Phase 2 で必須化
+    if (!flyerId || typeof flyerId !== "string" || flyerId.trim() === "") {
       return NextResponse.json(
-        { error: "QR掲載方法を選択してください" },
+        { error: "このQRを掲載するチラシを選択してください" },
         { status: 400 }
       );
     }
@@ -192,6 +194,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // 指定されたチラシが同一医院のものかを検証
+    const flyer = await prisma.flyer.findFirst({
+      where: { id: flyerId, clinicId: session.clinicId },
+    });
+    if (!flyer) {
+      return NextResponse.json(
+        { error: "指定されたチラシが見つかりません" },
+        { status: 400 }
+      );
+    }
+    const resolvedFlyerId = flyer.id;
+
     // ユニークなコードを生成
     const code = await generateUniqueChannelCode();
 
@@ -201,15 +215,15 @@ export async function POST(request: NextRequest) {
         name: name.trim(),
         displayName: displayName?.trim() || null,
         description: description?.trim() || null,
+        // imageUrl は Phase 2 でチラシ側に移管されたが、後方互換のため Channel 自身にも残せる
         imageUrl: imageUrl || null,
         channelType: type,
         diagnosisTypeSlug: type === "diagnosis" ? diagnosisTypeSlug.trim() : null,
         redirectUrl: type === "link" ? redirectUrl.trim() : null,
         expiresAt: expiresAt ? new Date(expiresAt) : null,
-        budget: budget ? parseInt(budget, 10) : null,
-        distributionMethod: distributionMethod || null,
-        distributionQuantity: distributionQuantity ? parseInt(distributionQuantity, 10) : null,
-        distributionPeriod: distributionPeriod?.trim() || null,
+        // 配布情報フィールド（budget, distributionMethod など）は Phase 2 でチラシ側に移管されたため
+        // Channel には null で作成する。集計はチラシの値が使われる。
+        flyerId: resolvedFlyerId,
         code,
       },
     })) as Channel;

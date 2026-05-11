@@ -12,91 +12,120 @@ datasource db {
 
 // 医院
 model Clinic {
-  id            String   @id @default(uuid())
-  slug          String   @unique
-  name          String
-  email         String   @unique
-  passwordHash  String   @map("password_hash")
-  phone         String?
-  logoUrl       String?  @map("logo_url")
-  mainColor     String   @default("#2563eb") @map("main_color")
-  ctaConfig     Json     @default("{}") @map("cta_config")
-  clinicPage    Json     @default("{}") @map("clinic_page")
-  status        String   @default("trial")
-  failedLoginAttempts  Int       @default(0) @map("failed_login_attempts")
-  lockedUntil          DateTime? @map("locked_until")
-  isHidden              Boolean  @default(false) @map("is_hidden") // 管理者パネルで非表示
-  excludeFromAnalysis   Boolean  @default(false) @map("exclude_from_analysis") // チラシ分析から除外
-  shareToken            String?  @unique @map("share_token") // ダッシュボード共有用トークン（nullなら共有OFF）
-  napInfo               Json     @default("{}") @map("nap_info") // 正式NAP情報 {officialName, postalCode, prefecture, city, address, building, phone, fax, url}
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id                  String    @id @default(uuid())
+  slug                String    @unique
+  name                String
+  email               String    @unique
+  passwordHash        String    @map("password_hash")
+  phone               String?
+  logoUrl             String?   @map("logo_url")
+  mainColor           String    @default("#2563eb") @map("main_color")
+  ctaConfig           Json      @default("{}") @map("cta_config")
+  clinicPage          Json      @default("{}") @map("clinic_page")
+  status              String    @default("trial")
+  failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
+  lockedUntil         DateTime? @map("locked_until")
+  isHidden            Boolean   @default(false) @map("is_hidden") // 管理者パネルで非表示
+  excludeFromAnalysis Boolean   @default(false) @map("exclude_from_analysis") // チラシ分析から除外
+  shareToken          String?   @unique @map("share_token") // ダッシュボード共有用トークン（nullなら共有OFF）
+  napInfo             Json      @default("{}") @map("nap_info") // 正式NAP情報 {officialName, postalCode, prefecture, city, address, building, phone, fax, url}
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
 
-  subscription      Subscription?
-  clinicDiagnoses   ClinicDiagnosis[]
-  diagnosisTypes    DiagnosisType[]   // クリニック固有の診断タイプ
-  sessions          DiagnosisSession[]
-  accessLogs        AccessLog[]
-  ctaClicks         CTAClick[]
-  channels          Channel[]
-  invitationTokens       InvitationToken[]
-  slpIntegrationTokens   SlpIntegrationToken[]
-  clinicTasks            ClinicTask[]
-  napPlatforms           NapPlatform[]
-  meetingMinutes         MeetingMinutes[]
+  subscription         Subscription?
+  clinicDiagnoses      ClinicDiagnosis[]
+  diagnosisTypes       DiagnosisType[] // クリニック固有の診断タイプ
+  sessions             DiagnosisSession[]
+  accessLogs           AccessLog[]
+  ctaClicks            CTAClick[]
+  channels             Channel[]
+  flyers               Flyer[] // 1枚のチラシに複数QRを束ねるための親レコード
+  invitationTokens     InvitationToken[]
+  slpIntegrationTokens SlpIntegrationToken[]
+  clinicTasks          ClinicTask[]
+  napPlatforms         NapPlatform[]
+  meetingMinutes       MeetingMinutes[]
 
   @@map("clinics")
 }
 
-// QRコード（経路別計測用）
-model Channel {
-  id                String    @id @default(uuid())
-  clinicId          String    @map("clinic_id")
-  code              String    @unique // QRコード用の短いコード
-  name              String   // 例: "ポスティング用", "駅看板", "Instagram広告"（管理用）
-  displayName       String?   @map("display_name") // 一般表示用のQRコード名（アンケートページに表示）
-  description       String?
-  imageUrl          String?   @map("image_url") // QRコードに紐付く画像
-  imageUrl2         String?   @map("image_url_2") // 2枚目の画像
-  channelType       String    @default("diagnosis") @map("channel_type") // "diagnosis" | "link"
-  diagnosisTypeSlug String?   @map("diagnosis_type_slug") // 診断タイプ（diagnosisタイプ用）
-  redirectUrl       String?   @map("redirect_url") // リダイレクト先URL（linkタイプ用）
-  sortOrder         Int       @default(0) @map("sort_order") // 表示順序
-  isActive          Boolean   @default(true) @map("is_active")
-  expiresAt         DateTime? @map("expires_at") // 有効期限（nullは無期限）
-  scanCount         Int       @default(0) @map("scan_count") // スキャン回数（linkタイプ用）
-  budget            Int?      @map("budget") // 予算（円）
+// チラシ（1枚のチラシに複数QRを掲載するときの親レコード）
+// 配布枚数・予算・配布方法・配布期間・チラシ画像はここに保存される。
+// Channelは flyerId にこのIDをセットすることで「このチラシに掲載されたQR」になる。
+// 集計時、flyerId がセットされたChannelは Flyer 側の配布枚数/予算を使う（重複加算を避ける）。
+model Flyer {
+  id                   String   @id @default(uuid())
+  clinicId             String   @map("clinic_id")
+  name                 String // 例: "2024年春チラシ", "駅前ポスティング第1弾"
+  description          String? // 備考（自由メモ）
   distributionMethod   String?  @map("distribution_method") // 配布方法（ポスティング/手配り/店頭設置/新聞折込/その他）
   distributionQuantity Int?     @map("distribution_quantity") // 配布枚数
   distributionPeriod   String?  @map("distribution_period") // 配布期間（例: "2024年1月〜3月"）
-  documents            Json     @default("[]") // 資料アップロード（[{url, name, size, uploadedAt}]）
-  createdAt         DateTime  @default(now()) @map("created_at")
-  updatedAt         DateTime  @updatedAt @map("updated_at")
+  budget               Int? // 予算（円）
+  imageUrl             String?  @map("image_url") // チラシ表面画像
+  imageUrl2            String?  @map("image_url_2") // チラシ裏面画像
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  clinic   Clinic    @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  channels Channel[]
+
+  @@index([clinicId])
+  @@map("flyers")
+}
+
+// QRコード（経路別計測用）
+model Channel {
+  id                   String    @id @default(uuid())
+  clinicId             String    @map("clinic_id")
+  code                 String    @unique // QRコード用の短いコード
+  name                 String // 例: "ポスティング用", "駅看板", "Instagram広告"（管理用）
+  displayName          String?   @map("display_name") // 一般表示用のQRコード名（アンケートページに表示）
+  description          String?
+  imageUrl             String?   @map("image_url") // QRコードに紐付く画像
+  imageUrl2            String?   @map("image_url_2") // 2枚目の画像
+  channelType          String    @default("diagnosis") @map("channel_type") // "diagnosis" | "link"
+  diagnosisTypeSlug    String?   @map("diagnosis_type_slug") // 診断タイプ（diagnosisタイプ用）
+  redirectUrl          String?   @map("redirect_url") // リダイレクト先URL（linkタイプ用）
+  sortOrder            Int       @default(0) @map("sort_order") // 表示順序
+  isActive             Boolean   @default(true) @map("is_active")
+  expiresAt            DateTime? @map("expires_at") // 有効期限（nullは無期限）
+  scanCount            Int       @default(0) @map("scan_count") // スキャン回数（linkタイプ用）
+  budget               Int?      @map("budget") // 予算（円）
+  distributionMethod   String?   @map("distribution_method") // 配布方法（ポスティング/手配り/店頭設置/新聞折込/その他）
+  distributionQuantity Int?      @map("distribution_quantity") // 配布枚数
+  distributionPeriod   String?   @map("distribution_period") // 配布期間（例: "2024年1月〜3月"）
+  documents            Json      @default("[]") // 資料アップロード（[{url, name, size, uploadedAt}]）
+  flyerId              String?   @map("flyer_id") // 紐付くチラシ。null = 「単独QR」（配布情報はChannel側を使う）
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
 
   clinic     Clinic             @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  flyer      Flyer?             @relation(fields: [flyerId], references: [id], onDelete: SetNull)
   sessions   DiagnosisSession[]
   accessLogs AccessLog[]
   ctaClicks  CTAClick[]
 
   @@index([clinicId])
+  @@index([flyerId])
   @@map("channels")
 }
 
 // サブスクリプション
 model Subscription {
-  id                   String    @id @default(uuid())
-  clinicId             String    @unique @map("clinic_id")
-  payjpCustomerId      String?   @map("payjp_customer_id")
-  payjpSubscriptionId  String?   @map("payjp_subscription_id")
-  status               String    @default("trial") // trial, active, canceled, past_due, expired
-  planType             String    @default("starter") @map("plan_type") // starter, standard, managed, free
-  trialEnd             DateTime? @map("trial_end")
-  currentPeriodStart   DateTime? @map("current_period_start")
-  currentPeriodEnd     DateTime? @map("current_period_end")
-  canceledAt           DateTime? @map("canceled_at")
-  gracePeriodEnd       DateTime? @map("grace_period_end") // 猶予期間終了日
-  createdAt            DateTime  @default(now()) @map("created_at")
-  updatedAt            DateTime  @updatedAt @map("updated_at")
+  id                  String    @id @default(uuid())
+  clinicId            String    @unique @map("clinic_id")
+  payjpCustomerId     String?   @map("payjp_customer_id")
+  payjpSubscriptionId String?   @map("payjp_subscription_id")
+  status              String    @default("trial") // trial, active, canceled, past_due, expired
+  planType            String    @default("starter") @map("plan_type") // starter, standard, managed, free
+  trialEnd            DateTime? @map("trial_end")
+  currentPeriodStart  DateTime? @map("current_period_start")
+  currentPeriodEnd    DateTime? @map("current_period_end")
+  canceledAt          DateTime? @map("canceled_at")
+  gracePeriodEnd      DateTime? @map("grace_period_end") // 猶予期間終了日
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
 
   clinic Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
 
@@ -105,15 +134,15 @@ model Subscription {
 
 // 診断タイプ
 model DiagnosisType {
-  id              String   @id @default(uuid())
-  slug            String   @unique
-  clinicId        String?  @map("clinic_id") // null = システム提供診断、値あり = クリニック固有診断
-  name            String
-  description     String?
-  questions       Json
-  resultPatterns  Json     @map("result_patterns")
-  isActive        Boolean  @default(true) @map("is_active")
-  createdAt       DateTime @default(now()) @map("created_at")
+  id             String   @id @default(uuid())
+  slug           String   @unique
+  clinicId       String?  @map("clinic_id") // null = システム提供診断、値あり = クリニック固有診断
+  name           String
+  description    String?
+  questions      Json
+  resultPatterns Json     @map("result_patterns")
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
 
   clinic          Clinic?            @relation(fields: [clinicId], references: [id], onDelete: Cascade)
   clinicDiagnoses ClinicDiagnosis[]
@@ -143,10 +172,10 @@ model DiagnosisSession {
   id              String    @id @default(uuid())
   clinicId        String?   @map("clinic_id")
   channelId       String?   @map("channel_id")
-  diagnosisTypeId String?   @map("diagnosis_type_id")  // linkタイプはnull
-  sessionType     String    @default("diagnosis") @map("session_type")  // "diagnosis" | "link"
+  diagnosisTypeId String?   @map("diagnosis_type_id") // linkタイプはnull
+  sessionType     String    @default("diagnosis") @map("session_type") // "diagnosis" | "link"
   isDemo          Boolean   @default(false) @map("is_demo")
-  isDeleted       Boolean   @default(false) @map("is_deleted")  // 履歴から論理削除
+  isDeleted       Boolean   @default(false) @map("is_deleted") // 履歴から論理削除
   userAge         Int?      @map("user_age")
   userGender      String?   @map("user_gender")
   answers         Json?
@@ -156,17 +185,17 @@ model DiagnosisSession {
   createdAt       DateTime  @default(now()) @map("created_at")
 
   // 位置情報（GPSベース、小数点2桁に丸めて保存）
-  ipAddress       String?   @map("ip_address")
-  country         String?   // 国コード (JP)
-  region          String?   // 都道府県 (兵庫県)
-  city            String?   // 市区町村 (西宮市)
-  town            String?   // 町丁目 (神南一丁目)
-  latitude        Float?    // 緯度（小数点2桁、約1km精度）
-  longitude       Float?    // 経度（小数点2桁、約1km精度）
+  ipAddress String? @map("ip_address")
+  country   String? // 国コード (JP)
+  region    String? // 都道府県 (兵庫県)
+  city      String? // 市区町村 (西宮市)
+  town      String? // 町丁目 (神南一丁目)
+  latitude  Float? // 緯度（小数点2桁、約1km精度）
+  longitude Float? // 経度（小数点2桁、約1km精度）
 
   clinic        Clinic?        @relation(fields: [clinicId], references: [id], onDelete: SetNull)
   channel       Channel?       @relation(fields: [channelId], references: [id], onDelete: SetNull)
-  diagnosisType DiagnosisType? @relation(fields: [diagnosisTypeId], references: [id])  // linkタイプはnull
+  diagnosisType DiagnosisType? @relation(fields: [diagnosisTypeId], references: [id]) // linkタイプはnull
   ctaClicks     CTAClick[]
 
   @@index([channelId])
@@ -187,14 +216,14 @@ model AccessLog {
   eventType         String   @map("event_type")
   userAgent         String?  @map("user_agent")
   referer           String?
-  isDeleted         Boolean  @default(false) @map("is_deleted")  // 履歴から論理削除
+  isDeleted         Boolean  @default(false) @map("is_deleted") // 履歴から論理削除
   createdAt         DateTime @default(now()) @map("created_at")
 
   // 位置情報（IPベース）
-  ipAddress         String?  @map("ip_address")
-  country           String?
-  region            String?
-  city              String?
+  ipAddress String? @map("ip_address")
+  country   String?
+  region    String?
+  city      String?
 
   clinic  Clinic?  @relation(fields: [clinicId], references: [id], onDelete: SetNull)
   channel Channel? @relation(fields: [channelId], references: [id], onDelete: SetNull)
@@ -247,7 +276,7 @@ model SlpIntegrationToken {
   token     String    @unique
   clinicId  String    @map("clinic_id")
   expiresAt DateTime  @map("expires_at")
-  usedAt    DateTime? @map("used_at")  // nullなら未使用・値があれば使用済み
+  usedAt    DateTime? @map("used_at") // nullなら未使用・値があれば使用済み
   createdAt DateTime  @default(now()) @map("created_at")
 
   clinic Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
@@ -259,20 +288,20 @@ model SlpIntegrationToken {
 
 // 対応依頼（医院への作業依頼を管理）
 model ClinicTask {
-  id          String    @id @default(uuid())
-  clinicId    String    @map("clinic_id")
-  taskType    String    @map("task_type")    // "hp_name_change" | "gbp_name_change" | "nap_unification" | "other"
-  title       String                          // 表示用タイトル（例: "ホームページの医院名変更"）
-  description String?                         // 詳細説明
-  status      String    @default("pending")  // "pending"(未依頼) | "requested"(依頼済) | "in_progress"(対応中) | "completed"(完了)
-  priority    Int       @default(0)          // 並び順（小さいほど先に表示）
-  note        String?                         // 管理者用メモ
-  requestedAt DateTime? @map("requested_at") // 依頼した日時
-  completedAt DateTime? @map("completed_at") // 完了した日時
-  reminderCount Int     @default(0) @map("reminder_count") // 催促した回数
+  id             String    @id @default(uuid())
+  clinicId       String    @map("clinic_id")
+  taskType       String    @map("task_type") // "hp_name_change" | "gbp_name_change" | "nap_unification" | "other"
+  title          String // 表示用タイトル（例: "ホームページの医院名変更"）
+  description    String? // 詳細説明
+  status         String    @default("pending") // "pending"(未依頼) | "requested"(依頼済) | "in_progress"(対応中) | "completed"(完了)
+  priority       Int       @default(0) // 並び順（小さいほど先に表示）
+  note           String? // 管理者用メモ
+  requestedAt    DateTime? @map("requested_at") // 依頼した日時
+  completedAt    DateTime? @map("completed_at") // 完了した日時
+  reminderCount  Int       @default(0) @map("reminder_count") // 催促した回数
   lastRemindedAt DateTime? @map("last_reminded_at") // 最終催促日時
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
 
   clinic Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
 
@@ -283,22 +312,22 @@ model ClinicTask {
 
 // NAP統一管理（媒体別）
 model NapPlatform {
-  id              String    @id @default(uuid())
-  clinicId        String    @map("clinic_id")
-  platformName    String    @map("platform_name")     // 媒体名（例: "Googleビジネスプロフィール"）
-  platformUrl     String?   @map("platform_url")      // 掲載ページのURL
-  nameStatus      String    @default("unchecked") @map("name_status")     // "unchecked" | "match" | "mismatch"
-  addressStatus   String    @default("unchecked") @map("address_status")  // "unchecked" | "match" | "mismatch"
-  phoneStatus     String    @default("unchecked") @map("phone_status")    // "unchecked" | "match" | "mismatch"
-  status          String    @default("unchecked")     // "unchecked"(未確認) | "ok"(問題なし) | "requested"(修正依頼済) | "completed"(修正完了)
-  note            String?                              // メモ（ログインID等）
-  requestedAt     DateTime? @map("requested_at")      // 修正依頼した日時
-  completedAt     DateTime? @map("completed_at")      // 修正完了した日時
-  reminderCount   Int       @default(0) @map("reminder_count")
-  lastRemindedAt  DateTime? @map("last_reminded_at")
-  priority        Int       @default(0)               // 表示順
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
+  id             String    @id @default(uuid())
+  clinicId       String    @map("clinic_id")
+  platformName   String    @map("platform_name") // 媒体名（例: "Googleビジネスプロフィール"）
+  platformUrl    String?   @map("platform_url") // 掲載ページのURL
+  nameStatus     String    @default("unchecked") @map("name_status") // "unchecked" | "match" | "mismatch"
+  addressStatus  String    @default("unchecked") @map("address_status") // "unchecked" | "match" | "mismatch"
+  phoneStatus    String    @default("unchecked") @map("phone_status") // "unchecked" | "match" | "mismatch"
+  status         String    @default("unchecked") // "unchecked"(未確認) | "ok"(問題なし) | "requested"(修正依頼済) | "completed"(修正完了)
+  note           String? // メモ（ログインID等）
+  requestedAt    DateTime? @map("requested_at") // 修正依頼した日時
+  completedAt    DateTime? @map("completed_at") // 修正完了した日時
+  reminderCount  Int       @default(0) @map("reminder_count")
+  lastRemindedAt DateTime? @map("last_reminded_at")
+  priority       Int       @default(0) // 表示順
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
 
   clinic Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
 
@@ -308,20 +337,20 @@ model NapPlatform {
 
 // 議事録（ミーティング記録）
 model MeetingMinutes {
-  id              String    @id @default(uuid())
-  clinicId        String    @map("clinic_id")
-  meetingDate     DateTime  @map("meeting_date")       // ミーティング日時
-  title           String                                // タイトル（例: "第3回定期ミーティング"）
-  content         String?   @db.Text                    // 議事録本文（Markdown対応）
-  summary         String?                               // 要約
-  ourStaff        String?   @map("our_staff")           // 弊社担当者名
-  clinicAttendees String?   @map("clinic_attendees")    // 医院側出席者名
-  zoomUrl         String?   @map("zoom_url")            // ZoomミーティングURL
-  recordingUrl    String?   @map("recording_url")       // 録画URL（Circleback等）
-  nextActions     String?   @map("next_actions") @db.Text // 次回アクション項目
-  isVisibleToClinic Boolean @default(true) @map("is_visible_to_clinic") // 医院側に表示するか
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
+  id                String   @id @default(uuid())
+  clinicId          String   @map("clinic_id")
+  meetingDate       DateTime @map("meeting_date") // ミーティング日時
+  title             String // タイトル（例: "第3回定期ミーティング"）
+  content           String?  @db.Text // 議事録本文（Markdown対応）
+  summary           String? // 要約
+  ourStaff          String?  @map("our_staff") // 弊社担当者名
+  clinicAttendees   String?  @map("clinic_attendees") // 医院側出席者名
+  zoomUrl           String?  @map("zoom_url") // ZoomミーティングURL
+  recordingUrl      String?  @map("recording_url") // 録画URL（Circleback等）
+  nextActions       String?  @map("next_actions") @db.Text // 次回アクション項目
+  isVisibleToClinic Boolean  @default(true) @map("is_visible_to_clinic") // 医院側に表示するか
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
   clinic Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
 
@@ -339,21 +368,21 @@ model Admin {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  auditLogs    AuditLog[]
+  auditLogs AuditLog[]
 
   @@map("admins")
 }
 
 // D3: 管理者操作の監査ログ
 model AuditLog {
-  id          String   @id @default(uuid())
-  adminId     String   @map("admin_id")
-  action      String   // 操作種別（例: "clinic.create", "clinic.impersonate", "invitation.create"）
-  targetType  String?  @map("target_type")  // 対象の種類（例: "clinic", "diagnosis"）
-  targetId    String?  @map("target_id")    // 対象のID
-  details     Json?    // 追加情報（変更前後の値など）
-  ipAddress   String?  @map("ip_address")
-  createdAt   DateTime @default(now()) @map("created_at")
+  id         String   @id @default(uuid())
+  adminId    String   @map("admin_id")
+  action     String // 操作種別（例: "clinic.create", "clinic.impersonate", "invitation.create"）
+  targetType String?  @map("target_type") // 対象の種類（例: "clinic", "diagnosis"）
+  targetId   String?  @map("target_id") // 対象のID
+  details    Json? // 追加情報（変更前後の値など）
+  ipAddress  String?  @map("ip_address")
+  createdAt  DateTime @default(now()) @map("created_at")
 
   admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
 

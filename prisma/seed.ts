@@ -1431,7 +1431,61 @@ async function main() {
   });
   console.log(`✅ Created/Updated: ${bruxism.name} (${bruxism.slug})`);
 
+  // 既存QR（チラシ未紐付け）を「旧QR: [QR名]」チラシに1:1で紐付ける
+  // ─ idempotent: flyerId が null の channel だけが対象なので、複数回実行しても同じ結果
+  // ─ 既存 channel が持っていた配布枚数・予算・画像・配布方法・配布期間を Flyer 側にコピー（情報ロスなし）
+  await migrateOrphanChannelsToFlyers();
+
   console.log("\n🎉 Seeding completed!");
+}
+
+// チラシに紐付かない既存QRを「旧QR: [QR名]」チラシに1:1で移行する
+// Phase 2 でチラシ必須化したため、過去のQRはこの処理で全て何らかのチラシに属するようになる
+async function migrateOrphanChannelsToFlyers() {
+  const orphanChannels = await prisma.channel.findMany({
+    where: { flyerId: null },
+  });
+
+  if (orphanChannels.length === 0) {
+    console.log("\n📦 旧QR→チラシ移行: 対象のQRはありません（移行済み）");
+    return;
+  }
+
+  console.log(`\n📦 旧QR→チラシ移行: ${orphanChannels.length}件のQRをチラシ化します`);
+
+  let migrated = 0;
+  for (const ch of orphanChannels) {
+    // 「旧QR: [name]」というチラシが既にあるかチェック（再実行時の衝突回避）
+    const flyerName = `旧QR: ${ch.name}`;
+    let flyer = await prisma.flyer.findFirst({
+      where: { clinicId: ch.clinicId, name: flyerName },
+    });
+
+    // なければ Channel の配布情報をコピーして新規作成
+    if (!flyer) {
+      flyer = await prisma.flyer.create({
+        data: {
+          clinicId: ch.clinicId,
+          name: flyerName,
+          distributionMethod: ch.distributionMethod,
+          distributionQuantity: ch.distributionQuantity,
+          distributionPeriod: ch.distributionPeriod,
+          budget: ch.budget,
+          imageUrl: ch.imageUrl,
+          imageUrl2: ch.imageUrl2,
+        },
+      });
+    }
+
+    // Channel に flyerId をセット
+    await prisma.channel.update({
+      where: { id: ch.id },
+      data: { flyerId: flyer.id },
+    });
+    migrated++;
+  }
+
+  console.log(`✅ ${migrated}件のQRを旧QRチラシに紐付け完了`);
 }
 
 main()

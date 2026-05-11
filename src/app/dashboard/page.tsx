@@ -494,14 +494,14 @@ export default function DashboardPage() {
     setTimeout(() => setShareCopied(false), 2000);
   };
 
-  // 新規作成ボタンクリック
+  // 新規QR作成ボタンクリック
+  // Phase 2: QR 作成はチラシ管理経由に統一されたので、まずチラシ一覧へ誘導する
   const handleNewQRCodeClick = () => {
     if (!subscription) {
-      router.push("/dashboard/channels/new");
+      router.push("/dashboard/flyers");
       return;
     }
 
-    // デモアカウントの場合
     if (subscription.isDemo) {
       showDemoModal();
       return;
@@ -512,7 +512,7 @@ export default function DashboardPage() {
       return;
     }
 
-    router.push("/dashboard/channels/new");
+    router.push("/dashboard/flyers");
   };
 
   const handleLoadMore = () => {
