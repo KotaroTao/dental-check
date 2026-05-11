@@ -566,7 +566,7 @@ function QrDetailRow({
             ch.channelType === "link"
               ? "-"
               : ch.ctaClicks > 0
-              ? `${(Math.round((ch.completions / ch.ctaClicks) * 10000) / 100).toFixed(2)}%`
+              ? `${(Math.round((ch.completions / ch.ctaClicks) * 1000) / 10).toFixed(1)}%`
               : "—"
           }
           color="text-amber-600"
@@ -790,7 +790,7 @@ function QrSummaryCard({
               isLink
                 ? "-"
                 : ctaClickRate !== null
-                ? `${ctaClickRate.toFixed(2)}%`
+                ? `${ctaClickRate.toFixed(1)}%`
                 : "—"
             }
             sub={isLink ? "対象外" : "診断完了÷CTAクリック"}
