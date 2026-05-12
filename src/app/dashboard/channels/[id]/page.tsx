@@ -129,6 +129,12 @@ export default function ChannelDetailPage() {
   const isInitialLoad = useRef(true);
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
+  // saveData が channel を依存に含めると、保存成功→setChannel→saveData 再生成→
+  // 自動保存 useEffect が再実行→無限保存ループとなり、入力途中の値が
+  // API レスポンスで上書きされて空欄になる不具合の原因になる。
+  // channel は ref 経由で参照し、依存からは外す。
+  const channelRef = useRef<Channel | null>(null);
+
   const isDemo = subscription?.isDemo;
 
   const baseUrl = typeof window !== "undefined"
@@ -278,12 +284,19 @@ export default function ChannelDetailPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // channel state を ref にミラーして saveData が常に最新値を参照できるようにする。
+  // これで saveData の依存配列から channel を外せる（無限保存ループ防止）。
+  useEffect(() => {
+    channelRef.current = channel;
+  }, [channel]);
+
   // 自動保存の実行関数（デバウンスなし、直接保存する）
   const saveData = useCallback(async (dataToSave: typeof formData) => {
-    if (!channel || isDemo) return;
+    const ch = channelRef.current;
+    if (!ch || isDemo) return;
     if (!dataToSave.name.trim()) return; // 名前が空の場合は保存しない
 
-    if (channel.channelType === "link" && dataToSave.redirectUrl.trim()) {
+    if (ch.channelType === "link" && dataToSave.redirectUrl.trim()) {
       try {
         new URL(dataToSave.redirectUrl);
       } catch {
@@ -307,7 +320,7 @@ export default function ChannelDetailPage() {
         imageUrl: dataToSave.imageUrl,
         imageUrl2: dataToSave.imageUrl2,
         expiresAt: dataToSave.expiresAt || null,
-        redirectUrl: channel.channelType === "link" ? dataToSave.redirectUrl : null,
+        redirectUrl: ch.channelType === "link" ? dataToSave.redirectUrl : null,
         budget: dataToSave.budget || null,
         distributionQuantity: dataToSave.distributionQuantity || null,
         distributionPeriod: dataToSave.distributionPeriod || null,
@@ -340,7 +353,8 @@ export default function ChannelDetailPage() {
     } finally {
       setIsSaving(false);
     }
-  }, [channel, id, isDemo]);
+  // channel は channelRef 経由で参照するため依存から外す（無限保存ループ防止）
+  }, [id, isDemo]);
 
   // formData が変わるたびにデバウンス付き自動保存
   useEffect(() => {

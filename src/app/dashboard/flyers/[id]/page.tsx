@@ -125,7 +125,6 @@ export default function EditFlyerPage() {
 
   const saveData = useCallback(
     async (data: typeof formData) => {
-      if (!flyer) return;
       // 必須項目が空のまま自動保存しようとすると 400 になるので、UIで明示的にスキップ
       if (!data.name.trim()) return;
       if (!data.distributionMethod) return;
@@ -162,7 +161,11 @@ export default function EditFlyerPage() {
         setIsSaving(false);
       }
     },
-    [id, flyer]
+    // 依存に `flyer` を入れると、保存成功 → setFlyer → saveData 再生成 →
+    // 下の自動保存 useEffect が再実行 → 1秒後に再保存…という無限ループになり、
+    // 入力途中の値が API レスポンスで上書きされて空欄になる不具合の原因になる。
+    // saveData は id だけ知っていれば充分なので、id のみを依存に入れる。
+    [id]
   );
 
   // フォーム値が変わるたびに 1 秒の debounce で自動保存
