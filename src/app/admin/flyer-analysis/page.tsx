@@ -93,7 +93,9 @@ interface AnalysisData {
   period: number;
 }
 
-type SortKey = "scans" | "qrScanRate" | "qrScanCost";
+// 並び替えキー。"createdAt" は新しい順を意味する（ascだけでデフォルト挙動を変えるのは混乱するため、
+// 「作成日（新しい順）」固定で扱う）。
+type SortKey = "createdAt" | "scans" | "qrScanRate" | "qrScanCost";
 
 export default function FlyerAnalysisPage() {
   const [data, setData] = useState<AnalysisData | null>(null);
@@ -101,7 +103,8 @@ export default function FlyerAnalysisPage() {
   const [error, setError] = useState("");
   const [period, setPeriod] = useState(365);
   const [methodFilter, setMethodFilter] = useState("");
-  const [sortKey, setSortKey] = useState<SortKey>("scans");
+  // デフォルトは「作成日（新しい順）」
+  const [sortKey, setSortKey] = useState<SortKey>("createdAt");
   const [sortAsc, setSortAsc] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   // 各チラシ行の「QR一覧」展開状態を保持
@@ -174,8 +177,24 @@ export default function FlyerAnalysisPage() {
   };
 
   // ソート関数。null は常に末尾。
-  const sortItems = <T extends { scans: number; qrScanRate: number | null; qrScanCost: number | null }>(items: T[]) => {
+  // createdAt は ISO 文字列なので Date.parse して数値比較する。
+  const sortItems = <
+    T extends {
+      scans: number;
+      qrScanRate: number | null;
+      qrScanCost: number | null;
+      createdAt: string;
+    }
+  >(
+    items: T[]
+  ) => {
     return [...items].sort((a, b) => {
+      if (sortKey === "createdAt") {
+        // 作成日は常に「新しい順」（降順）固定
+        const at = new Date(a.createdAt).getTime();
+        const bt = new Date(b.createdAt).getTime();
+        return bt - at;
+      }
       const aVal = a[sortKey];
       const bVal = b[sortKey];
       const aIsNull = aVal === null || aVal === undefined;
@@ -336,6 +355,8 @@ export default function FlyerAnalysisPage() {
           }}
           className="h-9 rounded-md border border-input bg-background px-2 text-sm"
         >
+          {/* 作成日（新しい順）— デフォルトの並び順 */}
+          <option value="createdAt:desc">作成日（新しい順）</option>
           <option value="scans:desc">QRアクセス数（多い順）</option>
           <option value="qrScanRate:desc">QRアクセス率（高い順）</option>
           <option value="qrScanCost:asc">QRアクセス単価（安い順）</option>
